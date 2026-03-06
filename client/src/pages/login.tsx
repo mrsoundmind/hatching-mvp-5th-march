@@ -56,22 +56,23 @@ export default function LoginPage() {
   ];
 
   return (
-    <main className="min-h-screen w-full flex flex-col lg:flex-row overflow-hidden bg-[#050505]">
+    <main className="min-h-[100dvh] w-full flex flex-col lg:flex-row bg-[#030303] overflow-y-auto lg:overflow-hidden font-sans selection:bg-indigo-500/30 selection:text-indigo-200">
 
       {/* LEFT COLUMN: Authentication */}
-      <section className="relative w-full lg:w-1/2 min-h-screen lg:min-h-0 flex flex-col items-center justify-center p-8 lg:p-16 z-20 bg-[#050505]">
+      <section className="relative w-full lg:w-1/2 flex items-center justify-center p-8 sm:p-12 lg:p-16 z-10 min-h-[100dvh] lg:min-h-screen shrink-0 bg-[#030303]">
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
-          <div className="absolute top-[-20%] left-[-20%] w-[60vw] h-[60vw] rounded-full bg-blue-500/5 blur-[120px]" />
+          <div className="absolute top-[-25%] left-[-25%] w-[70vw] h-[70vw] rounded-full bg-indigo-500/5 blur-[140px]" />
+          <div className="absolute bottom-[-10%] right-[-10%] w-[40vw] h-[40vw] rounded-full bg-blue-500/5 blur-[100px]" />
         </div>
 
         <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-          className="w-full max-w-[420px] relative z-20"
+          className="w-full max-w-[420px]"
         >
           {/* Enhanced Hatchin Logo */}
-          <div className="flex items-center gap-3 mb-12 lg:mb-16">
+          <div className="flex items-center gap-3 mb-16">
             <div className="relative w-12 h-12 flex items-center justify-center">
               <Hexagon className="absolute inset-0 w-12 h-12 text-blue-500 animate-[spin_10s_linear_infinite] opacity-50" strokeWidth={1} />
               <Hexagon className="absolute inset-0 w-12 h-12 text-indigo-500 drop-shadow-[0_0_10px_rgba(99,102,241,0.5)] fill-indigo-500/10" strokeWidth={2} />
@@ -80,10 +81,10 @@ export default function LoginPage() {
             <span className="text-2xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white to-white/70">Hatchin</span>
           </div>
 
-          <h1 className="text-3xl lg:text-4xl font-bold tracking-tight text-white mb-4">
+          <h1 className="text-4xl lg:text-5xl font-bold tracking-tight text-white mb-4 drop-shadow-sm">
             Welcome back
           </h1>
-          <p className="text-base lg:text-lg text-slate-400 mb-8 lg:mb-10 leading-relaxed">
+          <p className="text-lg text-slate-400 mb-12 leading-relaxed font-light">
             Sign in to access your projects and collaborate with your AI team seamlessly.
           </p>
 
@@ -98,14 +99,15 @@ export default function LoginPage() {
           )}
 
           <a
-            className="group relative w-full inline-flex items-center justify-center gap-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-white text-[16px] font-medium px-4 py-4 transition-all duration-300 overflow-hidden"
+            className="group relative w-full inline-flex items-center justify-center gap-3 rounded-2xl bg-white/[0.03] hover:bg-white/[0.08] border border-white/10 hover:border-white/20 text-white text-[16px] font-medium px-4 py-4 transition-all duration-300 overflow-hidden shadow-2xl shadow-black/50"
             href={`/api/auth/google/start?returnTo=${encodeURIComponent(nextPath)}`}
           >
-            <FcGoogle className="w-6 h-6 z-10" />
-            <span className="z-10 tracking-wide font-semibold text-white/90">Sign in with Google</span>
+            <FcGoogle className="w-6 h-6 z-10 drop-shadow-sm" />
+            <span className="z-10 tracking-wide font-medium text-white/90 group-hover:text-white transition-colors">Continue with Google</span>
 
             {/* Hover state gradient border inner glow */}
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-indigo-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 via-indigo-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+            <div className="absolute -inset-[1px] rounded-2xl bg-gradient-to-r from-transparent via-white/10 to-transparent opacity-0 group-hover:opacity-100 blur-sm transition-opacity duration-500" />
           </a>
 
           <p className="mt-8 text-sm text-slate-500">
@@ -115,64 +117,67 @@ export default function LoginPage() {
       </section>
 
       {/* RIGHT COLUMN: Showcase Carousel / Animations */}
-      <section className="relative w-full lg:w-1/2 min-h-screen lg:min-h-0 flex flex-col items-center justify-center bg-[#050505] lg:border-l border-white/5 overflow-hidden">
+      <section className="relative w-full lg:w-1/2 flex flex-col items-center justify-center bg-slate-900 overflow-hidden border-t lg:border-t-0 lg:border-l border-white/5 py-20 lg:py-0 min-h-[700px] lg:min-h-screen shrink-0">
 
-        {/* Dynamic Background Grid & Gradients */}
+        {/* Dynamic Background Grid */}
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff08_1px,transparent_1px),linear-gradient(to_bottom,#ffffff08_1px,transparent_1px)] bg-[size:32px_32px]"></div>
+        <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-transparent to-[#050505] z-0" />
+        <div className="absolute inset-0 bg-gradient-to-r from-[#050505] via-transparent to-transparent z-0" />
 
-        {/* Fix mobile overlapping by putting content in a relative z-20 container */}
-        <div className="relative z-20 w-full max-w-lg px-6 lg:px-8 flex flex-col items-center h-[450px] lg:h-[500px] justify-center pt-10 lg:pt-0">
+        <div className="relative z-10 w-full max-w-lg px-4 sm:px-8 flex flex-col items-center min-h-[550px] justify-center pb-12">
           <AnimatePresence mode="wait">
 
             {/* SLIDE 1: The AI Team */}
             {activeSlide === 0 && (
               <motion.div
                 key="slide1"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.5 }}
-                className="w-full flex flex-col items-center absolute inset-0 pt-16 lg:pt-24 pointer-events-none"
+                initial={{ opacity: 0, y: 30, filter: "blur(4px)" }}
+                animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                exit={{ opacity: 0, y: -30, filter: "blur(4px)" }}
+                transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+                className="w-full flex flex-col items-center"
               >
-                <div className="mb-4 lg:mb-6 inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 font-medium text-xs lg:text-sm">
+                <div className="mb-8 inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 font-medium text-sm tracking-wide uppercase shadow-[0_0_15px_rgba(59,130,246,0.15)]">
                   <Users2 className="w-4 h-4" /> Your Autonomous Team
                 </div>
-                <h2 className="text-3xl lg:text-4xl font-semibold text-white mb-3 lg:mb-4 tracking-tight text-center drop-shadow-md">
-                  Your Ideas, <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400">Hatched.</span>
+                <h2 className="text-4xl lg:text-5xl font-semibold text-white mb-6 tracking-tight text-center leading-tight">
+                  Your Ideas, <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 drop-shadow-sm">Hatched.</span>
                 </h2>
-                <p className="text-base lg:text-lg text-slate-300 leading-relaxed text-center mb-10 max-w-sm">
-                  Deploy autonomous AI agents to build, design, and engineer your next big project.
+                <p className="text-lg lg:text-xl text-slate-400 leading-relaxed text-center mb-16 px-4 font-light max-w-sm">
+                  Turn your boldest ideas into reality with a dedicated AI team that builds your dreams from the ground up.
                 </p>
 
                 {/* Floating Hatches Animation */}
-                <div className="relative w-full h-[200px] lg:h-[240px] flex items-center justify-center pointer-events-none">
+                <div className="relative w-full h-[240px] flex items-center justify-center pointer-events-none perspective-[1000px]">
                   {hatches.map((hatch, i) => (
                     <motion.div
                       key={i}
-                      className={`absolute w-48 lg:w-60 rounded-2xl border border-white/10 bg-black/60 backdrop-blur-md p-4 lg:p-5 shadow-2xl ${i === 0 ? "left-0 top-0" : i === 1 ? "right-0 top-1/2 -translate-y-1/2" : "left-8 lg:left-12 bottom-0"
-                        } z-${30 - i * 10}`}
+                      className={`absolute w-64 rounded-2xl border border-white/5 bg-black/40 backdrop-blur-2xl p-5 shadow-[0_8px_32px_rgba(0,0,0,0.5)] ${i === 0 ? "left-0 top-0" : i === 1 ? "right-0 top-1/2 -translate-y-1/2" : "left-12 bottom-0"
+                        } z-${20 - i * 10} transition-colors duration-500 hover:border-white/10`}
                       animate={{
-                        y: [0, -10, 0],
-                        rotate: [0, i % 2 === 0 ? 2 : -2, 0],
+                        y: [0, -12, 0],
+                        rotateX: [0, i % 2 === 0 ? 2 : -2, 0],
+                        rotateY: [0, i % 2 === 0 ? -2 : 2, 0],
+                        rotateZ: [0, i % 2 === 0 ? 1.5 : -1.5, 0],
                       }}
                       transition={{
-                        duration: 5,
+                        duration: 6,
                         repeat: Infinity,
                         ease: "easeInOut",
                         delay: hatch.delay,
                       }}
                     >
-                      <div className="flex items-center gap-3 lg:gap-4 mb-3">
-                        <div className={`w-8 h-8 lg:w-10 lg:h-10 rounded-full bg-gradient-to-br ${hatch.color} flex items-center justify-center shadow-lg shadow-white/5`}>
-                          <span className="text-white font-medium text-xs lg:text-sm">{hatch.name[0]}</span>
+                      <div className="flex items-center gap-4 mb-4">
+                        <div className={`w-12 h-12 rounded-full bg-gradient-to-br ${hatch.color} flex items-center justify-center shadow-lg shadow-white/5`}>
+                          <span className="text-white font-semibold text-lg drop-shadow-sm">{hatch.name[0]}</span>
                         </div>
                         <div>
-                          <h3 className="text-white font-medium text-xs lg:text-sm">{hatch.name}</h3>
-                          <p className="text-[10px] lg:text-xs text-slate-400">{hatch.role}</p>
+                          <h3 className="text-white font-medium text-sm">{hatch.name}</h3>
+                          <p className="text-xs text-slate-400">{hatch.role}</p>
                         </div>
                       </div>
-                      <div className="space-y-2 mt-3 lg:mt-4">
-                        <div className="h-1 lg:h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
+                      <div className="space-y-2 mt-4">
+                        <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
                           <motion.div
                             className={`h-full bg-gradient-to-r ${hatch.color}`}
                             initial={{ width: "0%" }}
@@ -180,7 +185,7 @@ export default function LoginPage() {
                             transition={{ duration: 2, repeat: Infinity, repeatDelay: 1, ease: "easeInOut" }}
                           />
                         </div>
-                        <div className="h-1 lg:h-1.5 w-2/3 bg-white/10 rounded-full" />
+                        <div className="h-1.5 w-2/3 bg-white/10 rounded-full" />
                       </div>
                     </motion.div>
                   ))}
@@ -192,28 +197,28 @@ export default function LoginPage() {
             {activeSlide === 1 && (
               <motion.div
                 key="slide2"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.5 }}
-                className="w-full flex flex-col items-center absolute inset-0 pt-16 lg:pt-24 pointer-events-none"
+                initial={{ opacity: 0, y: 30, filter: "blur(4px)" }}
+                animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                exit={{ opacity: 0, y: -30, filter: "blur(4px)" }}
+                transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+                className="w-full flex flex-col items-center"
               >
-                <div className="mb-4 lg:mb-6 inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-400 font-medium text-xs lg:text-sm">
-                  <Code2 className="w-4 h-4" /> Full-Stack Engineering
+                <div className="mb-8 inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-400 font-medium text-sm tracking-wide uppercase shadow-[0_0_15px_rgba(168,85,247,0.15)]">
+                  <Code2 className="w-4 h-4" /> Bringing Visions to Life
                 </div>
-                <h2 className="text-3xl lg:text-4xl font-semibold text-white mb-3 lg:mb-4 tracking-tight text-center drop-shadow-md">
-                  Production-Ready <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">Code.</span>
+                <h2 className="text-4xl lg:text-5xl font-semibold text-white mb-6 tracking-tight text-center leading-tight">
+                  Dreams made <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-400 to-rose-400 drop-shadow-sm">Real.</span>
                 </h2>
-                <p className="text-base lg:text-lg text-slate-300 leading-relaxed text-center mb-10 max-w-sm">
-                  Sit back as Hatchin writes frontend components, database schemas, and robust backend logic.
+                <p className="text-lg lg:text-xl text-slate-400 leading-relaxed text-center mb-16 px-4 font-light max-w-sm">
+                  Your autonomous team takes your vision and transforms it into a living, breathing application.
                 </p>
 
                 {/* Code Animation Mock */}
-                <div className="relative w-full max-w-[320px] lg:max-w-[360px] h-[200px] lg:h-[240px] rounded-2xl border border-white/10 bg-[#0A0A0A]/90 backdrop-blur-md p-4 lg:p-5 shadow-2xl overflow-hidden font-mono text-xs lg:text-sm shadow-purple-500/10 text-left">
+                <div className="relative w-full max-w-[360px] h-[240px] rounded-2xl border border-white/10 bg-[#0A0A0A]/80 backdrop-blur-xl p-5 shadow-2xl overflow-hidden font-mono text-sm shadow-purple-500/10 text-left">
                   <div className="flex gap-2 mb-4">
-                    <div className="w-2.5 h-2.5 lg:w-3 lg:h-3 rounded-full bg-red-500/80"></div>
-                    <div className="w-2.5 h-2.5 lg:w-3 lg:h-3 rounded-full bg-yellow-500/80"></div>
-                    <div className="w-2.5 h-2.5 lg:w-3 lg:h-3 rounded-full bg-green-500/80"></div>
+                    <div className="w-3 h-3 rounded-full bg-red-500/80"></div>
+                    <div className="w-3 h-3 rounded-full bg-yellow-500/80"></div>
+                    <div className="w-3 h-3 rounded-full bg-green-500/80"></div>
                   </div>
                   <motion.div
                     initial={{ opacity: 0 }}
@@ -257,6 +262,12 @@ export default function LoginPage() {
                     transition={{ delay: 2.4 }}
                     className="text-pink-400"
                   >{"}"};</motion.div>
+
+                  <motion.div
+                    className="absolute bottom-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-purple-500 to-transparent"
+                    animate={{ x: ["-100%", "100%"] }}
+                    transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+                  />
                 </div>
               </motion.div>
             )}
@@ -265,36 +276,36 @@ export default function LoginPage() {
             {(activeSlide === 2 || activeSlide === 3 /* fallback */) && (
               <motion.div
                 key="slide3"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.5 }}
-                className="w-full flex flex-col items-center absolute inset-0 pt-16 lg:pt-24 pointer-events-none"
+                initial={{ opacity: 0, y: 30, filter: "blur(4px)" }}
+                animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                exit={{ opacity: 0, y: -30, filter: "blur(4px)" }}
+                transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+                className="w-full flex flex-col items-center"
               >
-                <div className="mb-4 lg:mb-6 inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-medium text-xs lg:text-sm">
-                  <Sparkles className="w-4 h-4" /> Continuous Improvement
+                <div className="mb-8 inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-medium text-sm tracking-wide uppercase shadow-[0_0_15px_rgba(16,185,129,0.15)]">
+                  <Sparkles className="w-4 h-4" /> Nurturing Your Dream
                 </div>
-                <h2 className="text-3xl lg:text-4xl font-semibold text-white mb-3 lg:mb-4 tracking-tight text-center drop-shadow-md">
-                  Always <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-400">Evolving.</span>
+                <h2 className="text-4xl lg:text-5xl font-semibold text-white mb-6 tracking-tight text-center leading-tight">
+                  Growing <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400 drop-shadow-sm">Together.</span>
                 </h2>
-                <p className="text-base lg:text-lg text-slate-300 leading-relaxed text-center mb-10 max-w-sm">
-                  Maintain persistent project memory so your AI colleagues learn your specific style and culture over time.
+                <p className="text-lg lg:text-xl text-slate-400 leading-relaxed text-center mb-16 px-4 font-light max-w-sm">
+                  Your AI colleagues relentlessly learn your style, culture, and goals to make your dream project absolutely perfect.
                 </p>
 
                 {/* Dashboard / Graph Mock */}
-                <div className="relative w-full max-w-[320px] lg:max-w-[360px] h-[200px] lg:h-[240px] rounded-2xl border border-white/10 bg-[#0A0A0A]/90 backdrop-blur-md p-4 lg:p-5 shadow-2xl flex flex-col justify-end overflow-hidden shadow-emerald-500/10">
-                  <div className="absolute top-4 lg:top-5 left-4 lg:left-5 right-4 lg:right-5 flex justify-between items-center mb-4 lg:mb-6">
+                <div className="relative w-full max-w-[360px] h-[240px] rounded-2xl border border-white/10 bg-[#0A0A0A]/80 backdrop-blur-xl p-5 shadow-2xl flex flex-col justify-end overflow-hidden shadow-emerald-500/10">
+                  <div className="absolute top-5 left-5 right-5 flex justify-between items-center mb-6">
                     <div className="space-y-1">
-                      <div className="text-[10px] lg:text-xs text-slate-400 font-medium tracking-wide">Project Velocity</div>
-                      <div className="text-xl lg:text-2xl font-semibold text-white">98.4%</div>
+                      <div className="text-xs text-slate-400 font-medium tracking-wide">Project Velocity</div>
+                      <div className="text-2xl font-semibold text-white">98.4%</div>
                     </div>
-                    <div className="px-2 py-1 rounded bg-emerald-500/20 text-emerald-400 text-[10px] lg:text-xs font-medium">
+                    <div className="px-2 py-1 rounded bg-emerald-500/20 text-emerald-400 text-xs font-medium">
                       +12% vs last hatch
                     </div>
                   </div>
 
                   {/* Animated Bars */}
-                  <div className="flex items-end justify-between gap-2 lg:gap-3 h-20 lg:h-24 w-full px-1 lg:px-2 z-10">
+                  <div className="flex items-end justify-between gap-3 h-24 w-full px-2">
                     {[40, 60, 45, 80, 65, 90, 100].map((height, i) => (
                       <motion.div
                         key={i}
@@ -311,13 +322,13 @@ export default function LoginPage() {
 
           </AnimatePresence>
 
-          {/* Carousel Indicators */}
-          <div className="absolute bottom-6 flex gap-3 z-30 pointer-events-auto">
+          {/* Carousel Indicators - Refined */}
+          <div className="absolute -bottom-2 flex gap-4">
             {[0, 1, 2].map((slide) => (
               <button
                 key={slide}
                 onClick={() => setActiveSlide(slide)}
-                className={`w-2 h-2 rounded-full transition-all duration-300 ${activeSlide === slide ? "bg-white w-8" : "bg-white/20 hover:bg-white/40"
+                className={`h-1.5 rounded-full transition-all duration-500 ease-out ${activeSlide === slide ? "bg-white/90 w-10 shadow-[0_0_10px_rgba(255,255,255,0.5)]" : "bg-white/20 hover:bg-white/40 w-2"
                   }`}
                 aria-label={`Go to slide ${slide + 1}`}
               />
