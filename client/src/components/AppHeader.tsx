@@ -7,7 +7,8 @@ export function AppHeader() {
         <img
           src="/logo.png"
           alt="Hatchin"
-          className="h-8 w-auto object-contain brightness-110 pointer-events-none"
+          className="h-8 w-auto object-contain pointer-events-none"
+          style={{ mixBlendMode: "screen" }}
         />
       </div>
 

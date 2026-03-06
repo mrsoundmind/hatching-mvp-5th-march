@@ -86,7 +86,8 @@ export default function LoginPage() {
             <img
               src="/logo.png"
               alt="Hatchin"
-              className="h-10 w-auto object-contain pointer-events-none brightness-110"
+              className="h-12 w-auto object-contain pointer-events-none"
+              style={{ mixBlendMode: "screen" }}
             />
           </div>
 

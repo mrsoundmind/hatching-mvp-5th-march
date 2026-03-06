@@ -29,7 +29,8 @@ export function WelcomeModal({ isOpen, onClose, onGetStarted }: WelcomeModalProp
             <img
               src="/logo.png"
               alt="Hatchin"
-              className="h-16 w-auto object-contain brightness-110 pointer-events-none"
+              className="h-16 w-auto object-contain pointer-events-none"
+              style={{ mixBlendMode: "screen" }}
             />
           </motion.div>
 

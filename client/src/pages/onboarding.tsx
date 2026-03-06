@@ -43,7 +43,8 @@ export default function OnboardingPage() {
                             <img
                                 src="/logo.png"
                                 alt="Hatchin"
-                                className="h-14 w-auto object-contain mx-auto mb-8 brightness-110 pointer-events-none"
+                                className="h-14 w-auto object-contain mx-auto mb-8 pointer-events-none"
+                                style={{ mixBlendMode: "screen" }}
                             />
                             <h1 className="text-3xl font-semibold text-white mb-4 text-center tracking-tight">
                                 Welcome to Hatchin<br />
