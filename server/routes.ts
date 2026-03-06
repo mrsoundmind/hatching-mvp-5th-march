@@ -404,8 +404,9 @@ export async function registerRoutes(app: Express, sessionParser?: SessionParser
         }
       }
 
-      // If this is an "idea" project, automatically set up Maya agent and brain
-      if (projectType === 'idea') {
+      // Unless this is a starter pack project, automatically set up Maya agent and brain
+      // This ensures no new projects start with 0 agents (which breaks the orchestrator)
+      if (!starterPackId || projectType === 'idea') {
         await storage.initializeIdeaProject(project.id);
       }
 
