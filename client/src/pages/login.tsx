@@ -61,17 +61,42 @@ export default function LoginPage() {
 
       {/* LEFT COLUMN: Authentication */}
       <section className="relative w-full lg:w-1/2 flex items-center justify-center p-8 sm:p-12 lg:p-16 z-10 min-h-[100dvh] lg:min-h-screen shrink-0 bg-[#030303] overflow-hidden">
-        {/* Animated Background Orbs */}
-        <div className="absolute inset-0 pointer-events-none">
+        {/* Intense Animated Framer-Style Background Glows */}
+        <div className="absolute inset-x-0 top-0 h-[80vh] pointer-events-none overflow-hidden flex justify-center opacity-80 mix-blend-screen">
           <motion.div
-            animate={{ scale: [1, 1.1, 1], opacity: [0.4, 0.6, 0.4] }}
-            transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute top-[-20%] left-[-10%] w-[50vw] h-[50vw] rounded-full bg-indigo-500/10 blur-[130px]"
+            animate={{
+              scale: [1, 1.2, 1],
+              opacity: [0.6, 0.8, 0.6],
+              rotate: [0, 90, 0]
+            }}
+            transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute top-[-20%] left-[10%] w-[60vw] h-[40vw] rounded-full blur-[120px]"
+            style={{
+              background: 'radial-gradient(circle, rgba(0,255,180,0.4) 0%, rgba(0,100,255,0.2) 50%, transparent 80%)'
+            }}
           />
           <motion.div
-            animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.5, 0.3] }}
-            transition={{ duration: 12, repeat: Infinity, ease: "easeInOut", delay: 2 }}
-            className="absolute bottom-[-10%] right-[-10%] w-[40vw] h-[40vw] rounded-full bg-purple-500/10 blur-[110px]"
+            animate={{
+              scale: [1, 1.1, 1],
+              opacity: [0.5, 0.7, 0.5],
+              rotate: [0, -60, 0]
+            }}
+            transition={{ duration: 18, repeat: Infinity, ease: "easeInOut", delay: 2 }}
+            className="absolute top-[10%] right-[10%] w-[50vw] h-[50vw] rounded-full blur-[140px]"
+            style={{
+              background: 'radial-gradient(circle, rgba(255,0,128,0.3) 0%, rgba(128,0,255,0.2) 50%, transparent 80%)'
+            }}
+          />
+          <motion.div
+            animate={{
+              scale: [1.1, 1, 1.1],
+              opacity: [0.4, 0.6, 0.4]
+            }}
+            transition={{ duration: 12, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+            className="absolute top-[30%] left-[30%] w-[40vw] h-[40vw] rounded-full blur-[100px]"
+            style={{
+              background: 'radial-gradient(circle, rgba(255,100,0,0.25) 0%, rgba(255,0,50,0.15) 50%, transparent 80%)'
+            }}
           />
         </div>
 
