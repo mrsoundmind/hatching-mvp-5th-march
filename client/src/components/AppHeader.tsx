@@ -3,18 +3,12 @@ import { ChevronDown } from "lucide-react";
 export function AppHeader() {
   return (
     <header className="h-16 hatchin-border border-b flex items-center justify-between px-6 hatchin-bg-dark">
-      <div className="flex items-center gap-4">
-        <div className="flex items-center gap-2">
-          <video
-            src="/logo.webm"
-            autoPlay
-            loop
-            muted
-            playsInline
-            className="w-8 h-8 object-contain object-left pointer-events-none"
-          />
-          <span className="font-semibold text-lg hatchin-text">Hatchin</span>
-        </div>
+      <div className="flex items-center">
+        <img
+          src="/logo.png"
+          alt="Hatchin"
+          className="h-8 w-auto object-contain brightness-110 pointer-events-none"
+        />
       </div>
 
       <div className="flex items-center gap-4">

@@ -40,13 +40,10 @@ export default function OnboardingPage() {
                         >
                             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-indigo-500" />
 
-                            <video
-                                src="/logo.webm"
-                                autoPlay
-                                loop
-                                muted
-                                playsInline
-                                className="w-20 h-20 object-contain mx-auto mb-8 pointer-events-none"
+                            <img
+                                src="/logo.png"
+                                alt="Hatchin"
+                                className="h-14 w-auto object-contain mx-auto mb-8 brightness-110 pointer-events-none"
                             />
                             <h1 className="text-3xl font-semibold text-white mb-4 text-center tracking-tight">
                                 Welcome to Hatchin<br />

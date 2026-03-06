@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { motion, AnimatePresence } from "framer-motion";
 import { FcGoogle } from "react-icons/fc";
-import { Hexagon, Sparkles, Code2, Users2 } from "lucide-react";
+import { Sparkles, Code2, Users2 } from "lucide-react";
 
 function sanitizeNextPath(value: string | null): string {
   if (!value) return "/";
@@ -81,17 +81,13 @@ export default function LoginPage() {
           transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
           className="w-full max-w-[420px] relative z-10"
         >
-          {/* Enhanced Hatchin Logo using WebM */}
-          <div className="flex items-center gap-3 mb-12">
-            <video
-              src="/logo.webm"
-              autoPlay
-              loop
-              muted
-              playsInline
-              className="w-10 h-10 object-contain object-left pointer-events-none"
+          {/* Hatchin Logo */}
+          <div className="mb-12">
+            <img
+              src="/logo.png"
+              alt="Hatchin"
+              className="h-10 w-auto object-contain pointer-events-none brightness-110"
             />
-            <span className="text-2xl font-semibold tracking-tight text-white drop-shadow-sm">Hatchin</span>
           </div>
 
           <div className="mb-8">

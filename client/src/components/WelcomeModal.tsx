@@ -24,15 +24,12 @@ export function WelcomeModal({ isOpen, onClose, onGetStarted }: WelcomeModalProp
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ duration: 0.6 }}
-            className="relative w-32 h-32 mx-auto flex items-center justify-center"
+            className="mx-auto mb-2 flex items-center justify-center"
           >
-            <video
-              src="/logo.webm"
-              autoPlay
-              loop
-              muted
-              playsInline
-              className="w-full h-full object-contain pointer-events-none"
+            <img
+              src="/logo.png"
+              alt="Hatchin"
+              className="h-16 w-auto object-contain brightness-110 pointer-events-none"
             />
           </motion.div>
 
