@@ -14,6 +14,8 @@ const devLog = (...args: any[]) => {
   }
 };
 import { OpenAIConfigurationError, generateIntelligentResponse, generateStreamingResponse } from "./ai/openaiService.js";
+import { parseAction, stripActionBlocks, detectUserPermission } from "./ai/actionParser.js";
+import { resolveMentionedAgent } from "./ai/mentionParser.js";
 import { applyTeammateToneGuard } from "./ai/responsePostProcessing.js";
 import { personalityEngine } from "./ai/personalityEvolution.js";
 import { trainingSystem } from "./ai/trainingSystem.js";
@@ -2355,9 +2357,27 @@ export async function registerRoutes(app: Express, sessionParser?: SessionParser
         // Extract addressedAgentId from userMessage metadata if present
         const addressedAgentId = (userMessage as any).addressedAgentId || (userMessage as any).metadata?.addressedAgentId;
 
+        // 🆕 Feature 4: @Mention & Role Reference Resolution
+        // Check if the user's message contains an @mention or role reference to a specific Hatch.
+        // This overrides all other routing if a valid match is found.
+        let mentionResolvedAgentId: string | null = null;
+        try {
+          const mentionResult = resolveMentionedAgent(
+            userMessage.content || '',
+            availableAgents.map(a => ({ id: a.id, name: a.name, role: a.role }))
+          );
+          if (mentionResult.matchType !== 'none' && mentionResult.mentionedAgentId) {
+            mentionResolvedAgentId = mentionResult.mentionedAgentId;
+            devLog(`🎯 [MentionParser] Resolved @mention to agent: ${mentionResult.mentionedName} (${mentionResult.matchType})`);
+          }
+        } catch (mentionError: any) {
+          console.warn('[MentionParser] Error resolving mention:', mentionError.message);
+        }
+
         try {
           // Phase 1.2: Use addressedAgentId from validated envelope (not from raw casting)
-          const envelopeAddressedAgentId = addressedAgentId ||
+          // Mention-resolved ID takes precedence over envelope addressedAgentId
+          const envelopeAddressedAgentId = mentionResolvedAgentId || addressedAgentId ||
             (userMessage as any).addressedAgentId ||
             (userMessage as any).metadata?.addressedAgentId;
 
@@ -2687,7 +2707,139 @@ export async function registerRoutes(app: Express, sessionParser?: SessionParser
           }
         }
 
-        // Persistence invariant: Always persist agent message, even if empty or fallback
+        // ─── 🆕 CHAT ACTION PROCESSING ──────────────────────────────────────────
+        // After the full response is accumulated, check if the agent embedded
+        // an action block (HATCH_SUGGESTION, TASK_SUGGESTION, BRAIN_UPDATE).
+        // Strip the block from the displayed text and handle the action if user
+        // has granted permission in this turn.
+        if (!abortController.signal.aborted && accumulatedContent) {
+          const parsedAction = parseAction(accumulatedContent);
+          if (parsedAction) {
+            // Always strip action blocks from what the user sees
+            accumulatedContent = stripActionBlocks(accumulatedContent);
+            devLog(`[ActionParser] Detected action: ${parsedAction.type}`);
+
+            // Check if this turn is the user granting permission for a pending action
+            const userPermission = detectUserPermission(userMessage.content || '');
+            devLog(`[ActionParser] User permission: ${userPermission}`);
+
+            if (userPermission === 'granted') {
+              try {
+                // ── HATCH_SUGGESTION: Auto-create teams + agents ──────────────
+                if (parsedAction.type === 'HATCH_SUGGESTION') {
+                  const suggestionPayload = parsedAction.payload as any;
+                  const createdTeams: any[] = [];
+                  const createdAgents: any[] = [];
+
+                  for (const teamDef of (suggestionPayload.teams || [])) {
+                    try {
+                      const newTeam = await storage.createTeam({
+                        name: teamDef.name,
+                        emoji: teamDef.emoji || '⭐',
+                        projectId,
+                        userId: (ws as any).__userId!,
+                      } as any);
+                      createdTeams.push(newTeam);
+
+                      for (const agentDef of (teamDef.agents || [])) {
+                        const newAgent = await storage.createAgent({
+                          name: agentDef.name,
+                          role: agentDef.role,
+                          color: agentDef.color || 'blue',
+                          teamId: newTeam.id,
+                          projectId,
+                          userId: (ws as any).__userId!,
+                          personality: {
+                            traits: [],
+                            communicationStyle: `${agentDef.role} with deep expertise in their domain`,
+                            expertise: [agentDef.role],
+                            welcomeMessage: `Hi! I'm ${agentDef.name}, your ${agentDef.role}. Ready to help make this project a success!`,
+                          },
+                          isSpecialAgent: false,
+                        } as any);
+                        createdAgents.push(newAgent);
+                      }
+                    } catch (teamErr: any) {
+                      console.error('[ActionParser] Error creating team:', teamErr.message);
+                    }
+                  }
+
+                  // Notify frontend to refresh sidebar
+                  if (createdTeams.length > 0) {
+                    ws.send(JSON.stringify({
+                      type: 'teams_auto_hatched',
+                      projectId,
+                      teams: createdTeams,
+                      agents: createdAgents,
+                    }));
+                    devLog(`✨ [AutoHatch] Created ${createdTeams.length} team(s) and ${createdAgents.length} agent(s)`);
+                  }
+                }
+
+                // ── TASK_SUGGESTION: Create task in project task list ─────────
+                if (parsedAction.type === 'TASK_SUGGESTION') {
+                  const taskPayload = parsedAction.payload as any;
+                  try {
+                    const newTask = await storage.createTask({
+                      title: taskPayload.title,
+                      description: `Created from chat by ${respondingAgent?.name || 'Hatch'}`,
+                      status: 'todo',
+                      priority: taskPayload.priority || 'medium',
+                      projectId,
+                      userId: (ws as any).__userId!,
+                      agentId: respondingAgent?.id || null,
+                      dueDate: null,
+                      completedAt: null,
+                    } as any);
+
+                    ws.send(JSON.stringify({
+                      type: 'task_created_from_chat',
+                      projectId,
+                      task: newTask,
+                    }));
+                    devLog(`✅ [ActionParser] Task created from chat: ${taskPayload.title}`);
+                  } catch (taskErr: any) {
+                    console.error('[ActionParser] Error creating task:', taskErr.message);
+                  }
+                }
+
+                // ── BRAIN_UPDATE: Update project brain field ──────────────────
+                if (parsedAction.type === 'BRAIN_UPDATE') {
+                  const brainPayload = parsedAction.payload as any;
+                  try {
+                    const currentProject = await storage.getProject(projectId);
+                    if (currentProject) {
+                      const currentBrain = (currentProject.brain as any) || {};
+                      const updatedBrain = {
+                        ...currentBrain,
+                        [brainPayload.field]: brainPayload.value,
+                        lastUpdatedAt: new Date().toISOString(),
+                        lastUpdatedBy: respondingAgent?.name || 'Hatch',
+                      };
+                      await storage.updateProject(projectId, { brain: updatedBrain });
+
+                      ws.send(JSON.stringify({
+                        type: 'brain_updated_from_chat',
+                        projectId,
+                        field: brainPayload.field,
+                        value: brainPayload.value,
+                        updatedBy: respondingAgent?.name || 'Hatch',
+                      }));
+                      devLog(`🧠 [ActionParser] Project Brain updated: ${brainPayload.field}`);
+                    }
+                  } catch (brainErr: any) {
+                    console.error('[ActionParser] Error updating brain:', brainErr.message);
+                  }
+                }
+              } catch (actionErr: any) {
+                console.error('[ActionParser] Error executing action:', actionErr.message);
+              }
+            }
+          }
+        }
+        // ─── END CHAT ACTION PROCESSING ─────────────────────────────────────────
+
+
         // This ensures symmetric persistence: user messages are always saved, agent messages must be too
         if (!abortController.signal.aborted) {
           const runtimeNow = getCurrentRuntimeConfig();

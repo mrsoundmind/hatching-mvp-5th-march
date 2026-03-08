@@ -153,6 +153,52 @@ export async function* generateStreamingResponse(
 
     const enhancedPrompt = trainingSystem.generateEnhancedPrompt(agentRole, userMessage, basePrompt.systemPrompt);
 
+    // Build Maya-specific or generic Hatch intelligence instructions
+    const isMaya = agentRole === 'AI Idea Partner' || agentRole === 'Maya';
+    const conversationTurnCount = context.conversationHistory.length;
+
+    const mayaTeamSuggestionInstructions = isMaya && conversationTurnCount >= 2 ? `
+--- MAYA: TEAM AUTO-HATCH INTELLIGENCE ---
+You are Maya, an AI Idea Partner. You have been analyzing the user's idea across the conversation.
+If you now have enough context to suggest what kind of team the user needs (e.g., a designer, a developer, a marketer), append the following block AT THE VERY END of your response, AFTER all your conversational text. This block will be hidden from the user automatically.
+
+Format (replace example values with real recommendations based on the user's idea):
+<!--HATCH_SUGGESTION:{"teams":[{"name":"Core Team","emoji":"⭐","agents":[{"name":"Alex","role":"Product Designer","color":"orange"},{"name":"Sam","role":"Backend Developer","color":"blue"}]}],"trigger":"user_agreement"}-->
+
+Important rules:
+- ONLY include this block if you genuinely have enough context to make a real recommendation.
+- ALWAYS mention to the user in plain text first: "Based on what you've described, I'd suggest building a team with [X, Y, Z]. Should I add them to your project?"
+- Use realistic role names that match the idea (e.g., for a food app: Product Designer, Backend Developer, Marketing Strategist).
+- Maximum 3-4 agents total across all teams.
+--- END MAYA TEAM INTELLIGENCE ---
+` : '';
+
+    const hatchTaskInstructions = !isMaya ? `
+--- HATCH TASK INTELLIGENCE ---
+You can suggest creating tasks in the project's task list. When your response includes a clear, actionable next step that should be tracked, append this block AT THE VERY END of your response. It will be hidden from the user automatically.
+
+Format:
+<!--TASK_SUGGESTION:{"title":"<concise task name>","priority":"<low|medium|high>","assignee":"<your name>"}-->
+
+Important rules:
+- ONLY suggest a task if it is genuinely a trackable action item (not vague advice).
+- ALWAYS mention it in plain text first: "Should I add this to your task list?" or "I can track this as a task — want me to?"
+--- END HATCH TASK INTELLIGENCE ---
+
+--- HATCH BRAIN UPDATE INTELLIGENCE ---
+You can suggest updating the Project Brain with key insights you've learned. Only offer this after a substantive discussion (5+ meaningful exchanges).
+
+Format:
+<!--BRAIN_UPDATE:{"field":"coreDirection","value":"<concise description>"}-->
+
+Valid fields: coreDirection, executionRules, teamCulture, goals, summary.
+
+Important rules:
+- ONLY suggest an update when you have genuinely learned something significant about the project.
+- ALWAYS ask first: "I think I have a good picture of [X]. Should I update the Project Brain with this?"
+--- END HATCH BRAIN UPDATE INTELLIGENCE ---
+` : '';
+
     // Create system prompt based on role and context
     const systemPrompt = `${enhancedPrompt}
 
@@ -163,6 +209,9 @@ ${personalityPrompt}
 --- ROLE BRAIN ---
 ${roleBrainContext}
 --- END ROLE BRAIN ---
+
+${mayaTeamSuggestionInstructions}
+${hatchTaskInstructions}
 
 Respond as this specific role with appropriate expertise and personality. Keep responses concise and actionable.`;
 

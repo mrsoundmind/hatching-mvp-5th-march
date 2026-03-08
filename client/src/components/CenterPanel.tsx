@@ -5,7 +5,7 @@ import { useWebSocket, getWebSocketUrl, getConnectionStatusConfig } from '@/lib/
 import { MessageBubble } from './MessageBubble';
 import { MessageSkeleton } from './MessageSkeleton';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { apiRequest } from '@/lib/queryClient';
+import { apiRequest, queryClient } from '@/lib/queryClient';
 import { AddHatchModal } from './AddHatchModal';
 import { TaskApprovalModal } from './TaskApprovalModal';
 import { buildConversationId } from '@/lib/conversationId';
@@ -976,6 +976,58 @@ export function CenterPanel({
         console.warn('Failed to dispatch tasks_updated');
       }
     }
+    // ─── 🆕 Chat Intelligence Events ─────────────────────────────────────────
+    else if (message.type === 'teams_auto_hatched') {
+      devLog('✨ [AutoHatch] Teams created from chat:', message.teams, message.agents);
+      // Refresh teams and agents in the sidebar
+      queryClient.invalidateQueries({ queryKey: ['/api/teams'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/agents'] });
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${message.projectId}/agents`] });
+      // Dispatch event to show animated notification
+      try {
+        window.dispatchEvent(new CustomEvent('teams_auto_hatched', {
+          detail: {
+            teams: message.teams,
+            agents: message.agents,
+            projectId: message.projectId,
+          }
+        }));
+      } catch (e) {
+        console.warn('Failed to dispatch teams_auto_hatched event');
+      }
+    }
+    else if (message.type === 'task_created_from_chat') {
+      devLog('✅ [ChatIntelligence] Task created from chat:', message.task);
+      // Refresh tasks in the right sidebar
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${message.projectId}/tasks`] });
+      queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
+      try {
+        window.dispatchEvent(new CustomEvent('task_created_from_chat', {
+          detail: { task: message.task, projectId: message.projectId }
+        }));
+      } catch (e) {
+        console.warn('Failed to dispatch task_created_from_chat event');
+      }
+    }
+    else if (message.type === 'brain_updated_from_chat') {
+      devLog('🧠 [ChatIntelligence] Project Brain updated from chat:', message.field, message.value);
+      // Refresh project data in the right sidebar overview
+      queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${message.projectId}`] });
+      try {
+        window.dispatchEvent(new CustomEvent('brain_updated_from_chat', {
+          detail: {
+            field: message.field,
+            value: message.value,
+            updatedBy: message.updatedBy,
+            projectId: message.projectId,
+          }
+        }));
+      } catch (e) {
+        console.warn('Failed to dispatch brain_updated_from_chat event');
+      }
+    }
+    // ─── END Chat Intelligence Events ────────────────────────────────────────
   };
 
   // === SUBTASK 3.1.4: Message Persistence Integration ===
@@ -2140,28 +2192,28 @@ export function CenterPanel({
                   // Hide banner if a placeholder exists OR a placeholder is about to be created (streamingMessageId already set)
                   return isStreaming && streamingAgent && !hasStreamingPlaceholder && !streamingMessageId.current && !isThinking;
                 })() && (
-                  <div className="flex justify-start">
-                    <div className="flex items-start gap-3 max-w-[85%]">
-                      <div className="w-8 h-8 rounded-full bg-hatchin-text-muted flex items-center justify-center flex-shrink-0 mt-1">
-                        <span className="text-xs font-medium text-white">{streamingAgent?.charAt(0) || '?'}</span>
-                      </div>
-                      <div className="flex flex-col">
-                        <span className="text-sm font-medium hatchin-text mb-1">
-                          {streamingAgent}
-                        </span>
-                        <div className="bg-hatchin-colleague hatchin-text border hatchin-border rounded-2xl px-4 py-3 shadow-sm">
-                          <div className="flex items-center gap-1">
-                            <div className="flex gap-1">
-                              <div className="w-2 h-2 bg-hatchin-text-muted rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                              <div className="w-2 h-2 bg-hatchin-text-muted rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                              <div className="w-2 h-2 bg-hatchin-text-muted rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                    <div className="flex justify-start">
+                      <div className="flex items-start gap-3 max-w-[85%]">
+                        <div className="w-8 h-8 rounded-full bg-hatchin-text-muted flex items-center justify-center flex-shrink-0 mt-1">
+                          <span className="text-xs font-medium text-white">{streamingAgent?.charAt(0) || '?'}</span>
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-sm font-medium hatchin-text mb-1">
+                            {streamingAgent}
+                          </span>
+                          <div className="bg-hatchin-colleague hatchin-text border hatchin-border rounded-2xl px-4 py-3 shadow-sm">
+                            <div className="flex items-center gap-1">
+                              <div className="flex gap-1">
+                                <div className="w-2 h-2 bg-hatchin-text-muted rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                                <div className="w-2 h-2 bg-hatchin-text-muted rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                                <div className="w-2 h-2 bg-hatchin-text-muted rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                              </div>
                             </div>
                           </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
                 {/* Inline Task Approval UI */}
                 {suggestedTasks.length > 0 && taskSuggestionContext && (

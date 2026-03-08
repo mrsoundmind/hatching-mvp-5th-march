@@ -146,6 +146,25 @@ const requiredServerSchemas = z.union([
   z.object({
     type: z.literal('task_created'),
   }).passthrough(),
+  // 🆕 Chat Intelligence Events
+  z.object({
+    type: z.literal('teams_auto_hatched'),
+    projectId: z.string(),
+    teams: z.array(z.record(z.unknown())),
+    agents: z.array(z.record(z.unknown())),
+  }),
+  z.object({
+    type: z.literal('task_created_from_chat'),
+    projectId: z.string(),
+    task: z.record(z.unknown()),
+  }),
+  z.object({
+    type: z.literal('brain_updated_from_chat'),
+    projectId: z.string(),
+    field: z.string(),
+    value: z.string(),
+    updatedBy: z.string().optional(),
+  }),
 ]);
 
 export const wsServerMessageSchema = requiredServerSchemas;
