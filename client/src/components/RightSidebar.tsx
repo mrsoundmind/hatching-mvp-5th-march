@@ -99,7 +99,7 @@ export function RightSidebar({ activeProject, activeTeam, activeAgent }: RightSi
     setRecentlySaved,
   } = actions;
   const panelCardClass = "hatchin-bg-card rounded-xl border border-white/10 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]";
-  const asideClassName = `w-80 min-h-0 premium-column-bg rounded-2xl p-6 overflow-y-auto my-2.5 relative border border-white/5 shadow-[0_10px_30px_rgba(0,0,0,0.25)] right-sidebar-scroll ${isPanelScrolling ? 'is-scrolling' : ''}`;
+  const asideClassName = `w-80 min-h-0 premium-column-bg rounded-2xl p-6 overflow-y-auto hide-scrollbar my-2.5 relative border border-white/5 shadow-[0_10px_30px_rgba(0,0,0,0.25)] right-sidebar-scroll ${isPanelScrolling ? 'is-scrolling' : ''}`;
   const computedProgress = Math.min(100, Math.max(0, (activeProject?.progress || 0) + realTimeProgress));
   const agentHealthScore = Math.min(99, Math.max(45, 62 + realTimeMetrics.taskCompletions * 3 + Math.min(25, realTimeMetrics.messagesCount) * 0.3));
   const roleSummary = activeAgent?.role || activeTeam?.name || activeProject?.name || 'Project';

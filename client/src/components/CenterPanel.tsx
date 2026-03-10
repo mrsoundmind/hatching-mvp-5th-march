@@ -2133,7 +2133,7 @@ export function CenterPanel({
           (<>
             <div className="relative flex-1 min-h-0">
               {/* Messages Container */}
-              <div className="h-full overflow-y-auto p-6 space-y-4">
+              <div className="h-full overflow-y-auto hide-scrollbar p-6 space-y-4">
                 {messagesLoading && (
                   <div className="flex items-center justify-center py-4">
                     <div className="hatchin-text-muted text-sm">Loading conversation...</div>

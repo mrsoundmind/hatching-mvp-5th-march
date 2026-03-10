@@ -92,18 +92,7 @@ export default function Home() {
     return normalized;
   };
 
-  // Auto-expand all projects and teams when data loads
-  useEffect(() => {
-    if (projects.length > 0) {
-      setExpandedProjects(new Set(projects.map(p => p.id)));
-    }
-  }, [projects]);
 
-  useEffect(() => {
-    if (teams.length > 0) {
-      setExpandedTeams(new Set(teams.map(t => t.id)));
-    }
-  }, [teams]);
 
   // FIX 17: Auto-select first project if none is active
   useEffect(() => {
@@ -171,16 +160,14 @@ export default function Home() {
     }
   }, [activeProjectId, activeTeamId, activeAgentId, projects, teams, agents]);
 
-  // Toggle functions for expand/collapse
   const toggleProjectExpanded = (projectId: string) => {
     setExpandedProjects(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(projectId)) {
-        newSet.delete(projectId);
-      } else {
-        newSet.add(projectId);
+      // If we are already expanded, collapse it (empty set)
+      if (prev.has(projectId)) {
+        return new Set();
       }
-      return newSet;
+      // Otherwise, open this one and close all others
+      return new Set([projectId]);
     });
   };
 
@@ -216,6 +203,9 @@ export default function Home() {
     setActiveProjectId(normalizedProjectId);
     setActiveTeamId(null);
     setActiveAgentId(null);
+
+    // Auto-expand the selected project and close others
+    setExpandedProjects(new Set([normalizedProjectId]));
   };
 
   const handleSelectTeam = (teamId: string | null) => {
@@ -289,12 +279,8 @@ export default function Home() {
           selectionReason: 'newly_created_project'
         });
 
-        // Auto-expand the new project 
-        setExpandedProjects(prev => {
-          const newSet = new Set(prev);
-          newSet.add(newProject.id);
-          return newSet;
-        });
+        // Auto-expand the new project and close others
+        setExpandedProjects(new Set([newProject.id]));
 
         // Optimistically update the projects cache so the UI updates immediately
         queryClient.setQueryData(["/api/projects"], (oldData: any) => {
@@ -422,12 +408,8 @@ export default function Home() {
             selectionReason: 'egg_hatching_complete_project_scope'
           });
 
-          // Expand both project and core team to show Maya
-          setExpandedProjects(prev => {
-            const newSet = new Set(prev);
-            newSet.add(newProject.id);
-            return newSet;
-          });
+          // Expand only the new project and core team to show Maya
+          setExpandedProjects(new Set([newProject.id]));
 
           if (coreTeam) {
             setExpandedTeams(prev => {
@@ -517,20 +499,12 @@ export default function Home() {
             setActiveTeamId(null);
             setActiveAgentId(null);
 
-            // Auto-expand the new project and all its teams
-            setExpandedProjects(prev => {
-              const newSet = new Set(prev);
-              newSet.add(newProject.id);
-              return newSet;
-            });
+            // Auto-expand the new project and all its teams, closing others
+            setExpandedProjects(new Set([newProject.id]));
 
             // Get teams for this project and auto-expand them
             const teams = (await fetch(`/api/projects/${newProject.id}/teams`).then(res => res.json())) as Team[];
-            setExpandedTeams(prev => {
-              const newSet = new Set(prev);
-              teams.forEach(team => newSet.add(team.id));
-              return newSet;
-            });
+            setExpandedTeams(new Set(teams.map(t => t.id)));
           }
         }
 
@@ -566,14 +540,11 @@ export default function Home() {
 
         devLog('Agents data refreshed');
 
-        // Set the new agent as active and ensure its team is expanded
+        // Set the new agent as active and ensure its team and project are expanded
         setActiveAgentId(newAgent.id);
+        setExpandedProjects(new Set([newAgent.projectId]));
         if (newAgent.teamId) {
-          setExpandedTeams(prev => {
-            const newSet = new Set(prev);
-            newSet.add(newAgent.teamId);
-            return newSet;
-          });
+          setExpandedTeams(new Set([newAgent.teamId]));
         }
 
         // Return the created agent for undo functionality
@@ -602,6 +573,10 @@ export default function Home() {
       if (response.ok) {
         const newTeam = await response.json();
         devLog('Team created successfully:', newTeam);
+
+        // Auto-expand the project and team, closing others
+        setExpandedProjects(new Set([newTeam.projectId]));
+        setExpandedTeams(new Set([newTeam.id]));
 
         // Refresh data
         queryClient.invalidateQueries({ queryKey: ["/api/teams"] });

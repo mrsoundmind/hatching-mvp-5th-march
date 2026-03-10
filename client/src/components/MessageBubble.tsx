@@ -195,6 +195,18 @@ export function MessageBubble({
                 className={`p-3 rounded-lg ${getBubbleStyles().className} ${isAgent ? 'ai-bubble-border' : ''}`}
                 style={getBubbleStyles().style}
               >
+                {/* C1.1: Render reply context if exists */}
+                {(message.replyTo || message.metadata?.replyTo) && (
+                  <div className="mb-2 p-2 rounded bg-white/5 border-l-2 border-green-400/50 text-[11px] opacity-80 line-clamp-2">
+                    <div className="font-semibold text-green-400/90 mb-0.5">
+                      Replying to {(message.replyTo || message.metadata?.replyTo)?.senderName}
+                    </div>
+                    <div className="truncate italic">
+                      {(message.replyTo || message.metadata?.replyTo)?.content}
+                    </div>
+                  </div>
+                )}
+
                 {/* C4.3: Markdown support for message content */}
                 <div className="text-sm leading-relaxed">
                   {/* Show "Thinking..." when streaming with empty content */}
@@ -256,47 +268,6 @@ export function MessageBubble({
                       >
                         {safeContent}
                       </ReactMarkdown>
-                      {/* B1.2: Enhanced streaming indicator for AI messages */}
-                      {message.isStreaming && (
-                        <div className="inline-flex items-center ml-2 space-x-2">
-                          {/* Agent name typing indicator */}
-                          <span className="text-xs text-gray-400">
-                            {safeSenderName} is typing...
-                          </span>
-                          {/* Enhanced typing cursor with multiple dots */}
-                          <div className="flex items-center space-x-0.5">
-                            <motion.span
-                              className="w-1 h-4 bg-green-400 rounded-full"
-                              animate={{ opacity: [1, 0.3, 1] }}
-                              transition={{
-                                duration: 0.8,
-                                repeat: Infinity,
-                                ease: "easeInOut"
-                              }}
-                            />
-                            <motion.span
-                              className="w-1 h-4 bg-green-400 rounded-full"
-                              animate={{ opacity: [0.3, 1, 0.3] }}
-                              transition={{
-                                duration: 0.8,
-                                repeat: Infinity,
-                                ease: "easeInOut",
-                                delay: 0.2
-                              }}
-                            />
-                            <motion.span
-                              className="w-1 h-4 bg-green-400 rounded-full"
-                              animate={{ opacity: [0.3, 1, 0.3] }}
-                              transition={{
-                                duration: 0.8,
-                                repeat: Infinity,
-                                ease: "easeInOut",
-                                delay: 0.4
-                              }}
-                            />
-                          </div>
-                        </div>
-                      )}
                     </>
                   )}
                 </div>

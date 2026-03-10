@@ -8,7 +8,7 @@ import type {
     ProviderHealth,
 } from '../providerTypes.js';
 
-const DEFAULT_MODEL = 'gemini-1.5-flash';
+const DEFAULT_MODEL = 'gemini-2.5-flash';
 
 function buildClient(): GoogleGenerativeAI {
     const apiKey = process.env.GEMINI_API_KEY?.trim();

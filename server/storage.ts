@@ -574,37 +574,7 @@ export class MemStorage implements IStorage {
     const project = this.projects.get(projectId);
     if (!project) return;
 
-    // Create "Core Team" for the project
-    const coreTeam: Team = {
-      id: randomUUID(),
-      userId: project.userId,
-      name: "Core Team",
-      emoji: "⭐",
-      projectId: projectId,
-      isExpanded: true,
-    };
-    this.teams.set(coreTeam.id, coreTeam);
-
-    // Create Maya agent
-    const mayaAgent: Agent = {
-      id: randomUUID(),
-      userId: project.userId,
-      name: "Maya",
-      role: "AI Idea Partner",
-      color: "purple",
-      teamId: coreTeam.id,
-      projectId: projectId,
-      personality: {
-        traits: ["Creative", "Analytical", "Encouraging"],
-        communicationStyle: "Friendly and insightful, helps turn ideas into actionable plans",
-        expertise: ["Idea Development", "Strategic Thinking", "Project Planning"],
-        welcomeMessage: "Hi! I'm Maya, your AI idea partner. I'm here to help you explore, develop, and turn your idea into something amazing. What's on your mind?"
-      },
-      isSpecialAgent: true,
-    };
-    this.agents.set(mayaAgent.id, mayaAgent);
-
-    // Initialize project brain with Idea Development document
+    // Initialize project brain
     if (project) {
       const updatedProject = {
         ...project,
@@ -612,11 +582,11 @@ export class MemStorage implements IStorage {
           documents: [{
             id: randomUUID(),
             title: "Idea Development",
-            content: "This is where we'll capture and develop your core idea. Maya will help you refine your concept, identify key features, and create a roadmap for success.",
+            content: "This is where we'll capture and develop your core idea. You can add a Product Manager to help you refine your concept, identify key features, and create a roadmap for success.",
             type: "idea-development" as const,
             createdAt: new Date().toISOString()
           }],
-          sharedMemory: "Project initialized for idea development with Maya as the AI partner."
+          sharedMemory: "Project initialized for idea development."
         }
       };
       this.projects.set(projectId, updatedProject);
@@ -1353,8 +1323,7 @@ export class DatabaseStorage implements IStorage {
   async initializeIdeaProject(projectId: string): Promise<void> {
     const project = await this.getProject(projectId);
     if (!project) return;
-    const [team] = await db.insert(schema.teams).values({ userId: project.userId, name: 'Core Team', emoji: '⭐', projectId, isExpanded: true }).returning();
-    await db.insert(schema.agents).values({ userId: project.userId, name: 'Maya', role: 'AI Idea Partner', color: 'purple', teamId: team.id, projectId, isSpecialAgent: true, personality: { traits: ['Creative', 'Analytical', 'Encouraging'], communicationStyle: 'Friendly and insightful, helps turn ideas into actionable plans', expertise: ['Idea Development', 'Strategic Thinking', 'Project Planning'], welcomeMessage: "Hi! I'm Maya, your AI idea partner. What's on your mind?" } });
+    // Maya is NOT added automatically anymore. The project starts empty.
   }
   async initializeStarterPackProject(projectId: string, starterPackId: string): Promise<void> {
     // Delegate to in-memory logic then persist — use MemStorage helper pattern

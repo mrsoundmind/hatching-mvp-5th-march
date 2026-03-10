@@ -173,24 +173,30 @@ export async function registerRoutes(app: Express, sessionParser?: SessionParser
   function buildServiceFallbackMessage(params: {
     mode: "project" | "team" | "agent";
     agentName?: string;
+    agentRole?: string;
     userMessage: string;
     errorCode: string;
   }): string {
-    const speaker = params.agentName || "Project Manager";
-    const cleanedInput = (params.userMessage || "").replace(/\s+/g, " ").trim();
-    const shortInput = cleanedInput.length > 100 ? `${cleanedInput.slice(0, 100).trimEnd()}...` : cleanedInput;
+    const defaultRole = "Product Manager";
+    const roleFallback = params.agentRole && params.agentRole.trim() !== "" ? params.agentRole : defaultRole;
 
-    if (params.mode === "agent") {
-      return `${speaker} here. I’m still with you, but I hit a temporary capacity spike. Share the exact outcome + deadline you want from this role, and I’ll return a concrete execution checklist.`;
-    }
+    // Check if the role is a generic term (like "AI Agent") or specific.
+    const displayRole = roleFallback;
+
+    const fallbacks = [
+      `Hey there! Your ${displayRole} is currently out for lunch. 🥪 I'll be back in just a few to respond to your message!`,
+      `Looks like your ${displayRole} took a quick break to stretch their digital legs and go for a walk. 🚶‍♂️ Give me a minute and I'll be right back with you!`,
+      `Quick heads up — your ${displayRole} is resting their circuits for a minute. 🔋 I'll review "${params.userMessage.slice(0, 20)}..." as soon as I'm back online!`,
+      `Your ${displayRole} is currently having a little 'think session' over coffee. ☕ I'll be back awake and ready to dive in in just a few seconds.`
+    ];
+
+    const randomFallback = fallbacks[Math.floor(Math.random() * fallbacks.length)];
 
     if (params.mode === "team") {
-      return `Team lead update: I’m still on this, but there’s a temporary response delay. To keep momentum, send the team’s top objective, main blocker, and deadline. I’ll turn that into an owner-wise action plan.`;
+      return `Team update: Your lead is taking a quick breather. 🌿 We're almost ready to keep going, just give us a minute to sync back up!`;
     }
 
-    return shortInput
-      ? `Got it on "${shortInput}". I’m still on this, but there’s a temporary response delay. Send your top priority and one hard constraint (time, budget, or scope), and I’ll map the fastest execution plan.`
-      : `I’m still on this, but there’s a temporary response delay. Send your top priority and one hard constraint (time, budget, or scope), and I’ll map the fastest execution plan.`;
+    return randomFallback;
   }
 
   function deriveProjectBrainPatch(params: {
@@ -3015,7 +3021,7 @@ export async function registerRoutes(app: Express, sessionParser?: SessionParser
             }
           }
 
-          const toneGuard = applyTeammateToneGuard(accumulatedContent || "");
+          const toneGuard = applyTeammateToneGuard(accumulatedContent || "", userMessage?.content || "");
           if (toneGuard.changed) {
             accumulatedContent = toneGuard.content;
             ws.send(JSON.stringify({
@@ -3042,6 +3048,31 @@ export async function registerRoutes(app: Express, sessionParser?: SessionParser
               },
             });
           }
+
+          // ─── START PROJECT NAME AUTO-UPDATE DETECTION ──────────────────────────
+          // Look for [[PROJECT_NAME: Your Confirmed Name]] in Maya's response
+          const projectNameRegex = /\[\[PROJECT_NAME:\s*(.+?)\]\]/i;
+          const match = accumulatedContent.match(projectNameRegex);
+          if (match && match[1]) {
+            const newProjectName = match[1].trim();
+            try {
+              await storage.updateProject(projectId, { name: newProjectName });
+              // Strip the tag from the content shown to the user for a cleaner feel
+              accumulatedContent = accumulatedContent.replace(projectNameRegex, '').trim();
+
+              // Notify all clients of the project update
+              ws.send(JSON.stringify({
+                type: 'project_updated',
+                projectId,
+                name: newProjectName,
+                updatedBy: respondingAgent?.name || 'Maya'
+              }));
+              devLog(`🏷️ [PM] Project auto-renamed to: ${newProjectName}`);
+            } catch (err: any) {
+              console.error('Error auto-renaming project:', err.message);
+            }
+          }
+          // ─── END PROJECT NAME AUTO-UPDATE DETECTION ────────────────────────────
 
           // Save complete response to storage
           // Note: accumulatedContent may be empty or a fallback message, but it must be persisted
@@ -3469,14 +3500,6 @@ export async function registerRoutes(app: Express, sessionParser?: SessionParser
       console.error('❌ Streaming response error:', error);
       const payload = getStreamingErrorPayload(error);
       try {
-        const runtimeNow = getCurrentRuntimeConfig();
-        const fallbackContent = buildServiceFallbackMessage({
-          mode: resolvedMode,
-          agentName: fallbackResponder?.name,
-          userMessage: userMessage?.content || "",
-          errorCode: payload.code,
-        });
-
         let effectiveAgent = fallbackResponder;
         if ((!effectiveAgent || effectiveAgent.id === "system") && resolvedProjectId) {
           const projectAgents = await storage.getAgentsByProject(resolvedProjectId);
@@ -3491,6 +3514,15 @@ export async function registerRoutes(app: Express, sessionParser?: SessionParser
             };
           }
         }
+
+        const runtimeNow = getCurrentRuntimeConfig();
+        const fallbackContent = buildServiceFallbackMessage({
+          mode: resolvedMode,
+          agentName: effectiveAgent?.name,
+          agentRole: effectiveAgent?.role,
+          userMessage: userMessage?.content || "",
+          errorCode: payload.code,
+        });
 
         if (!hasStreamingStarted) {
           ws.send(JSON.stringify({

@@ -61,7 +61,7 @@ export function resolveRuntimeConfig(env = process.env): RuntimeConfig {
       return {
         mode,
         provider: 'gemini',
-        model: env.GEMINI_MODEL || 'gemini-1.5-flash',
+        model: env.GEMINI_MODEL || 'gemini-2.5-flash',
       };
     }
     return {
@@ -79,7 +79,7 @@ export function resolveRuntimeConfig(env = process.env): RuntimeConfig {
         mode,
         provider: 'gemini',
         testProvider: 'openai',
-        model: env.GEMINI_MODEL || 'gemini-1.5-flash',
+        model: env.GEMINI_MODEL || 'gemini-2.5-flash',
       };
     }
     return {
@@ -182,7 +182,7 @@ function applyModelDefaults(request: LLMRequest, config: RuntimeConfig, provider
   }
 
   if (provider === 'gemini') {
-    return { ...request, model: process.env.GEMINI_MODEL || config.model || 'gemini-1.5-flash' };
+    return { ...request, model: process.env.GEMINI_MODEL || config.model || 'gemini-2.5-flash' };
   }
 
   if (provider === 'openai') {
@@ -387,7 +387,7 @@ export async function getProviderHealthSummary(): Promise<Record<ProviderId, Pro
 
   const [openai, gemini, ollama, mock] = await Promise.all([
     openaiProvider.healthCheck?.(process.env.OPENAI_MODEL || 'gpt-4o-mini') || Promise.resolve({ status: 'down', details: 'Unavailable' } as ProviderHealth),
-    geminiProvider.healthCheck?.(process.env.GEMINI_MODEL || 'gemini-1.5-flash') || Promise.resolve({ status: 'down', details: 'Unavailable' } as ProviderHealth),
+    geminiProvider.healthCheck?.(process.env.GEMINI_MODEL || 'gemini-2.5-flash') || Promise.resolve({ status: 'down', details: 'Unavailable' } as ProviderHealth),
     ollamaProvider.healthCheck?.(process.env.TEST_OLLAMA_MODEL || 'llama3.1:8b') || Promise.resolve({ status: 'down', details: 'Unavailable' } as ProviderHealth),
     mockProvider.healthCheck?.() || Promise.resolve({ status: 'ok', details: 'Deterministic mock available' } as ProviderHealth),
   ]);

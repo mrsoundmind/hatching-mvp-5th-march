@@ -570,7 +570,7 @@ export function LeftSidebar({
           onWheel={showProjectScrollbarTemporarily}
           onTouchMove={showProjectScrollbarTemporarily}
           onMouseLeave={handleProjectListMouseLeave}
-          className={`flex-1 min-h-0 overflow-y-auto overflow-x-hidden pr-1 left-sidebar-scroll ${isProjectListScrolling ? 'is-scrolling' : ''}`}
+          className={`flex-1 min-h-0 overflow-y-auto overflow-x-hidden hide-scrollbar pr-1 left-sidebar-scroll ${isProjectListScrolling ? 'is-scrolling' : ''}`}
         >
           {filteredProjects.length > 0 ? (
             <ProjectTree
