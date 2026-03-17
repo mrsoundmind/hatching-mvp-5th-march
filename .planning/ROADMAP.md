@@ -75,6 +75,14 @@ When the conductor routes a message from Alex to Dev, the user just sees Dev res
 
 **Requirements:** UX-01, UX-02, UX-03, UX-04, UX-05, UX-06, UX-07, UX-08, DATA-04
 
+**Plans:** 4 plans
+
+Plans:
+- [ ] 02-01-PLAN.md — Fix `/` routing (LandingPage for logged-out) + home.tsx modal calls handleCreateIdeaProject
+- [ ] 02-02-PLAN.md — Fix team accordion (Set.replace not Set.add) + clear typingColleagues on streaming_started
+- [ ] 02-03-PLAN.md — Server-side agentRole backfill in GET messages route (batched, read-time enrichment)
+- [ ] 02-04-PLAN.md — Fix activeProjectAgents in backfill useEffect dep array + human verification checkpoint
+
 **Success Criteria:**
 1. Click "Create Project" in the modal with a name → project is created, selected, and chat is ready — button does not silently fail
 2. Visit `/` when logged out → LandingPage renders with Hatchin's value proposition
