@@ -157,10 +157,6 @@
     border: 1px solid hsla(264, 68%, 60%, 0.3) !important;
   }
 
-  .hatchin-bg-orange {
-    background-color: var(--hatchin-orange);
-  }
-
   /* Color dots for agents */
   .agent-dot-orange {
     background-color: var(--hatchin-orange);
@@ -181,12 +177,35 @@
 
 /* Hide scrollbar but keep functionality */
 .hide-scrollbar {
-  -ms-overflow-style: none;  /* IE and Edge */
-  scrollbar-width: none;  /* Firefox */
+  -ms-overflow-style: none;
+  /* IE and Edge */
+  scrollbar-width: none;
+  /* Firefox */
 }
 
 .hide-scrollbar::-webkit-scrollbar {
-  display: none; /* Chrome, Safari and Opera */
+  display: none;
+  /* Chrome, Safari and Opera */
+}
+
+/* Premium Thin Scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(108, 130, 255, 0.2);
+  border-radius: 10px;
+  transition: background 0.3s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(108, 130, 255, 0.4);
 }
 
 /* ============================================================
@@ -366,4 +385,86 @@
   background: rgba(255, 255, 255, 0.05);
   border-color: rgba(255, 255, 255, 0.12);
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+}
+
+/* =====================================================
+   Task 11: Premium focus ring, active sidebar accent
+   ===================================================== */
+*:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(108, 130, 255, 0.45);
+  border-radius: 6px;
+}
+
+/* Active item left accent in sidebar — applied via JS class */
+.sidebar-active-item {
+  position: relative;
+}
+
+.sidebar-active-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 20%;
+  height: 60%;
+  width: 2px;
+  background: var(--hatchin-blue, #6C82FF);
+  border-radius: 0 2px 2px 0;
+}
+
+/* =====================================================
+   Task 14: AI Sync micro-animations (Show, Don't Tell)
+   ===================================================== */
+
+/* 14a — Brain icon pulse when syncing */
+@keyframes brain-glow-pulse {
+
+  0%,
+  100% {
+    box-shadow: 0 0 0 0px rgba(108, 130, 255, 0);
+  }
+
+  50% {
+    box-shadow: 0 0 12px 6px rgba(108, 130, 255, 0.5);
+  }
+}
+
+.brain-glow {
+  animation: brain-glow-pulse 2s ease-in-out infinite;
+  border-radius: 50%;
+}
+
+/* 14b — Chat input edge glow while AI is thinking / streaming */
+@keyframes ai-thinking-ring {
+
+  0%,
+  100% {
+    box-shadow: 0 0 0 0px rgba(108, 130, 255, 0);
+  }
+
+  50% {
+    box-shadow: 0 0 15px 4px rgba(108, 130, 255, 0.6);
+  }
+}
+
+.ai-thinking-ring {
+  animation: ai-thinking-ring 2s ease-in-out infinite;
+  border-radius: 10px;
+}
+
+/* 14c — One-shot green flash on save */
+@keyframes flash-save-border {
+  0% {
+    border-color: rgba(71, 219, 154, 1);
+    box-shadow: 0 0 10px rgba(71, 219, 154, 0.4);
+  }
+
+  100% {
+    border-color: rgba(255, 255, 255, 0.08);
+    box-shadow: none;
+  }
+}
+
+.flash-save {
+  animation: flash-save-border 0.6s ease-out forwards;
 }

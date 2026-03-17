@@ -204,8 +204,12 @@ export default function Home() {
     setActiveTeamId(null);
     setActiveAgentId(null);
 
-    // Auto-expand the selected project and close others
-    setExpandedProjects(new Set([normalizedProjectId]));
+    // Auto-expand selected project and close others; toggle if clicking the already-active project
+    setExpandedProjects(prev =>
+      prev.has(normalizedProjectId) && activeProjectId === normalizedProjectId
+        ? new Set<string>()
+        : new Set([normalizedProjectId])
+    );
   };
 
   const handleSelectTeam = (teamId: string | null) => {
@@ -221,6 +225,18 @@ export default function Home() {
 
     setActiveTeamId(normalizedTeamId);
     setActiveAgentId(null);
+    // Auto-expand selected team; toggle collapse if clicking the same team again
+    if (normalizedTeamId) {
+      setExpandedTeams(prev => {
+        const next = new Set(prev);
+        if (next.has(normalizedTeamId) && activeTeamId === normalizedTeamId) {
+          next.delete(normalizedTeamId);
+        } else {
+          next.add(normalizedTeamId);
+        }
+        return next;
+      });
+    }
   };
 
   const handleSelectAgent = (agentId: string | null) => {

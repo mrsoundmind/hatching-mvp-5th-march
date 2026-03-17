@@ -127,6 +127,25 @@ export interface IStorage {
 
   // Phase 1 invariant helper
   hasConversation(id: string): Promise<boolean>;
+
+  // P3: Extracted project memories (cross-agent, cross-session)
+  createConversationMemory(data: {
+    conversationId: string;
+    memoryType: string;
+    content: string;
+    importance: number;
+    agentId?: string | null;
+  }): Promise<unknown>;
+  getRelevantProjectMemories(projectId: string, options: {
+    query: string;
+    limit: number;
+    minImportance: number;
+    excludeConversationId?: string;
+  }): Promise<Array<{ content: string; memoryType: string; importance: number }>>;
+
+  // P5: Proactive outreach rate limiting
+  getLastProactiveOutreachAt(agentId: string): Promise<Date | null>;
+  setLastProactiveOutreachAt(agentId: string): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
@@ -590,6 +609,50 @@ export class MemStorage implements IStorage {
         }
       };
       this.projects.set(projectId, updatedProject);
+
+      // Create a default team first for Maya
+      const strategyTeam: Team = {
+        id: randomUUID(),
+        userId: project.userId,
+        name: "Strategy",
+        emoji: "🎯",
+        projectId: projectId,
+        isExpanded: true,
+      };
+      this.teams.set(strategyTeam.id, strategyTeam);
+
+      // Task 15 Part 2: Ensure an 'Idea' project has a default PM agent to avoid 0-agent fallback
+      const mayaAgent: Agent = {
+        id: randomUUID(),
+        userId: project.userId,
+        name: "Maya",
+        role: "Product Manager",
+        color: "blue",
+        teamId: strategyTeam.id,
+        projectId: projectId,
+        personality: {
+          traits: ["strategic", "supportive", "analytical"],
+          communicationStyle: "Warm, direct, and structured",
+          expertise: ["Product Strategy", "Requirements Gathering"],
+          welcomeMessage: "Hi! I'm Maya, your Product Manager. Tell me about your idea and I'll help you structure it into an actionable plan."
+        },
+        isSpecialAgent: false,
+      };
+      this.agents.set(mayaAgent.id, mayaAgent);
+
+      try {
+        await this.createConversation({
+          id: `agent:${projectId}:${mayaAgent.id}`,
+          userId: project.userId,
+          projectId: projectId,
+          teamId: null,
+          agentId: mayaAgent.id,
+          type: 'agent',
+          title: null
+        } as any);
+      } catch (e) {
+        console.error("Failed to auto-create Maya agent conversation:", e);
+      }
     }
   }
 
@@ -1151,6 +1214,46 @@ export class MemStorage implements IStorage {
   async hasConversation(id: string): Promise<boolean> {
     return Promise.resolve(this.conversations.has(id));
   }
+
+  // P3: createConversationMemory — store extracted project memory
+  async createConversationMemory(data: { conversationId: string; memoryType: string; content: string; importance: number; agentId?: string | null; }): Promise<unknown> {
+    const memory = { id: randomUUID(), ...data, createdAt: new Date() };
+    if (!this.conversationMemories.has(data.conversationId)) {
+      this.conversationMemories.set(data.conversationId, []);
+    }
+    this.conversationMemories.get(data.conversationId)!.push(memory);
+    return memory;
+  }
+
+  // P3: getRelevantProjectMemories — retrieve cross-agent project memories by relevance
+  async getRelevantProjectMemories(projectId: string, options: { query: string; limit: number; minImportance: number; excludeConversationId?: string; }): Promise<Array<{ content: string; memoryType: string; importance: number }>> {
+    const projectKey = `project:${projectId}`;
+    const memories = this.conversationMemories.get(projectKey) ?? [];
+    const queryWords = options.query.toLowerCase().split(/\s+/).filter(w => w.length > 3);
+    return memories
+      .filter((m: any) => m.importance >= options.minImportance)
+      .map((m: any) => ({
+        ...m,
+        _score: queryWords.filter(w => m.content.toLowerCase().includes(w)).length,
+      }))
+      .sort((a: any, b: any) => b._score - a._score || b.importance - a.importance)
+      .slice(0, options.limit)
+      .map(({ content, memoryType, importance }: any) => ({ content, memoryType, importance }));
+  }
+
+  // P5: Proactive outreach rate limiting (stored in agent personality)
+  async getLastProactiveOutreachAt(agentId: string): Promise<Date | null> {
+    const agent = this.agents.get(agentId);
+    const lastAt = (agent?.personality as any)?.lastProactiveAt;
+    return lastAt ? new Date(lastAt) : null;
+  }
+  async setLastProactiveOutreachAt(agentId: string): Promise<void> {
+    const agent = this.agents.get(agentId);
+    if (agent) {
+      const personality = ((agent.personality ?? {}) as Record<string, unknown>);
+      this.agents.set(agentId, { ...agent, personality: { ...personality, lastProactiveAt: new Date().toISOString() } as any });
+    }
+  }
 }
 
 // ============================================================
@@ -1474,6 +1577,52 @@ export class DatabaseStorage implements IStorage {
   async getSharedMemoryForAgent(agentId: string, projectId: string): Promise<string> {
     const mems = await this.getProjectMemory(projectId);
     return mems.map((m: any) => `[${m.memoryType}] ${m.content}`).join('\n');
+  }
+
+  // P3: createConversationMemory — insert extracted project memory
+  async createConversationMemory(data: { conversationId: string; memoryType: string; content: string; importance: number; agentId?: string | null; }): Promise<unknown> {
+    const [row] = await db.insert(schema.conversationMemory).values({
+      conversationId: data.conversationId,
+      memoryType: data.memoryType as any,
+      content: data.content,
+      importance: data.importance,
+    }).returning();
+    return row;
+  }
+
+  // P3: getRelevantProjectMemories — retrieve scored project-scoped memories
+  async getRelevantProjectMemories(projectId: string, options: { query: string; limit: number; minImportance: number; excludeConversationId?: string; }): Promise<Array<{ content: string; memoryType: string; importance: number }>> {
+    const projectKey = `project:${projectId}`;
+    const rows = await db.select().from(schema.conversationMemory)
+      .where(eq(schema.conversationMemory.conversationId, projectKey));
+    const queryWords = options.query.toLowerCase().split(/\s+/).filter(w => w.length > 3);
+    return rows
+      .filter((m: any) => (m.importance ?? 0) >= options.minImportance)
+      .map((m: any) => ({
+        content: m.content as string,
+        memoryType: m.memoryType as string,
+        importance: m.importance as number,
+        _score: queryWords.filter(w => (m.content as string).toLowerCase().includes(w)).length,
+      }))
+      .sort((a, b) => b._score - a._score || b.importance - a.importance)
+      .slice(0, options.limit)
+      .map(({ content, memoryType, importance }) => ({ content, memoryType, importance }));
+  }
+
+  // P5: Proactive outreach rate limiting (uses agents.personality JSONB)
+  async getLastProactiveOutreachAt(agentId: string): Promise<Date | null> {
+    const [agent] = await db.select().from(schema.agents).where(eq(schema.agents.id, agentId));
+    const lastAt = (agent?.personality as any)?.lastProactiveAt;
+    return lastAt ? new Date(lastAt) : null;
+  }
+  async setLastProactiveOutreachAt(agentId: string): Promise<void> {
+    const [agent] = await db.select().from(schema.agents).where(eq(schema.agents.id, agentId));
+    if (agent) {
+      const personality = ((agent.personality ?? {}) as Record<string, unknown>);
+      await db.update(schema.agents)
+        .set({ personality: { ...personality, lastProactiveAt: new Date().toISOString() } as any })
+        .where(eq(schema.agents.id, agentId));
+    }
   }
 }
 

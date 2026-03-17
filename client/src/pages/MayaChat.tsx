@@ -480,9 +480,9 @@ export function MayaChat({ projectId }: MayaChatProps) {
                       <FileText className="w-6 h-6 text-gray-500" />
                     </div>
                     <div>
-                      <h3 className="text-gray-300 font-medium mb-1">Brain is Empty</h3>
+                      <h3 className="text-gray-300 font-medium mb-1">Maya's Memory</h3>
                       <p className="text-xs text-gray-500 max-w-[200px] mb-4">
-                        Add documents, rules, and context here to train your AI colleagues.
+                        As you chat with Maya, she'll automatically build a memory of your project here.
                       </p>
                       <Button
                         variant="outline"
@@ -491,7 +491,7 @@ export function MayaChat({ projectId }: MayaChatProps) {
                         onClick={() => setIsAddDocOpen(true)}
                       >
                         <Plus className="w-4 h-4 mr-2" />
-                        Add First Document
+                        Add Context Manually
                       </Button>
                     </div>
                   </div>

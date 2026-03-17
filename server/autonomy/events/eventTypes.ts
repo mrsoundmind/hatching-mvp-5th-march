@@ -34,7 +34,18 @@ export type AutonomyEventType =
   | 'task_assigned'
   | 'task_completed'
   | 'task_failed'
-  | 'task_retried';
+  | 'task_retried'
+  // Living skills events
+  | 'skill_gap_detected'
+  | 'skill_update_created'
+  | 'skill_performance_scored'
+  | 'skill_promoted_to_canon'
+  // Background autonomy events
+  | 'background_health_check'
+  | 'friction_detected'
+  | 'proactive_outreach_queued'
+  | 'proactive_outreach_sent'
+  | 'world_update_detected';
 
 export interface AutonomyEvent {
   eventType: AutonomyEventType;

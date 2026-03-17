@@ -1,7 +1,10 @@
 import { devLog } from '@/lib/devLog';
-import { useState, useRef, useEffect } from "react";
-import { ChevronDown, ChevronRight, MoreHorizontal, FileText, Users, User, X, File, Folder, UserCircle, Edit, Trash2 } from "lucide-react";
+import React, { useState, useRef, useEffect } from "react";
+import { ChevronDown, ChevronRight, MoreHorizontal, FileText, Users, X, File, Folder, UserCircle, Edit, Trash2 } from "lucide-react";
 import type { Project, Team, Agent } from "@shared/schema";
+import { getAgentColors } from '@/lib/agentColors';
+import { getRoleDefinition } from '@shared/roleRegistry';
+import AgentAvatar from '@/components/avatars/AgentAvatar';
 
 interface ProjectTreeProps {
   projects: Project[];
@@ -558,7 +561,9 @@ export function ProjectTree({
                                   onClick={() => onSelectAgent(agent.id)}
                                 >
                                   <div className="flex items-center gap-2 min-w-0 flex-1">
-                                    <User className={`w-4 h-4 ${getProjectIconColor(projects.find(p => p.id === agent.projectId)?.color || 'blue')}`} />
+                                    <React.Suspense fallback={<div className={`w-5 h-5 rounded-full flex-shrink-0 ${getAgentColors(agent.role).avatarBg}`} />}>
+                                      <AgentAvatar role={agent.role} state="idle" size={20} />
+                                    </React.Suspense>
                                     {editingAgent === agent.id ? (
                                       <input
                                         ref={inputRef}
@@ -575,7 +580,7 @@ export function ProjectTree({
                                         className="hatchin-text-muted text-[12px] truncate cursor-pointer hover:bg-hatchin-border/50 px-1 py-0.5 rounded"
                                         onDoubleClick={() => handleDoubleClick('agent', agent.id, agent.role || agent.name)}
                                       >
-                                        {highlightMatch(agent.role || agent.name, searchQuery)}
+                                        {highlightMatch(getRoleDefinition(agent.role)?.characterName ?? agent.name, searchQuery)}
                                       </span>
                                     )}
                                   </div>
@@ -664,7 +669,9 @@ export function ProjectTree({
                           onClick={() => onSelectAgent(agent.id)}
                         >
                           <div className="flex items-center gap-2 min-w-0 flex-1">
-                            <User className={`w-4 h-4 ${getProjectIconColor(projects.find(p => p.id === agent.projectId)?.color || 'blue')}`} />
+                            <React.Suspense fallback={<div className={`w-5 h-5 rounded-full flex-shrink-0 ${getAgentColors(agent.role).avatarBg}`} />}>
+                              <AgentAvatar role={agent.role} state="idle" size={20} />
+                            </React.Suspense>
                             {editingAgent === agent.id ? (
                               <input
                                 ref={inputRef}
@@ -681,7 +688,7 @@ export function ProjectTree({
                                 className="hatchin-text-muted text-[12px] truncate cursor-pointer hover:bg-hatchin-border/50 px-1 py-0.5 rounded"
                                 onDoubleClick={() => handleDoubleClick('agent', agent.id, agent.name)}
                               >
-                                {highlightMatch(agent.name, searchQuery)}
+                                {highlightMatch(getRoleDefinition(agent.role)?.characterName ?? agent.name, searchQuery)}
                               </span>
                             )}
                           </div>

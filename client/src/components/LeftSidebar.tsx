@@ -613,7 +613,7 @@ export function LeftSidebar({
                 <span className="text-lg">🥚</span>
               </div>
               <p className="text-[11px] hatchin-text-muted leading-relaxed mb-3">
-                No projects yet. Hit <span className="text-[#6C82FF] font-medium">+ New</span> to hatch your first idea.
+                Nothing here yet. Press <span className="text-[#6C82FF] font-medium">+ New</span> and tell Maya what you want to build.
               </p>
             </div>
           )}

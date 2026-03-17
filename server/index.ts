@@ -5,7 +5,7 @@ import cors from "cors";
 import rateLimit from "express-rate-limit";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
-import { registerRoutes } from "./routes";
+import { registerRoutes, getGlobalBroadcast } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { getStorageModeInfo } from "./storage";
 import { pool } from "./db";
@@ -246,6 +246,36 @@ app.use((req, res, next) => {
     log(`serving on port ${port}`);
   });
 
+  // P7: Background autonomy runner (opt-in via env flag, default off)
+  if (process.env.BACKGROUND_AUTONOMY_ENABLED === 'true') {
+    try {
+      const { backgroundRunner } = await import('./autonomy/background/backgroundRunner.js');
+      const { generateChatWithRuntimeFallback } = await import('./llm/providerResolver.js');
+      const { storage: storageInstance } = await import('./storage.js');
+      backgroundRunner.start({
+        storage: storageInstance,
+        broadcastToConversation: (convId: string, payload: unknown) => {
+          const broadcast = getGlobalBroadcast();
+          if (broadcast) broadcast(convId, payload);
+        },
+        generateText: async (prompt: string, systemPrompt: string, maxTokens?: number) => {
+          const result = await generateChatWithRuntimeFallback({
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: prompt },
+            ],
+            maxTokens: maxTokens ?? 120,
+            temperature: 0.7,
+          });
+          return result.content ?? '';
+        },
+      });
+      console.log('[Hatchin][BackgroundRunner] Autonomy background jobs started');
+    } catch (err: any) {
+      console.error('[Hatchin][BackgroundRunner] Failed to start:', err.message);
+    }
+  }
+
   // Fix P0-6: Graceful Shutdown
   const shutdown = async (signal: string) => {
     console.log(`\n[Hatchin] Received ${signal}. Starting graceful shutdown...`);
@@ -256,6 +286,14 @@ app.use((req, res, next) => {
     });
 
     try {
+      // Stop background jobs if running
+      if (process.env.BACKGROUND_AUTONOMY_ENABLED === 'true') {
+        try {
+          const { backgroundRunner } = await import('./autonomy/background/backgroundRunner.js');
+          backgroundRunner.stop();
+        } catch { /* non-critical */ }
+      }
+
       // Close the database connection pool to prevent leaks
       if (pool) {
         await pool.end();

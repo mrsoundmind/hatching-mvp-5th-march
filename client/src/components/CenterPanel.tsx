@@ -1,6 +1,8 @@
 import { Send } from "lucide-react";
 import { useState, useEffect, useRef, useMemo } from "react";
+import { useToast } from "@/hooks/use-toast";
 import type { Project, Team, Agent } from "@shared/schema";
+import { getRoleDefinition } from "@shared/roleRegistry";
 import { useWebSocket, getWebSocketUrl, getConnectionStatusConfig } from '@/lib/websocket';
 import { MessageBubble } from './MessageBubble';
 import { MessageSkeleton } from './MessageSkeleton';
@@ -50,6 +52,7 @@ export function CenterPanel({
   onAddProjectClick,
 }: CenterPanelProps) {
   const { user } = useAuth();
+  const { toast } = useToast();
 
   const toDisplayText = (value: unknown, fallback = ''): string => {
     if (typeof value === 'string') return value;
@@ -122,6 +125,21 @@ export function CenterPanel({
   const [streamingAgent, setStreamingAgent] = useState<string | null>(null);
   const [streamingConversationId, setStreamingConversationId] = useState<string | null>(null);
   const [isThinking, setIsThinking] = useState(false);
+  // Task 10: Cycling thinking state text
+  const thinkingPhrases = ['Thinking...', 'Reviewing context...', 'Forming a response...'];
+  const [thinkingPhraseIdx, setThinkingPhraseIdx] = useState(0);
+  const thinkingPhraseTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  useEffect(() => {
+    if (isThinking) {
+      setThinkingPhraseIdx(0);
+      thinkingPhraseTimerRef.current = setInterval(() => {
+        setThinkingPhraseIdx((prev) => (prev + 1) % thinkingPhrases.length);
+      }, 1800);
+    } else {
+      if (thinkingPhraseTimerRef.current) clearInterval(thinkingPhraseTimerRef.current);
+    }
+    return () => { if (thinkingPhraseTimerRef.current) clearInterval(thinkingPhraseTimerRef.current); };
+  }, [isThinking]);
   const streamingTimeoutRef = useRef<number | null>(null);
   const pendingResponseTimeoutRef = useRef<number | null>(null);
 
@@ -546,6 +564,8 @@ export function CenterPanel({
       streamingMessageId.current = message.messageId;
       setStreamingContent('');
       setStreamingConversationId(currentChatContext?.conversationId || null);
+      // Broadcast streaming state to sibling components (RightSidebar brain glow, etc.)
+      window.dispatchEvent(new CustomEvent('ai_streaming_active', { detail: { active: true } }));
 
       // Get actual agent name for streaming and set it for the typing indicator
       const getActualAgentName = (agentId: string) => {
@@ -717,6 +737,8 @@ export function CenterPanel({
       devLog('✅ Streaming completed');
       clearStreamingTimeout();
       setStreamingConversationId(null);
+      // Signal sibling components that streaming has ended
+      window.dispatchEvent(new CustomEvent('ai_streaming_active', { detail: { active: false } }));
 
       // Add the completed message to conversation
       if (message.message) {
@@ -892,6 +914,19 @@ export function CenterPanel({
 
       console.error('WebSocket server error:', message.code, message.message);
     }
+    else if (message.type === 'typing_started') {
+      const agentName = message.agentName || message.agentId || 'Agent';
+      setTypingColleagues(prev => prev.includes(agentName) ? prev : [...prev, agentName]);
+      // Auto-clear after estimated duration + buffer
+      const clearAfter = (message.estimatedDuration || 3000) + 500;
+      setTimeout(() => {
+        setTypingColleagues(prev => prev.filter(n => n !== agentName));
+      }, clearAfter);
+    }
+    else if (message.type === 'typing_stopped') {
+      const agentName = message.agentName || message.agentId || 'Agent';
+      setTypingColleagues(prev => prev.filter(n => n !== agentName));
+    }
     else if (message.type === 'assistant_message') {
       // Final completed assistant message (alternative to streaming_completed)
       clearPendingResponseTimeout();
@@ -975,6 +1010,11 @@ export function CenterPanel({
       } catch (e) {
         console.warn('Failed to dispatch tasks_updated');
       }
+      queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
+      const taskTitle = message.data?.tasks?.[0]?.title || message.data?.title;
+      if (taskTitle) {
+        toast({ title: 'Task created', description: taskTitle });
+      }
     }
     // ─── 🆕 Chat Intelligence Events ─────────────────────────────────────────
     else if (message.type === 'teams_auto_hatched') {
@@ -983,6 +1023,10 @@ export function CenterPanel({
       queryClient.invalidateQueries({ queryKey: ['/api/teams'] });
       queryClient.invalidateQueries({ queryKey: ['/api/agents'] });
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${message.projectId}/agents`] });
+      const agentCount = message.agents?.length || 0;
+      if (agentCount > 0) {
+        toast({ title: 'Team assembled', description: `${agentCount} AI teammate${agentCount !== 1 ? 's' : ''} added to your project` });
+      }
       // Dispatch event to show animated notification
       try {
         window.dispatchEvent(new CustomEvent('teams_auto_hatched', {
@@ -1014,6 +1058,7 @@ export function CenterPanel({
       // Refresh project data in the right sidebar overview
       queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${message.projectId}`] });
+      toast({ title: 'Project memory updated', description: `Captured: ${message.field || 'new insight'}` });
       try {
         window.dispatchEvent(new CustomEvent('brain_updated_from_chat', {
           detail: {
@@ -1094,23 +1139,28 @@ export function CenterPanel({
     if (apiMessages && currentChatContext && Array.isArray(apiMessages)) {
       devLog(`📥 Loaded ${apiMessages.length} messages from API for ${currentChatContext.conversationId}`);
       // Transform API messages to match our format
-      const transformedMessages = apiMessages.map((msg: any) => ({
-        id: msg.id,
-        content: msg.content,
-        senderId: msg.messageType === 'system' ? 'system' : (msg.agentId || msg.userId || 'unknown'),
-        senderName: msg.messageType === 'system' ? 'System' : (msg.agentId ? (() => {
-          const agent = activeProjectAgents.find(a => a.id === msg.agentId);
-          return agent ? agent.name : msg.agentId.replace('-', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase());
-        })() : 'You'),
-        messageType: msg.messageType,
-        timestamp: msg.createdAt,
-        conversationId: msg.conversationId,
-        status: 'delivered' as const,
-        parentMessageId: msg.parentMessageId,
-        threadRootId: msg.threadRootId,
-        threadDepth: msg.threadDepth || 0,
-        metadata: msg.metadata || {}
-      }));
+      const transformedMessages = apiMessages.map((msg: any) => {
+        const agentRoleFromId = msg.agentId
+          ? activeProjectAgents.find((a: any) => a.id === msg.agentId)?.role
+          : undefined;
+        return {
+          id: msg.id,
+          content: msg.content,
+          senderId: msg.messageType === 'system' ? 'system' : (msg.agentId || msg.userId || 'unknown'),
+          senderName: msg.messageType === 'system' ? 'System' : (msg.agentId ? (() => {
+            const agent = activeProjectAgents.find(a => a.id === msg.agentId);
+            return agent ? agent.name : msg.agentId.replace('-', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase());
+          })() : 'You'),
+          messageType: msg.messageType,
+          timestamp: msg.createdAt,
+          conversationId: msg.conversationId,
+          status: 'delivered' as const,
+          parentMessageId: msg.parentMessageId,
+          threadRootId: msg.threadRootId,
+          threadDepth: msg.threadDepth || 0,
+          metadata: { ...(msg.metadata || {}), agentRole: msg.metadata?.agentRole ?? agentRoleFromId ?? null }
+        };
+      });
 
       // Merge messages instead of replacing to preserve in-flight streaming
       setAllMessages(prev => {
@@ -1400,7 +1450,7 @@ export function CenterPanel({
           title: 'Maya',
           subtitle: 'Project Manager',
           participants,
-          placeholder: `Message all teams in ${activeProject?.name || 'your project'}...`,
+          placeholder: "Message your team...",
           welcomeTitle: 'Talk to your entire project team',
           welcomeSubtitle: 'Get insights and coordination across all teams and roles.',
           welcomeIcon: '🚀'
@@ -1418,9 +1468,11 @@ export function CenterPanel({
           welcomeIcon: selectedTeam?.emoji || '👥'
         };
 
-      case 'agent':
-        const agentName = toDisplayText(selectedAgent?.name, 'Maya');
+      case 'agent': {
         const agentRole = toDisplayText(selectedAgent?.role, 'Product Manager');
+        // Show character name (e.g. "Alex") from registry, not the DB name field
+        const agentName = getRoleDefinition(selectedAgent?.role)?.characterName
+          ?? toDisplayText(selectedAgent?.name, agentRole);
         return {
           title: agentName,
           subtitle: `1-on-1 Chat • ${agentRole}`,
@@ -1428,8 +1480,9 @@ export function CenterPanel({
           placeholder: `Message ${agentName}...`,
           welcomeTitle: `Chat with ${agentName}`,
           welcomeSubtitle: `Get specialized help with ${agentRole.toLowerCase()} tasks.`,
-          welcomeIcon: '🤖'
+          welcomeIcon: getRoleDefinition(selectedAgent?.role)?.emoji ?? '🤖'
         };
+      }
 
       default:
         return {
@@ -2027,6 +2080,13 @@ export function CenterPanel({
             <h1 className="font-semibold hatchin-text text-lg">
               {contextDisplay.title}
             </h1>
+            {currentChatContext?.mode && (
+              <span className="text-xs px-2 py-0.5 rounded-full bg-white/8 text-gray-400 border border-white/10">
+                {currentChatContext.mode === 'project' ? '🌐 All agents' :
+                 currentChatContext.mode === 'agent' ? `💬 1-on-1` :
+                 '👥 Team chat'}
+              </span>
+            )}
           </div>
 
           <button
@@ -2282,17 +2342,6 @@ export function CenterPanel({
                   </div>
                 )}
 
-                {/* Thinking Indicator */}
-                {isThinking && (
-                  <div className="flex items-center space-x-2 p-4 text-gray-400 italic">
-                    <div className="flex space-x-1">
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
-                    </div>
-                    <span className="text-sm">Thinking...</span>
-                  </div>
-                )}
 
                 {/* Auto-scroll helper */}
                 <div ref={(el) => {
@@ -2308,6 +2357,19 @@ export function CenterPanel({
           </>)
         )}
       </div>
+      {/* Typing Indicator Bar */}
+      {typingColleagues.length > 0 && !isStreaming && (
+        <div className="flex items-center gap-2 px-6 py-1.5 text-xs text-gray-400 border-t hatchin-border">
+          <div className="flex gap-0.5">
+            <span className="animate-bounce" style={{ animationDelay: '0ms' }}>·</span>
+            <span className="animate-bounce" style={{ animationDelay: '75ms' }}>·</span>
+            <span className="animate-bounce" style={{ animationDelay: '150ms' }}>·</span>
+          </div>
+          <span>
+            {typingColleagues.join(', ')} {typingColleagues.length === 1 ? 'is' : 'are'} typing...
+          </span>
+        </div>
+      )}
       {/* Chat Input */}
       <div className="p-6 hatchin-border border-t">
         {/* C1.2: Reply preview */}
@@ -2332,13 +2394,12 @@ export function CenterPanel({
           </div>
         )}
 
-        <form onSubmit={handleChatSubmit} className="relative">
+        <form onSubmit={handleChatSubmit} className={`relative rounded-lg ${isStreaming || isThinking ? 'ai-thinking-ring' : ''}`}>
           <textarea
             ref={messageInputRef}
             data-testid="input-message"
             name="message"
-            placeholder={isStreaming || isThinking ? "AI is responding..." : contextDisplay.placeholder}
-            disabled={isStreaming || isThinking}
+            placeholder={contextDisplay.placeholder}
             autoComplete="off"
             value={inputValue}
             rows={1}
@@ -2353,8 +2414,7 @@ export function CenterPanel({
               }
             }}
             aria-label="Message input"
-            className={`w-full hatchin-bg-card hatchin-border border rounded-lg px-4 pr-14 py-3 text-sm hatchin-text placeholder-hatchin-text-muted focus:outline-none focus:ring-2 focus:ring-hatchin-blue focus:border-transparent resize-none min-h-[48px] max-h-[180px] overflow-y-auto ${isStreaming || isThinking ? 'opacity-50 cursor-not-allowed' : ''
-              }`}
+            className="w-full hatchin-bg-card hatchin-border border rounded-lg px-4 pr-14 py-3 text-sm hatchin-text placeholder-hatchin-text-muted focus:outline-none focus:ring-2 focus:ring-hatchin-blue focus:border-transparent resize-none min-h-[48px] max-h-[180px] overflow-y-auto"
           />
           {/* B1.3: Show stop button during streaming, send button otherwise */}
           {isStreaming ? (

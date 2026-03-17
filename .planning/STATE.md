@@ -11,10 +11,10 @@ See: .planning/PROJECT.md (updated 2026-03-17)
 
 ## Current Position
 
-Phase: 1 — Hatch Conversation Quality
+Phase: 2 — User Journey Fixes
 Plan: Not started
 Status: Ready to plan
-Last activity: 2026-03-17 — Milestone v1.0 initialized with full product vision
+Last activity: 2026-03-17 — Phase 1 complete: all 8 conversation quality gaps implemented
 
 ---
 
@@ -56,3 +56,4 @@ None.
 | Phase | Name | Status | Notes |
 |-------|------|--------|-------|
 | — | Pre-GSD | Complete | Core platform: auth, streaming chat, agents, tasks, WebSocket, LangGraph |
+| 1 | Hatch Conversation Quality | Complete | All 8 gaps: graph.ts removed, emotional signature, LLM memory, first-message opener, opinion injection, open questions, userDesignation derivation, handoff acknowledgment |

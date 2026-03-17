@@ -14,13 +14,15 @@ const devLog = (...args: any[]) => {
   }
 };
 import { OpenAIConfigurationError, generateIntelligentResponse, generateStreamingResponse } from "./ai/openaiService.js";
+import { getCharacterProfile } from "./ai/characterProfiles.js";
+import { markSkillUsed } from "./knowledge/skillUpdates/skillLearner.js";
 import { parseAction, stripActionBlocks, detectUserPermission } from "./ai/actionParser.js";
 import { resolveMentionedAgent } from "./ai/mentionParser.js";
 import { applyTeammateToneGuard } from "./ai/responsePostProcessing.js";
 import { personalityEngine } from "./ai/personalityEvolution.js";
 import { trainingSystem } from "./ai/trainingSystem.js";
 import { initializePreTrainedColleagues, devTrainingTools } from "./ai/devTrainingTools.js";
-import { runTurn } from "./ai/graph.js";
+
 import { evaluateConductorDecision, buildRoleIdentity } from "./ai/conductor.js";
 import { evaluateSafetyScore, buildClarificationIntervention } from "./ai/safety.js";
 import { buildDecisionForecast, isStrategicTurn } from "./ai/forecast.js";
@@ -81,6 +83,14 @@ import {
 type SessionParser = (req: any, res: any, next: (err?: unknown) => void) => void;
 type AuthedWebSocket = WebSocket & { __userId?: string };
 
+// Module-level broadcast reference — set once registerRoutes runs.
+// Allows background autonomy runner (and other server modules) to broadcast
+// WS messages without needing access to the activeConnections closure.
+let _globalBroadcast: ((conversationId: string, data: unknown) => void) | null = null;
+export function getGlobalBroadcast(): ((conversationId: string, data: unknown) => void) | null {
+  return _globalBroadcast;
+}
+
 export async function registerRoutes(app: Express, sessionParser?: SessionParser): Promise<Server> {
   // Initialize pre-trained AI colleagues on server start
   initializePreTrainedColleagues();
@@ -125,7 +135,7 @@ export async function registerRoutes(app: Express, sessionParser?: SessionParser
     if (error instanceof OpenAIConfigurationError || error?.code === "OPENAI_API_KEY_MISSING") {
       return {
         code: "OPENAI_NOT_CONFIGURED",
-        error: "I’m temporarily unavailable right now. Please retry in a moment."
+        error: "I'm temporarily unavailable right now. Please retry in a moment."
       };
     }
 
@@ -136,7 +146,7 @@ export async function registerRoutes(app: Express, sessionParser?: SessionParser
     if (status === 401 || apiCode.includes("invalid_api_key") || message.includes("invalid api key")) {
       return {
         code: "OPENAI_AUTH_FAILED",
-        error: "I’m temporarily unavailable right now. Please retry in a moment."
+        error: "I'm temporarily unavailable right now. Please retry in a moment."
       };
     }
 
@@ -149,7 +159,7 @@ export async function registerRoutes(app: Express, sessionParser?: SessionParser
     ) {
       return {
         code: "OPENAI_RATE_LIMITED",
-        error: "I’m handling high traffic right now. Please retry in a minute."
+        error: "I'm handling high traffic right now. Please retry in a minute."
       };
     }
 
@@ -160,13 +170,13 @@ export async function registerRoutes(app: Express, sessionParser?: SessionParser
     ) {
       return {
         code: "OPENAI_MODEL_UNAVAILABLE",
-        error: "I’m temporarily unavailable right now. Please retry in a moment."
+        error: "I'm temporarily unavailable right now. Please retry in a moment."
       };
     }
 
     return {
       code: "STREAMING_GENERATION_FAILED",
-      error: "I’m still here, but this reply could not be completed. Please try again."
+      error: "I'm still here, but this reply could not be completed. Please try again."
     };
   }
 
@@ -968,55 +978,31 @@ export async function registerRoutes(app: Express, sessionParser?: SessionParser
     }
   });
 
-  // LangGraph Hatch chat endpoint
+  // Hatch chat endpoint
   app.post("/api/hatch/chat", async (req, res) => {
     try {
-      const { threadId = "default", user = "", history = [], enablePeerNotes = false } = req.body || {};
-      const out = await runTurn({ threadId, user, history, enablePeerNotes });
+      const { user = "", history = [] } = req.body || {};
+      const context = {
+        mode: 'project' as const,
+        projectName: 'Chat',
+        agentRole: 'Product Manager',
+        conversationHistory: (history || []).map((m: any) => ({
+          role: m.role === 'assistant' ? 'assistant' : 'user',
+          content: m.content || '',
+          timestamp: new Date().toISOString(),
+        })),
+        userId: (req.session as any).userId || 'anonymous',
+      };
 
-      // Fallback: if LangGraph returned an empty reply, synthesize via OpenAI path
-      if (!out.reply || out.reply.trim().length === 0) {
-        try {
-          const context = {
-            mode: 'project' as const,
-            projectName: 'SaaS Startup',
-            agentRole: 'Product Manager',
-            conversationHistory: (history || []).map((m: any) => ({
-              role: m.role === 'assistant' ? 'assistant' : 'user',
-              content: m.content || '',
-              timestamp: new Date().toISOString(),
-            })),
-            userId: (req.session as any).userId || 'anonymous',
-          };
+      const ai = await generateIntelligentResponse(user || 'Hello', 'Product Manager', context);
 
-          const ai = await generateIntelligentResponse(
-            user || 'Help me plan next steps.',
-            'Product Manager',
-            context,
-          );
-
-          return res.json({
-            messages: [...(history || []), { role: 'assistant', content: ai.content, metadata: ai.metadata }],
-            reply: ai.content,
-            metadata: ai.metadata,
-            needsConsent: false,
-          });
-        } catch (e) {
-          console.error('Fallback OpenAI generation failed:', e);
-          if (e instanceof OpenAIConfigurationError) {
-            return res.status(503).json({
-              code: "OPENAI_NOT_CONFIGURED",
-              error: "I’m temporarily unavailable right now. Please retry in a moment."
-            });
-          }
-          // If fallback also fails, return the original out to keep behavior predictable
-          return res.json(out);
-        }
-      }
-
-      res.json(out);
+      return res.json({
+        messages: [...(history || []), { role: 'assistant', content: ai.content }],
+        reply: ai.content,
+        metadata: ai.metadata,
+      });
     } catch (error) {
-      console.error("LangGraph chat error:", error);
+      console.error("Hatch chat error:", error);
       res.status(500).json({ error: "Failed to process chat" });
     }
   });
@@ -1053,6 +1039,14 @@ export async function registerRoutes(app: Express, sessionParser?: SessionParser
           '', // User message context would need to be passed from frontend
           '' // Agent response would need to be retrieved
         );
+
+        // P4/P6: Hook living skills feedback into skill learner
+        try {
+          const reactedAgent = await storage.getAgent(reactionData.agentId);
+          if (reactedAgent?.role) {
+            markSkillUsed(reactedAgent.role, feedback);
+          }
+        } catch { /* non-critical */ }
 
         devLog(`🎯 B4: Personality feedback integrated: ${feedback} reaction for ${reactionData.agentId}`);
       }
@@ -1570,6 +1564,39 @@ export async function registerRoutes(app: Express, sessionParser?: SessionParser
               type: 'connection_confirmed',
               conversationId
             }));
+
+            // P2: Auto-send welcome message for agent conversations with no messages yet
+            if (conversationId.trim().startsWith('agent:')) {
+              try {
+                const parsed = parseConversationId(conversationId.trim());
+                const agentId = (parsed as any).agentId;
+                if (agentId) {
+                  const existingMsgs = await storage.getMessagesByConversation(conversationId.trim(), { limit: 1 });
+                  if (existingMsgs.length === 0) {
+                    const agent = await storage.getAgent(agentId);
+                    if (agent) {
+                      const personality = agent.personality as Record<string, unknown> | null;
+                      const welcomeText = (personality?.welcomeMessage as string | undefined) ||
+                        `Hey — I'm ${agent.name}, your ${agent.role}. What are we working on?`;
+                      const welcomeMsg = await storage.createMessage({
+                        id: randomUUID(),
+                        conversationId: conversationId.trim(),
+                        content: welcomeText,
+                        messageType: 'agent',
+                        agentId: agent.id,
+                        userId: null,
+                        metadata: { isWelcome: true },
+                      } as any);
+                      broadcastToConversation(conversationId.trim(), {
+                        type: 'new_message',
+                        conversationId: conversationId.trim(),
+                        message: welcomeMsg,
+                      });
+                    }
+                  }
+                }
+              } catch { /* non-critical — join still works if welcome fails */ }
+            }
             break;
           }
 
@@ -1746,13 +1773,24 @@ export async function registerRoutes(app: Express, sessionParser?: SessionParser
                 messageId,
                 conversationId: envelope.conversationId,
                 code: 'CONVERSATION_BUSY',
-                error: 'I’m still finishing an earlier reply. Please retry in a few seconds.'
+                error: "I'm still finishing an earlier reply. Please retry in a few seconds."
               }));
               break;
             }
 
             // Mark as actively streaming
             activeStreamingResponses.add(envelope.conversationId);
+
+            // P2: Emit server-calculated typing indicator (scaled to message complexity)
+            {
+              const wordCount = (envelope.message?.content || '').split(/\s+/).filter(Boolean).length;
+              const typingMs = Math.min(Math.max(wordCount * 80, 1200), 4000);
+              broadcastToConversation(envelope.conversationId, {
+                type: 'typing_started',
+                agentId: addressedAgentId || null,
+                estimatedDuration: typingMs,
+              });
+            }
 
             try {
               await handleStreamingColleagueResponse(
@@ -1911,6 +1949,8 @@ export async function registerRoutes(app: Express, sessionParser?: SessionParser
       });
     }
   }
+  // Expose broadcast to other server modules (e.g. background autonomy runner)
+  _globalBroadcast = (conversationId, data) => broadcastToConversation(conversationId, data);
 
   // E2.1: Multi-agent response handler for team dynamics
   async function handleMultiAgentResponse(
@@ -2581,11 +2621,50 @@ export async function registerRoutes(app: Express, sessionParser?: SessionParser
         mode: mode as 'project' | 'team' | 'agent',
         projectName: project.name,
         projectId,
+        conversationId,
         teamName,
         agentRole: respondingAgent.role,
         agentId: respondingAgent.id,
         conversationHistory,
-        userId: userMessage.userId || 'user'
+        userId: userMessage.userId || 'user',
+        // P3: Project direction + team + memories injected for richer context
+        projectDirection: (project.coreDirection as any) ?? null,
+        teamMembers: respondingAgent ? await storage.getAgentsByProject(projectId!).then(
+          (agents: any[]) => agents.filter((a: any) => !a.isSpecialAgent).map((a: any) => ({ name: a.name, role: a.role }))
+        ).catch(() => []) : [],
+        projectMemories: projectId ? await storage.getRelevantProjectMemories(projectId, {
+          query: userMessage.content,
+          limit: 12,
+          minImportance: 0.4,
+          excludeConversationId: conversationId,
+        }).then((mems: any[]) => mems.map((m: any) => `- ${m.content}`).join('\n')).catch(() => null) : null,
+        // GAP-7: Derive userDesignation from self-identification patterns in early messages
+        userDesignation: (() => {
+          const stored = (project.coreDirection as any)?.userRole ?? null;
+          if (stored) return stored;
+          const earlyMessages = recentMessages.slice(0, 8).filter((m: any) => m.messageType === 'user');
+          const rolePatterns = [
+            { pattern: /\bi(?:'m| am) (?:a |an )?([a-z][\w\s]{2,25}(?:designer|developer|engineer|founder|marketer|pm|product manager|analyst|writer|consultant|cto|ceo|manager))\b/i, group: 1 },
+            { pattern: /\bwork(?:ing)? as (?:a |an )?([a-z][\w\s]{2,25})\b/i, group: 1 },
+            { pattern: /\bmy (?:job|role|title) is ([a-z][\w\s]{2,25})\b/i, group: 1 },
+          ];
+          for (const msg of earlyMessages) {
+            for (const { pattern, group } of rolePatterns) {
+              const match = msg.content?.match(pattern);
+              if (match?.[group]) return match[group].trim();
+            }
+          }
+          return null;
+        })(),
+        // GAP-8: Detect handoff — when conductor routed to a different agent than last speaker
+        handoffFrom: (() => {
+          const lastAgentMsg = recentMessages.slice().reverse().find((m: any) => m.messageType === 'agent' && m.agentId);
+          if (!lastAgentMsg || !lastAgentMsg.agentId || lastAgentMsg.agentId === respondingAgent?.id) return null;
+          const previousAgent = availableAgents.find((a: any) => a.id === lastAgentMsg.agentId);
+          return previousAgent?.role ?? null;
+        })(),
+        // P3: Inject real storage for memory extraction (fire-and-forget)
+        createConversationMemory: storage.createConversationMemory.bind(storage),
       };
 
       // Create AbortController for cancellation
@@ -2617,7 +2696,7 @@ export async function registerRoutes(app: Express, sessionParser?: SessionParser
         if (isSystemFallback) {
           // Last resort: project has zero agents total
           devLog('📝 Generating system fallback response (no agents in project)');
-          accumulatedContent = "I'm sorry, but there are no agents available to respond at this time. Please add agents to this project to enable responses.";
+          accumulatedContent = "Your AI team hasn't been assembled yet! 🥚\n\nAdd a Hatch to this project so we can start building together.";
 
           // Send the fallback response as a single chunk
           ws.send(JSON.stringify({
@@ -2626,6 +2705,26 @@ export async function registerRoutes(app: Express, sessionParser?: SessionParser
             chunk: accumulatedContent,
             accumulatedContent
           }));
+
+          // Must persist and signal completion so the client input is unblocked
+          const fallbackSaved = await storage.createMessage({
+            id: responseMessageId,
+            conversationId,
+            agentId: null,
+            senderName: 'System',
+            content: accumulatedContent,
+            messageType: 'system' as const,
+            metadata: { fallback: { type: 'system', reason: 'no_agents_in_project' } },
+          } as any);
+
+          ws.send(JSON.stringify({
+            type: 'streaming_completed',
+            messageId: responseMessageId,
+            message: fallbackSaved
+          }));
+
+          return; // No further processing needed for pure system fallback
+
         } else if (isPmFallback) {
           // PM Maya fallback - scope-specific messages
           devLog('📝 Generating PM Maya fallback response');
@@ -2646,6 +2745,26 @@ export async function registerRoutes(app: Express, sessionParser?: SessionParser
             chunk: accumulatedContent,
             accumulatedContent
           }));
+
+          // Must persist and signal completion so the client input is unblocked
+          const pmFallbackSaved = await storage.createMessage({
+            id: responseMessageId,
+            conversationId,
+            agentId: respondingAgent && respondingAgent.id !== 'system' ? respondingAgent.id : null,
+            senderName: respondingAgent ? respondingAgent.name : 'System',
+            content: accumulatedContent,
+            messageType: 'agent' as const,
+            metadata: { fallback: { type: 'pm', reason: 'no_agents_in_scope' } },
+          } as any);
+
+          ws.send(JSON.stringify({
+            type: 'streaming_completed',
+            messageId: responseMessageId,
+            message: pmFallbackSaved
+          }));
+
+          return; // No further processing needed for pure PM fallback
+
         } else if (conductorResult.decision.interventionRequired) {
           // Safety intervention flow: stop speculative output and ask focused clarifications
           devLog('🛑 Safety intervention triggered for turn');
@@ -2792,6 +2911,32 @@ export async function registerRoutes(app: Express, sessionParser?: SessionParser
                       agents: createdAgents,
                     }));
                     devLog(`✨ [AutoHatch] Created ${createdTeams.length} team(s) and ${createdAgents.length} agent(s)`);
+
+                    // P2: Maya announces the new team in the project conversation
+                    try {
+                      const allAgents = await storage.getAgentsByProject(projectId);
+                      const mayaAgent = allAgents.find((a: any) => a.isSpecialAgent || a.role === 'AI Idea Partner');
+                      if (mayaAgent) {
+                        const agentList = createdAgents.slice(0, 3).map((a: any) => `${a.name} (${a.role})`).join(', ');
+                        const extra = createdAgents.length > 3 ? `, and ${createdAgents.length - 3} more` : '';
+                        const announcement = `I've pulled together a team for you — ${agentList}${extra}. They're ready to jump in. What would you like to kick off with?`;
+                        const projectConvId = `project:${projectId}`;
+                        const announcementMsg = await storage.createMessage({
+                          id: randomUUID(),
+                          conversationId: projectConvId,
+                          content: announcement,
+                          messageType: 'agent',
+                          agentId: mayaAgent.id,
+                          userId: null,
+                          metadata: { isTeamAnnouncement: true },
+                        } as any);
+                        broadcastToConversation(projectConvId, {
+                          type: 'new_message',
+                          conversationId: projectConvId,
+                          message: announcementMsg,
+                        });
+                      }
+                    } catch { /* non-critical */ }
                   }
                 }
 
@@ -3021,7 +3166,9 @@ export async function registerRoutes(app: Express, sessionParser?: SessionParser
             }
           }
 
-          const toneGuard = applyTeammateToneGuard(accumulatedContent || "", userMessage?.content || "");
+          const toneGuard = (!isSystemFallback && !isPmFallback)
+            ? applyTeammateToneGuard(accumulatedContent || "", userMessage?.content || "")
+            : { changed: false, content: accumulatedContent || "", reasons: [] as string[] };
           if (toneGuard.changed) {
             accumulatedContent = toneGuard.content;
             ws.send(JSON.stringify({
@@ -3090,6 +3237,8 @@ export async function registerRoutes(app: Express, sessionParser?: SessionParser
             metadata: {
               conductor: conductorResult.decision,
               safetyScore: conductorResult.safetyScore,
+              // P6: agentRole stored in metadata so MessageBubble can apply role-specific colors
+              agentRole: respondingAgent?.role ?? null,
               llm: llmMetadata || {
                 provider: runtimeNow.provider,
                 mode: runtimeNow.mode,
@@ -3965,6 +4114,40 @@ export async function registerRoutes(app: Express, sessionParser?: SessionParser
             connection.send(payload);
           }
         });
+      }
+
+      // P2: Task acknowledgment by assigned agent (opt-in via env flag)
+      if (process.env.TASK_ACKNOWLEDGMENT_ENABLED === 'true' && createdTasks.length > 0) {
+        try {
+          const task = createdTasks[0] as any;
+          if (task.assignee) {
+            const allAgents = await storage.getAgentsByProject(projectId);
+            const assignedAgent = allAgents.find((a: any) =>
+              a.name === task.assignee || a.role === task.assignee
+            );
+            if (assignedAgent) {
+              const character = getCharacterProfile(assignedAgent.role);
+              const ackText = character
+                ? `On it — "${task.title.substring(0, 50)}" is now on my list. I'll dig into the specifics first.`
+                : `Got it, I'll work on "${task.title}".`;
+              const convId = `agent:${projectId}:${assignedAgent.id}`;
+              const ackMsg = await storage.createMessage({
+                id: randomUUID(),
+                conversationId: convId,
+                content: ackText,
+                messageType: 'agent',
+                agentId: assignedAgent.id,
+                userId: null,
+                metadata: { isTaskAck: true, taskId: task.id },
+              } as any);
+              broadcastToConversation(convId, {
+                type: 'new_message',
+                conversationId: convId,
+                message: ackMsg,
+              });
+            }
+          }
+        } catch { /* non-critical */ }
       }
 
       res.json({

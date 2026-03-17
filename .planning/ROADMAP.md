@@ -65,7 +65,7 @@ When the conductor routes a message from Alex to Dev, the user just sees Dev res
 8. No response contains bullet points or markdown headers
 9. `graph.ts` path either deleted or wired through the same character/context system
 
-**Status:** not-started
+**Status:** complete — all 8 gaps implemented (2026-03-17)
 
 ---
 
