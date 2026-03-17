@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: — captured for context)
-status: complete
-stopped_at: "Completed 02-04 — Phase 2 all plans done; 5 gap items documented for follow-up"
-last_updated: "2026-03-17"
-last_activity: "2026-03-17 — Phase 2 Plan 04 complete: dep array fix + human verification with pass/gap results"
+status: 3 of 5 gap items closed (UX-07, UX-08, DATA-04 resolved in 02-06; UX-05 resolved in 02-07; UX-01/02 resolved in 02-05)
+stopped_at: "Completed 02-06 — gap closure: UX-07 UX-08 DATA-04 fixed in CenterPanel.tsx"
+last_updated: "2026-03-17T22:25:45.732Z"
+last_activity: "2026-03-18 — Phase 2 Plan 06 complete: streaming placeholder agentRole injection, activeProjectAgents guard, typing indicator mutual exclusion"
 progress:
   total_phases: 5
-  completed_phases: 2
-  total_plans: 4
-  completed_plans: 4
+  completed_phases: 0
+  total_plans: 7
+  completed_plans: 5
 ---
 
 # State: Hatchin MVP
@@ -26,12 +26,12 @@ See: .planning/PROJECT.md (updated 2026-03-17)
 
 ## Current Position
 
-Phase: 2 — User Journey Fixes — COMPLETE (proceeding to Phase 3)
-Plan: 4 of 4 complete
-Status: Phase complete — 5 gap items deferred
-Last activity: 2026-03-17 — Phase 2 Plan 04 complete: dep array fix + browser verification; 3/9 passing, 5 gaps documented
-Last session: 2026-03-17
-Stopped at: Completed 02-04 — Phase 2 done
+Phase: 2 — User Journey Fixes — gap closure in progress
+Plan: 06 complete (gap closure plans 05-07 active)
+Status: 3 of 5 gap items closed (UX-07, UX-08, DATA-04 resolved in 02-06; UX-05 resolved in 02-07; UX-01/02 resolved in 02-05)
+Last activity: 2026-03-18 — Phase 2 Plan 06 complete: streaming placeholder agentRole injection, activeProjectAgents guard, typing indicator mutual exclusion
+Last session: 2026-03-17T22:25:45.729Z
+Stopped at: Completed 02-06 — gap closure: UX-07 UX-08 DATA-04 fixed in CenterPanel.tsx
 
 ---
 
@@ -57,12 +57,18 @@ Stopped at: Completed 02-04 — Phase 2 done
 - Phase 2: Typing indicator cleared when AI streaming starts (02-02)
 - Phase 2: agentRole backfill in GET messages read path — old messages enriched at read time (02-03)
 
-### Phase 2 gap items (deferred — need follow-up plans)
-- UX-01/UX-02: Project creation — no name prompt; team auto-created alongside Maya; Maya shows fallback circle avatar
-- UX-05: Team accordion animation glitch when clicking last team in a project
-- UX-07: First reply after navigating back to project flashes old green color before correcting (race condition)
-- UX-08: Multiple typing indicators still appear simultaneously — Plan 02-02 fix was partial
-- DATA-04: Initial page load flashes green + letter avatar before correct color/SVG renders (loading-order issue)
+### Phase 2 gap items status
+- UX-01/UX-02: Project creation — addressed in plan 02-05
+- UX-05: Team accordion animation glitch — addressed in plan 02-07
+- UX-07: RESOLVED in 02-06 — streaming placeholder now includes agentRole from activeProjectAgents at creation time
+- UX-08: RESOLVED in 02-06 — typing indicators mutually exclusive; typingColleagues cleared on send
+- DATA-04: RESOLVED in 02-06 — agentRole backfill useEffect guarded against empty activeProjectAgents list
+
+### What's been built (02-06)
+- CenterPanel.tsx: streaming_started handler injects agentRole from activeProjectAgents into placeholder message metadata
+- CenterPanel.tsx: apiMessages transform useEffect guards with `if (activeProjectAgents.length === 0) return`
+- CenterPanel.tsx: in-message-list typing bubble gated on `typingColleagues.length === 0`
+- CenterPanel.tsx: both submit handlers call `setTypingColleagues([])` alongside `setIsThinking(true)`
 
 ---
 
