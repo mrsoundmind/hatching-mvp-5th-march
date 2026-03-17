@@ -592,7 +592,13 @@ export function CenterPanel({
         parentMessageId: message.parentMessageId || undefined,
         threadRootId: message.threadRootId || undefined,
         threadDepth: message.threadDepth || 0,
-        metadata: { isStreaming: true }
+        metadata: {
+          isStreaming: true,
+          agentRole: (() => {
+            const agent = activeProjectAgents.find(a => a.id === (message.agentId || ''));
+            return agent?.role ?? null;
+          })()
+        }
       };
 
       devLog('Creating streaming placeholder message:', message.messageId, 'for agent:', message.agentName);
@@ -1138,6 +1144,11 @@ export function CenterPanel({
   // Process API messages when they load
   useEffect(() => {
     if (apiMessages && currentChatContext && Array.isArray(apiMessages)) {
+      // Guard: if activeProject has no agents loaded yet, defer transform to avoid
+      // rendering all messages with null agentRole (green flash).
+      // The effect will re-run when activeProjectAgents populates.
+      if (activeProjectAgents.length === 0) return;
+
       devLog(`📥 Loaded ${apiMessages.length} messages from API for ${currentChatContext.conversationId}`);
       // Transform API messages to match our format
       const transformedMessages = apiMessages.map((msg: any) => {
@@ -1789,6 +1800,7 @@ export function CenterPanel({
           }
 
           setIsThinking(true);
+          setTypingColleagues([]);  // prevent stale indicator from showing during AI response
           const tempMessageId = `temp-${Date.now()}`;
           const timestamp = new Date().toISOString();
 
@@ -1886,6 +1898,7 @@ export function CenterPanel({
 
       if (canSend) {
         setIsThinking(true);
+        setTypingColleagues([]);  // prevent stale indicator from showing during AI response
         const tempMessageId = `temp-${Date.now()}`;
         const timestamp = new Date().toISOString();
 
@@ -2251,7 +2264,8 @@ export function CenterPanel({
                   const currentMsgs = getCurrentMessages();
                   const hasStreamingPlaceholder = currentMsgs.some(m => m.status === 'streaming' || m.metadata?.isStreaming);
                   // Hide banner if a placeholder exists OR a placeholder is about to be created (streamingMessageId already set)
-                  return isStreaming && streamingAgent && !hasStreamingPlaceholder && !streamingMessageId.current && !isThinking;
+                  // Also hide if bottom bar typing indicator is active to prevent dual indicators
+                  return isStreaming && streamingAgent && !hasStreamingPlaceholder && !streamingMessageId.current && !isThinking && typingColleagues.length === 0;
                 })() && (
                     <div className="flex justify-start">
                       <div className="flex items-start gap-3 max-w-[85%]">
