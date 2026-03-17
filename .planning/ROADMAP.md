@@ -78,23 +78,23 @@ When the conductor routes a message from Alex to Dev, the user just sees Dev res
 **Plans:** 4/4 plans complete
 
 Plans:
-- [ ] 02-01-PLAN.md — Fix `/` routing (LandingPage for logged-out) + home.tsx modal calls handleCreateIdeaProject
-- [ ] 02-02-PLAN.md — Fix team accordion (Set.replace not Set.add) + clear typingColleagues on streaming_started
-- [ ] 02-03-PLAN.md — Server-side agentRole backfill in GET messages route (batched, read-time enrichment)
-- [ ] 02-04-PLAN.md — Fix activeProjectAgents in backfill useEffect dep array + human verification checkpoint
+- [x] 02-01-PLAN.md — Fix `/` routing (LandingPage for logged-out) + home.tsx modal calls handleCreateIdeaProject
+- [x] 02-02-PLAN.md — Fix team accordion (Set.replace not Set.add) + clear typingColleagues on streaming_started
+- [x] 02-03-PLAN.md — Server-side agentRole backfill in GET messages route (batched, read-time enrichment)
+- [x] 02-04-PLAN.md — Fix activeProjectAgents in backfill useEffect dep array + human verification checkpoint
 
 **Success Criteria:**
-1. Click "Create Project" in the modal with a name → project is created, selected, and chat is ready — button does not silently fail
-2. Visit `/` when logged out → LandingPage renders with Hatchin's value proposition
-3. Visit `/` when logged in → redirect to the app immediately
-4. Click a project in the sidebar → it expands and all others collapse
-5. Click a team in the sidebar → agents appear; click again → agents collapse
-6. AI is streaming a response → textarea is fully enabled, user can type a follow-up
-7. Navigate away from a conversation and come back → agent bubble color is the same as before
-8. AI is thinking → typing indicator appears in exactly one place (not both message list and above input)
-9. Old messages loaded from DB show correct agent role color (not always default green)
+1. Click "Create Project" in the modal with a name → project is created, selected, and chat is ready — button does not silently fail — GAP (no name prompt; team auto-created; Maya shows fallback avatar)
+2. Visit `/` when logged out → LandingPage renders with Hatchin's value proposition — PASSED
+3. Visit `/` when logged in → redirect to the app immediately — (not independently tested)
+4. Click a project in the sidebar → it expands and all others collapse — PASSED
+5. Click a team in the sidebar → agents appear; click again → agents collapse — PARTIAL (works but animation glitch on last team)
+6. AI is streaming a response → textarea is fully enabled, user can type a follow-up — PASSED
+7. Navigate away from a conversation and come back → agent bubble color is the same as before — PARTIAL (first reply flashes old color before correcting)
+8. AI is thinking → typing indicator appears in exactly one place (not both message list and above input) — GAP (multiple indicators still appear)
+9. Old messages loaded from DB show correct agent role color (not always default green) — PARTIAL (flashes green on initial load before correcting)
 
-**Status:** not-started
+**Status:** complete (3/9 fully passing; 5 gap items documented in 02-04-SUMMARY.md for follow-up)
 
 ---
 

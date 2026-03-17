@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: — captured for context)
-status: completed
-stopped_at: "Completed 02-04 Task 1; waiting at checkpoint:human-verify Task 2"
-last_updated: "2026-03-17T15:12:59.442Z"
-last_activity: "2026-03-17 — Phase 2 Plan 01 complete: LandingPage for logged-out users + idea project creation fix"
+status: complete
+stopped_at: "Completed 02-04 — Phase 2 all plans done; 5 gap items documented for follow-up"
+last_updated: "2026-03-17"
+last_activity: "2026-03-17 — Phase 2 Plan 04 complete: dep array fix + human verification with pass/gap results"
 progress:
   total_phases: 5
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 4
   completed_plans: 4
 ---
@@ -20,18 +20,18 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-17)
 
 **Core value:** No one should ever feel alone with their idea, have to start from scratch, or need to know how to prompt AI — just have a conversation and your team takes it from there.
-**Current focus:** Phase 1 — Hatch Conversation Quality
+**Current focus:** Phase 3 — Hatch Presence and Avatar System
 
 ---
 
 ## Current Position
 
-Phase: 2 — User Journey Fixes
+Phase: 2 — User Journey Fixes — COMPLETE (proceeding to Phase 3)
 Plan: 4 of 4 complete
-Status: Phase complete
-Last activity: 2026-03-17 — Phase 2 Plan 01 complete: LandingPage for logged-out users + idea project creation fix
-Last session: 2026-03-17T15:12:59.439Z
-Stopped at: Completed 02-04 Task 1; waiting at checkpoint:human-verify Task 2
+Status: Phase complete — 5 gap items deferred
+Last activity: 2026-03-17 — Phase 2 Plan 04 complete: dep array fix + browser verification; 3/9 passing, 5 gaps documented
+Last session: 2026-03-17
+Stopped at: Completed 02-04 — Phase 2 done
 
 ---
 
@@ -57,11 +57,12 @@ Stopped at: Completed 02-04 Task 1; waiting at checkpoint:human-verify Task 2
 - Phase 2: Typing indicator cleared when AI streaming starts (02-02)
 - Phase 2: agentRole backfill in GET messages read path — old messages enriched at read time (02-03)
 
-### Known broken flows (Phase 2 priority)
-- Create Project button does nothing — needs investigation in LeftSidebar/home.tsx call chain
-- Sidebar does not auto-collapse on project/team click
-- Input blocked while AI responds (fix planned, needs verification)
-- Bubble color resets on navigation (fix planned, needs verification)
+### Phase 2 gap items (deferred — need follow-up plans)
+- UX-01/UX-02: Project creation — no name prompt; team auto-created alongside Maya; Maya shows fallback circle avatar
+- UX-05: Team accordion animation glitch when clicking last team in a project
+- UX-07: First reply after navigating back to project flashes old green color before correcting (race condition)
+- UX-08: Multiple typing indicators still appear simultaneously — Plan 02-02 fix was partial
+- DATA-04: Initial page load flashes green + letter avatar before correct color/SVG renders (loading-order issue)
 
 ---
 
@@ -77,3 +78,4 @@ None.
 |-------|------|--------|-------|
 | — | Pre-GSD | Complete | Core platform: auth, streaming chat, agents, tasks, WebSocket, LangGraph |
 | 1 | Hatch Conversation Quality | Complete | All 8 gaps: graph.ts removed, emotional signature, LLM memory, first-message opener, opinion injection, open questions, userDesignation derivation, handoff acknowledgment |
+| 2 | User Journey Fixes | Complete | 4 plans done; 3/9 criteria fully passing; 5 gap items (UX-01, UX-05, UX-07, UX-08, DATA-04) documented for follow-up |
