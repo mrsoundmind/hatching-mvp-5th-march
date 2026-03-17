@@ -75,7 +75,7 @@ When the conductor routes a message from Alex to Dev, the user just sees Dev res
 
 **Requirements:** UX-01, UX-02, UX-03, UX-04, UX-05, UX-06, UX-07, UX-08, DATA-04
 
-**Plans:** 2/4 plans executed
+**Plans:** 3/4 plans executed
 
 Plans:
 - [ ] 02-01-PLAN.md — Fix `/` routing (LandingPage for logged-out) + home.tsx modal calls handleCreateIdeaProject
