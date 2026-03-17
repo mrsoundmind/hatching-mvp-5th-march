@@ -75,13 +75,16 @@ When the conductor routes a message from Alex to Dev, the user just sees Dev res
 
 **Requirements:** UX-01, UX-02, UX-03, UX-04, UX-05, UX-06, UX-07, UX-08, DATA-04
 
-**Plans:** 4/4 plans complete
+**Plans:** 7 plans (4 original + 3 gap closure)
 
 Plans:
 - [x] 02-01-PLAN.md — Fix `/` routing (LandingPage for logged-out) + home.tsx modal calls handleCreateIdeaProject
 - [x] 02-02-PLAN.md — Fix team accordion (Set.replace not Set.add) + clear typingColleagues on streaming_started
 - [x] 02-03-PLAN.md — Server-side agentRole backfill in GET messages route (batched, read-time enrichment)
 - [x] 02-04-PLAN.md — Fix activeProjectAgents in backfill useEffect dep array + human verification checkpoint
+- [ ] 02-05-PLAN.md — GAP CLOSURE: UX-01/UX-02 — Project name prompt + Maya-only creation + Maya SVG avatar
+- [ ] 02-06-PLAN.md — GAP CLOSURE: UX-07/UX-08/DATA-04 — Streaming color race, typing indicator dedup, load flash
+- [ ] 02-07-PLAN.md — GAP CLOSURE: UX-05 — Team accordion AnimatePresence smooth collapse
 
 **Success Criteria:**
 1. Click "Create Project" in the modal with a name → project is created, selected, and chat is ready — button does not silently fail — GAP (no name prompt; team auto-created; Maya shows fallback avatar)
