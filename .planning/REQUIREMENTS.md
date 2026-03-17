@@ -33,7 +33,7 @@ Focus: **Perfect the text/conversation layer.** Every Hatch must feel genuinely 
 - [ ] **UX-04**: User can click a project in the sidebar to expand it (others auto-collapse)
 - [x] **UX-05**: User can click a team in the sidebar to expand its agents (others auto-collapse)
 - [ ] **UX-06**: Textarea in chat is always enabled — user can type while the AI is streaming
-- [ ] **UX-07**: Agent chat bubble color is consistent when navigating between projects and teams (no color reset on nav)
+- [x] **UX-07**: Agent chat bubble color is consistent when navigating between projects and teams (no color reset on nav)
 - [x] **UX-08**: Typing indicator appears in one place only — not both in the message list and above the input
 
 ### Hatch Presence (making them feel alive)
@@ -115,7 +115,7 @@ Focus: **Perfect the text/conversation layer.** Every Hatch must feel genuinely 
 | UX-04 | Phase 2 | Pending |
 | UX-05 | Phase 2 | Complete |
 | UX-06 | Phase 2 | Pending |
-| UX-07 | Phase 2 | Pending |
+| UX-07 | Phase 2 | Complete |
 | UX-08 | Phase 2 | Complete |
 | PRES-01 | Phase 3 | Pending |
 | PRES-02 | Phase 3 | Pending |
