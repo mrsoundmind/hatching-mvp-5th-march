@@ -1,98 +1,139 @@
 # Requirements: Hatchin MVP
 
 **Defined:** 2026-03-17
-**Core Value:** A user should feel like they're talking to real colleagues — not a chatbot.
+**Core Value:** No one should ever feel alone with their idea, have to start from scratch, or need to know how to prompt AI — just have a conversation and your team takes it from there.
 
 ## v1 Requirements
 
-Requirements for the v1.0 milestone. Each maps to roadmap phases.
+Focus: **Perfect the text/conversation layer.** Every Hatch must feel genuinely expert, contextually aware, and personality-driven. The user should never feel like they're talking to a generic AI.
 
-### User Journey Fixes
+### Conversation Quality (the core)
 
-- [ ] **UX-01**: User can create a project via the modal and land in the new project immediately
-- [ ] **UX-02**: User sees the landing page at `/` when not logged in, and is redirected to the app when logged in
-- [ ] **UX-03**: User can click a project in the sidebar to expand it (others collapse)
-- [ ] **UX-04**: User can click a team in the sidebar to expand its agents (others collapse)
-- [ ] **UX-05**: User can type in the chat input while the AI is responding (input never blocked)
-- [ ] **UX-06**: Agent chat bubble colors are consistent when navigating between projects and teams
+- [ ] **CONV-01**: Each Hatch responds with domain-specific expertise — an Engineer Hatch talks like a senior engineer, not a generic assistant
+- [ ] **CONV-02**: Each Hatch is aware of the full project context (Brain, direction, goals, past key decisions) without the user having to repeat themselves
+- [ ] **CONV-03**: Conversation memory works within a session — Hatch references what was discussed earlier and builds on it naturally
+- [ ] **CONV-04**: Hatch asks at most one question per reply, and it's the *right* question — not a catch-all "tell me more"
+- [ ] **CONV-05**: Hatch responses match the user's message length and energy — short casual message gets a short casual reply
+- [ ] **CONV-06**: No response ever starts with "Great!", "Sure!", or any sycophantic opener
+- [ ] **CONV-07**: No bullet points or markdown headers in chat responses — all natural prose
+- [ ] **CONV-08**: Each Hatch has a distinct voice — Alex (PM) sounds strategically probing, Dev (Engineer) sounds precise and dry, Cleo (Designer) sounds expressive and visual
 
-### AI Presence & Avatars
+### Project Awareness
 
-- [ ] **AV-01**: Each agent avatar shows a unique idle micro-animation (brow/mouth movement per personality)
-- [ ] **AV-02**: Thinking state shows a thought bubble instead of head tilt
-- [ ] **AV-03**: Avatars render in MessageBubble, ProjectTree, RightSidebar, and CenterPanel
-- [ ] **AV-04**: Avatar animations are subtle — no full-body floating
+- [ ] **AWARE-01**: When a user creates a project and describes their idea, the Hatch team acknowledges the specific idea — not a generic welcome
+- [ ] **AWARE-02**: Hatches reference the project Brain (goals, direction, culture) when it's relevant — "given what you're building..."
+- [ ] **AWARE-03**: Task detection from chat accurately surfaces tasks without interrupting the conversation flow
+- [ ] **AWARE-04**: When the user's intent shifts (from ideating to executing, or from one feature to another), the Hatch picks it up without being redirected
+
+### User Journey (broken flows that block everything)
+
+- [ ] **UX-01**: User can create a project via the modal and land in the new project immediately (Create Project button currently does nothing)
+- [ ] **UX-02**: First-time user is onboarded into their first project with a compelling welcome that sets the tone
+- [ ] **UX-03**: User sees the landing page at `/` when not logged in — it communicates what Hatchin is and why it's different
+- [ ] **UX-04**: User can click a project in the sidebar to expand it (others auto-collapse)
+- [ ] **UX-05**: User can click a team in the sidebar to expand its agents (others auto-collapse)
+- [ ] **UX-06**: Textarea in chat is always enabled — user can type while the AI is streaming
+- [ ] **UX-07**: Agent chat bubble color is consistent when navigating between projects and teams (no color reset on nav)
+- [ ] **UX-08**: Typing indicator appears in one place only — not both in the message list and above the input
+
+### Hatch Presence (making them feel alive)
+
+- [ ] **PRES-01**: Each agent avatar renders correctly in MessageBubble, ProjectTree, RightSidebar, and CenterPanel
+- [ ] **PRES-02**: Avatar idle state shows a unique micro-animation matching the character's personality (brow/mouth movement) — no full-body floating
+- [ ] **PRES-03**: Thinking state shows a thought bubble — not a head tilt
+- [ ] **PRES-04**: Agent display names show the character name (Alex, Dev, Cleo) everywhere — not the role label (Product Manager, Software Engineer)
+- [ ] **PRES-05**: Personality evolution (what a Hatch learns about the user's style) is persisted to the database — survives server restart
 
 ### Data Reliability
 
-- [ ] **DATA-01**: Agent personality evolution is persisted to the database (survives server restart)
-- [ ] **DATA-02**: Message creation uses an idempotency key to prevent duplicates on retry
-- [ ] **DATA-03**: Long conversations use cursor-based pagination (not all-at-once load)
-- [ ] **DATA-04**: Server asserts `STORAGE_MODE=db` on startup in production (prevents silent data loss)
+- [ ] **DATA-01**: Message creation uses an idempotency key — no duplicate messages on network retry
+- [ ] **DATA-02**: Long conversations use cursor-based pagination — first 50 messages load, user can load more
+- [ ] **DATA-03**: Server asserts `STORAGE_MODE=db` at startup in production — prevents silent in-memory data loss
+- [ ] **DATA-04**: `agentRole` stored in message metadata at creation and backfilled at read time for old messages
 
 ### Architecture
 
-- [ ] **ARCH-01**: `routes.ts` split into `server/routes/projects.ts`, `teams.ts`, `agents.ts`, `messages.ts`, `chat.ts`
-- [ ] **ARCH-02**: `agentRole` is stored in message metadata on creation and backfilled at read time for old messages
+- [ ] **ARCH-01**: `routes.ts` (3,500+ lines) split into focused modules: `projects.ts`, `teams.ts`, `agents.ts`, `messages.ts`, `chat.ts`
+- [ ] **ARCH-02**: All existing tests pass after route split — no behavior changes
 
-## v2 Requirements
+## v2 Requirements (future milestones)
 
-Deferred to a future release.
+### Multimodal
 
-### Analytics & Growth
-
-- **ANLX-01**: User can see a dashboard of team activity (messages, tasks, response times)
-- **ANLX-02**: Admin can view usage metrics across all projects
-- **ANLX-03**: User can export conversation history
-
-### Agent Marketplace
-
-- **MKT-01**: User can browse public agent templates
-- **MKT-02**: User can publish their agent configuration as a template
-- **MKT-03**: User can import an agent template into their project
+- **MM-01**: User can generate images from a conversation with the Designer or Creative Hatch
+- **MM-02**: User can trigger Claude coding agent from a conversation with the Engineer Hatch
+- **MM-03**: Code output from Claude agent is shown in a rich code block with apply/copy actions
 
 ### Integrations
 
-- **INT-01**: User can connect a GitHub repo and agents can reference it
-- **INT-02**: User can connect Linear and tasks sync bidirectionally
-- **INT-03**: User receives Slack notifications for agent messages
+- **INT-01**: User can connect a GitHub repo — Engineer Hatch can reference real files
+- **INT-02**: Tasks sync bidirectionally with Linear
+- **INT-03**: User receives Slack notifications for Hatch messages
 
-## Out of Scope
+### Growth & Craft
+
+- **CRAFT-01**: Designer Hatch provides critique mode — user shares work, Hatch gives structured feedback
+- **CRAFT-02**: Hatch tracks user's skill progress over time — "you've improved at X since last month"
+- **CRAFT-03**: User can request a "teach me" session — Hatch enters teaching mode for their domain
+
+### Analytics
+
+- **ANLX-01**: User sees a dashboard of team activity — messages, tasks completed, response quality scores
+- **ANLX-02**: Hatch feedback loop — user rates responses, training data accumulates
+
+## Out of Scope (this milestone)
 
 | Feature | Reason |
 |---------|--------|
+| Image generation | Text-first — perfect conversation before adding modalities |
+| Claude coding integration | Text-first |
+| Voice input | Text-first |
 | Mobile app | Web-first, validate before native |
-| Real-time video | Massive infra, not core to value |
-| Custom LLM fine-tuning | Need 10K+ training examples minimum |
 | Multi-tenant billing | Pre product-market fit |
-| Audio input (Whisper) | Nice-to-have, not core flow |
+| Custom LLM fine-tuning | Need 10K+ training examples first |
+| GitHub / Linear integrations | v2+ |
 
 ## Traceability
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| UX-01 | Phase 1 | Pending |
-| UX-02 | Phase 1 | Pending |
-| UX-03 | Phase 1 | Pending |
-| UX-04 | Phase 1 | Pending |
-| UX-05 | Phase 1 | Pending |
-| UX-06 | Phase 1 | Pending |
-| AV-01 | Phase 2 | Pending |
-| AV-02 | Phase 2 | Pending |
-| AV-03 | Phase 2 | Pending |
-| AV-04 | Phase 2 | Pending |
-| DATA-01 | Phase 3 | Pending |
-| DATA-02 | Phase 3 | Pending |
-| DATA-03 | Phase 3 | Pending |
-| DATA-04 | Phase 3 | Pending |
-| ARCH-01 | Phase 4 | Pending |
-| ARCH-02 | Phase 1 | Pending |
+| CONV-01 | Phase 1 | Pending |
+| CONV-02 | Phase 1 | Pending |
+| CONV-03 | Phase 1 | Pending |
+| CONV-04 | Phase 1 | Pending |
+| CONV-05 | Phase 1 | Pending |
+| CONV-06 | Phase 1 | Pending |
+| CONV-07 | Phase 1 | Pending |
+| CONV-08 | Phase 1 | Pending |
+| AWARE-01 | Phase 1 | Pending |
+| AWARE-02 | Phase 1 | Pending |
+| AWARE-03 | Phase 1 | Pending |
+| AWARE-04 | Phase 1 | Pending |
+| UX-01 | Phase 2 | Pending |
+| UX-02 | Phase 2 | Pending |
+| UX-03 | Phase 2 | Pending |
+| UX-04 | Phase 2 | Pending |
+| UX-05 | Phase 2 | Pending |
+| UX-06 | Phase 2 | Pending |
+| UX-07 | Phase 2 | Pending |
+| UX-08 | Phase 2 | Pending |
+| PRES-01 | Phase 3 | Pending |
+| PRES-02 | Phase 3 | Pending |
+| PRES-03 | Phase 3 | Pending |
+| PRES-04 | Phase 3 | Pending |
+| PRES-05 | Phase 3 | Pending |
+| DATA-01 | Phase 4 | Pending |
+| DATA-02 | Phase 4 | Pending |
+| DATA-03 | Phase 4 | Pending |
+| DATA-04 | Phase 2 | Pending |
+| ARCH-01 | Phase 5 | Pending |
+| ARCH-02 | Phase 5 | Pending |
 
 **Coverage:**
-- v1 requirements: 16 total
-- Mapped to phases: 16
+- v1 requirements: 31 total
+- Mapped to phases: 31
 - Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-03-17*
-*Last updated: 2026-03-17 after initial definition*
+*Last updated: 2026-03-17 — Rewritten with full product vision*
