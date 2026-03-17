@@ -1,3 +1,18 @@
+---
+gsd_state_version: 1.0
+milestone: v1.0
+milestone_name: — captured for context)
+status: executing
+stopped_at: Completed 02-02-PLAN.md
+last_updated: "2026-03-17T15:09:18.769Z"
+last_activity: "2026-03-17 — Phase 2 Plan 03 complete: agentRole backfill in GET messages read path"
+progress:
+  total_phases: 5
+  completed_phases: 0
+  total_plans: 4
+  completed_plans: 2
+---
+
 # State: Hatchin MVP
 
 ## Project Reference
@@ -12,9 +27,11 @@ See: .planning/PROJECT.md (updated 2026-03-17)
 ## Current Position
 
 Phase: 2 — User Journey Fixes
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-03-17 — Phase 1 complete: all 8 conversation quality gaps implemented
+Plan: 3 of 3 complete
+Status: In progress
+Last activity: 2026-03-17 — Phase 2 Plan 03 complete: agentRole backfill in GET messages read path
+Last session: 2026-03-17T15:09:18.766Z
+Stopped at: Completed 02-02-PLAN.md
 
 ---
 
@@ -36,6 +53,9 @@ Last activity: 2026-03-17 — Phase 1 complete: all 8 conversation quality gaps 
 - `agentRole` added to message metadata in `routes.ts`
 - AgentAvatar wired into MessageBubble, ProjectTree, RightSidebar, CenterPanel
 - Character names (Alex, Dev, Cleo, etc.) shown instead of role names
+- Phase 2: LandingPage wired to router for logged-out users (02-01)
+- Phase 2: Typing indicator cleared when AI streaming starts (02-02)
+- Phase 2: agentRole backfill in GET messages read path — old messages enriched at read time (02-03)
 
 ### Known broken flows (Phase 2 priority)
 - Create Project button does nothing — needs investigation in LeftSidebar/home.tsx call chain
