@@ -1186,7 +1186,7 @@ export function CenterPanel({
         };
       });
     }
-  }, [apiMessages, currentChatContext]);
+  }, [apiMessages, currentChatContext, activeProjectAgents]);
 
   // Cleanup processed message IDs when conversation changes
   useEffect(() => {
