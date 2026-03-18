@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: — captured for context)
-status: All PRES-01 through PRES-05 closed
-stopped_at: Completed 03-01-PLAN.md
-last_updated: "2026-03-18T03:16:44.487Z"
-last_activity: "2026-03-18 — Phase 3 Plan 01 complete: personality persistence to JSONB, avatar system verified"
+status: DATA-01, DATA-02, and DATA-03 closed
+stopped_at: Completed 04-02-PLAN.md
+last_updated: "2026-03-18T13:36:25.678Z"
+last_activity: "2026-03-18 — Phase 4 Plan 01 complete: production storage guard + client idempotencyKey (commit 5d9b80e)"
 progress:
   total_phases: 5
-  completed_phases: 2
-  total_plans: 8
-  completed_plans: 8
+  completed_phases: 3
+  total_plans: 10
+  completed_plans: 10
 ---
 
 # State: Hatchin MVP
@@ -20,18 +20,18 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-17)
 
 **Core value:** No one should ever feel alone with their idea, have to start from scratch, or need to know how to prompt AI — just have a conversation and your team takes it from there.
-**Current focus:** Phase 3 complete — ready for Phase 4
+**Current focus:** Phase 4 — Data Reliability and Resilience
 
 ---
 
 ## Current Position
 
-Phase: 3 — Hatch Presence and Avatar System — complete
-Plan: 01 complete (1 of 1 plans)
-Status: All PRES-01 through PRES-05 closed
-Last activity: 2026-03-18 — Phase 3 Plan 01 complete: personality persistence to JSONB, avatar system verified
-Last session: 2026-03-18T03:12:40.102Z
-Stopped at: Completed 03-01-PLAN.md
+Phase: 4 — Data Reliability and Resilience — plan 02 complete
+Plan: 02 complete (2 of 2 plans)
+Status: DATA-01, DATA-02, and DATA-03 closed
+Last activity: 2026-03-18 — Phase 4 Plan 02 complete: cursor pagination + Load earlier messages UI (commit 98f90a1)
+Last session: 2026-03-18T13:36:25.672Z
+Stopped at: Completed 04-02-PLAN.md
 
 ---
 
@@ -71,11 +71,36 @@ Stopped at: Completed 03-01-PLAN.md
 - CenterPanel.tsx: in-message-list typing bubble gated on `typingColleagues.length === 0`
 - CenterPanel.tsx: both submit handlers call `setTypingColleagues([])` alongside `setIsThinking(true)`
 
+### What's been built (04-02)
+- server/storage.ts: MemStorage + DatabaseStorage cursor-aware limit: sort ascending, before/after cursor filter, slice last N when limit set without page
+- server/routes.ts: GET messages returns { messages, hasMore, nextCursor } envelope; removed page param
+- CenterPanel.tsx: useQuery select transform normalizes bare array + envelope; hasMoreMessages/nextMessageCursor state; loadEarlierMessages() function; "Load earlier messages" button at top of list
+- scripts/test-pagination.ts: 3 TDD tests for storage pagination
+- scripts/test-pagination-ui.ts: 4 TDD tests for select transform + URL building + guard logic
+
+### What's been built (04-01)
+- server/productionGuard.ts: pure exported assertProductionStorageMode() guard function (DATA-03)
+- server/index.ts: wired assertProductionStorageMode(NODE_ENV, STORAGE_MODE) at startup
+- CenterPanel.tsx: idempotencyKey added to both WS send locations in message metadata (DATA-01)
+- scripts/test-production-guard.ts: 4 assertions for guard behavior + wiring
+- scripts/test-idempotency-e2e.ts: 5 assertions for checkIdempotencyKey() behavior
+
 ---
 
 ## Blockers / Concerns
 
 None.
+
+---
+
+## Decisions
+
+| Date | Phase | Decision |
+|------|-------|----------|
+| 2026-03-18 | 04-01 | Guard extracted to server/productionGuard.ts (not server/index.ts) for testability — importing index.ts boots full server |
+| 2026-03-18 | 04-01 | idempotencyKey uses tempMessageId + Date.now() composite — unique across retries within same millisecond |
+| 2026-03-18 | 04-02 | Cursor = createdAt ISO timestamp of oldest message in window; hasMore heuristic: response length === limit implies more exist |
+| 2026-03-18 | 04-02 | earlierMessages in separate state array merged via useMemo; select transform in useQuery normalizes both bare array and envelope for backward compat |
 
 ---
 
@@ -87,3 +112,4 @@ None.
 | 1 | Hatch Conversation Quality | Complete | All 8 gaps: graph.ts removed, emotional signature, LLM memory, first-message opener, opinion injection, open questions, userDesignation derivation, handoff acknowledgment |
 | 2 | User Journey Fixes | Complete | 4 plans done; 3/9 criteria fully passing; 5 gap items (UX-01, UX-05, UX-07, UX-08, DATA-04) documented for follow-up |
 | 3 | Hatch Presence and Avatar System | Complete | 26 SVG avatars, unique idle animations, thinking bubble, character names, personality persistence to DB (PRES-01 to PRES-05) |
+| 4 | Data Reliability and Resilience | Complete | Plan 01: production guard (DATA-03) + client idempotencyKey (DATA-01). Plan 02: cursor pagination + Load earlier messages UI (DATA-02) |

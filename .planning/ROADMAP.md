@@ -131,7 +131,7 @@ Plans:
 
 **Requirements:** DATA-01, DATA-02, DATA-03
 
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 
 Plans:
 - [ ] 04-01-PLAN.md — Production STORAGE_MODE guard (DATA-03) + end-to-end message idempotency (DATA-01)

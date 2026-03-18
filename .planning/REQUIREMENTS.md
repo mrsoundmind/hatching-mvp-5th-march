@@ -47,7 +47,7 @@ Focus: **Perfect the text/conversation layer.** Every Hatch must feel genuinely 
 ### Data Reliability
 
 - [ ] **DATA-01**: Message creation uses an idempotency key — no duplicate messages on network retry
-- [ ] **DATA-02**: Long conversations use cursor-based pagination — first 50 messages load, user can load more
+- [x] **DATA-02**: Long conversations use cursor-based pagination — first 50 messages load, user can load more
 - [ ] **DATA-03**: Server asserts `STORAGE_MODE=db` at startup in production — prevents silent in-memory data loss
 - [x] **DATA-04**: `agentRole` stored in message metadata at creation and backfilled at read time for old messages
 
@@ -123,7 +123,7 @@ Focus: **Perfect the text/conversation layer.** Every Hatch must feel genuinely 
 | PRES-04 | Phase 3 | Complete |
 | PRES-05 | Phase 3 | Complete |
 | DATA-01 | Phase 4 | Pending |
-| DATA-02 | Phase 4 | Pending |
+| DATA-02 | Phase 4 | Complete |
 | DATA-03 | Phase 4 | Pending |
 | DATA-04 | Phase 2 | Complete |
 | ARCH-01 | Phase 5 | Pending |
