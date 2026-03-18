@@ -28,7 +28,7 @@ Focus: **Perfect the text/conversation layer.** Every Hatch must feel genuinely 
 ### User Journey (broken flows that block everything)
 
 - [x] **UX-01**: User can create a project via the modal and land in the new project immediately (Create Project button currently does nothing)
-- [ ] **UX-02**: First-time user is onboarded into their first project with a compelling welcome that sets the tone
+- [x] **UX-02**: First-time user is onboarded into their first project with a compelling welcome that sets the tone
 - [x] **UX-03**: User sees the landing page at `/` when not logged in — it communicates what Hatchin is and why it's different
 - [ ] **UX-04**: User can click a project in the sidebar to expand it (others auto-collapse)
 - [x] **UX-05**: User can click a team in the sidebar to expand its agents (others auto-collapse)
@@ -38,11 +38,11 @@ Focus: **Perfect the text/conversation layer.** Every Hatch must feel genuinely 
 
 ### Hatch Presence (making them feel alive)
 
-- [ ] **PRES-01**: Each agent avatar renders correctly in MessageBubble, ProjectTree, RightSidebar, and CenterPanel
-- [ ] **PRES-02**: Avatar idle state shows a unique micro-animation matching the character's personality (brow/mouth movement) — no full-body floating
-- [ ] **PRES-03**: Thinking state shows a thought bubble — not a head tilt
-- [ ] **PRES-04**: Agent display names show the character name (Alex, Dev, Cleo) everywhere — not the role label (Product Manager, Software Engineer)
-- [ ] **PRES-05**: Personality evolution (what a Hatch learns about the user's style) is persisted to the database — survives server restart
+- [x] **PRES-01**: Each agent avatar renders correctly in MessageBubble, ProjectTree, RightSidebar, and CenterPanel
+- [x] **PRES-02**: Avatar idle state shows a unique micro-animation matching the character's personality (brow/mouth movement) — no full-body floating
+- [x] **PRES-03**: Thinking state shows a thought bubble — not a head tilt
+- [x] **PRES-04**: Agent display names show the character name (Alex, Dev, Cleo) everywhere — not the role label (Product Manager, Software Engineer)
+- [x] **PRES-05**: Personality evolution (what a Hatch learns about the user's style) is persisted to the database — survives server restart
 
 ### Data Reliability
 
@@ -110,18 +110,18 @@ Focus: **Perfect the text/conversation layer.** Every Hatch must feel genuinely 
 | AWARE-03 | Phase 1 | Pending |
 | AWARE-04 | Phase 1 | Pending |
 | UX-01 | Phase 2 | Complete |
-| UX-02 | Phase 2 | Pending |
+| UX-02 | Phase 2 | Complete |
 | UX-03 | Phase 2 | Complete |
 | UX-04 | Phase 2 | Pending |
 | UX-05 | Phase 2 | Complete |
 | UX-06 | Phase 2 | Pending |
 | UX-07 | Phase 2 | Complete |
 | UX-08 | Phase 2 | Complete |
-| PRES-01 | Phase 3 | Pending |
-| PRES-02 | Phase 3 | Pending |
-| PRES-03 | Phase 3 | Pending |
-| PRES-04 | Phase 3 | Pending |
-| PRES-05 | Phase 3 | Pending |
+| PRES-01 | Phase 3 | Complete |
+| PRES-02 | Phase 3 | Complete |
+| PRES-03 | Phase 3 | Complete |
+| PRES-04 | Phase 3 | Complete |
+| PRES-05 | Phase 3 | Complete |
 | DATA-01 | Phase 4 | Pending |
 | DATA-02 | Phase 4 | Pending |
 | DATA-03 | Phase 4 | Pending |
