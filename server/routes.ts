@@ -1063,6 +1063,20 @@ export async function registerRoutes(app: Express, sessionParser?: SessionParser
       // B4: Integrate reaction with personality evolution
       if (reactionData.agentId) {
         const feedback = reactionData.reactionType === 'thumbs_up' ? 'positive' : 'negative';
+
+        // Bug 1: seed from DB so learning survives server restart
+        try {
+          const agentForSeed = await storage.getAgent(reactionData.agentId);
+          const persisted = (agentForSeed?.personality as any);
+          if (persisted?.adaptedTraits?.[userId] && persisted?.adaptationMeta?.[userId]) {
+            personalityEngine.seedProfileFromDB(
+              reactionData.agentId, userId,
+              persisted.adaptedTraits[userId],
+              persisted.adaptationMeta[userId]
+            );
+          }
+        } catch { /* non-critical */ }
+
         personalityEngine.adaptPersonalityFromFeedback(
           reactionData.agentId,
           userId,
@@ -3492,8 +3506,43 @@ export async function registerRoutes(app: Express, sessionParser?: SessionParser
             console.error("AKL runtime error:", aklError);
           }
 
-          // B4: Process personality evolution from this interaction
-          // This happens automatically in the streaming generation now
+          // B4: Persist behavior-based personality adaptation after each response
+          try {
+            const behaviorUserId = userMessage.userId || userMessage.senderId;
+            if (behaviorUserId && respondingAgent?.id) {
+              // Seed from DB first so restart doesn't wipe learning
+              const agentForPersist = await storage.getAgent(respondingAgent.id);
+              const persistedPersonality = (agentForPersist?.personality as any);
+              if (persistedPersonality?.adaptedTraits?.[behaviorUserId] && persistedPersonality?.adaptationMeta?.[behaviorUserId]) {
+                personalityEngine.seedProfileFromDB(
+                  respondingAgent.id, behaviorUserId,
+                  persistedPersonality.adaptedTraits[behaviorUserId],
+                  persistedPersonality.adaptationMeta[behaviorUserId]
+                );
+              }
+              // Persist any behavior-based adaptation that happened during streaming
+              const behaviorProfile = personalityEngine.getPersonalityProfile(respondingAgent.id, behaviorUserId);
+              if (behaviorProfile.interactionCount > 0) {
+                const existingPersonality = persistedPersonality || {};
+                await storage.updateAgent(respondingAgent.id, {
+                  personality: {
+                    ...existingPersonality,
+                    adaptedTraits: { ...(existingPersonality.adaptedTraits || {}), [behaviorUserId]: behaviorProfile.adaptedTraits },
+                    adaptationMeta: {
+                      ...(existingPersonality.adaptationMeta || {}),
+                      [behaviorUserId]: {
+                        interactionCount: behaviorProfile.interactionCount,
+                        adaptationConfidence: behaviorProfile.adaptationConfidence,
+                        lastUpdated: new Date().toISOString()
+                      }
+                    }
+                  } as any
+                });
+              }
+            }
+          } catch (behaviorPersistErr) {
+            devLog('Behavior personality persist failed (non-critical):', behaviorPersistErr);
+          }
 
           // Auto task extraction from conversation
           try {

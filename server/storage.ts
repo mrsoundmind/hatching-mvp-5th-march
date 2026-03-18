@@ -611,33 +611,22 @@ export class MemStorage implements IStorage {
       };
       this.projects.set(projectId, updatedProject);
 
-      // Create a default team first for Maya
-      const strategyTeam: Team = {
-        id: randomUUID(),
-        userId: project.userId,
-        name: "Strategy",
-        emoji: "🎯",
-        projectId: projectId,
-        isExpanded: true,
-      };
-      this.teams.set(strategyTeam.id, strategyTeam);
-
-      // Task 15 Part 2: Ensure an 'Idea' project has a default PM agent to avoid 0-agent fallback
+      // Create Maya as a project-level agent with no team (teamId: null)
       const mayaAgent: Agent = {
         id: randomUUID(),
         userId: project.userId,
         name: "Maya",
         role: "Product Manager",
-        color: "blue",
-        teamId: strategyTeam.id,
+        color: "teal",
+        teamId: null,
         projectId: projectId,
         personality: {
           traits: ["strategic", "supportive", "analytical"],
           communicationStyle: "Warm, direct, and structured",
-          expertise: ["Product Strategy", "Requirements Gathering"],
-          welcomeMessage: "Hi! I'm Maya, your Product Manager. Tell me about your idea and I'll help you structure it into an actionable plan."
+          expertise: ["Product Strategy", "Requirements Gathering", "Idea Development"],
+          welcomeMessage: "Hi! I'm Maya. Tell me about your idea and I'll help you shape it into something real."
         },
-        isSpecialAgent: false,
+        isSpecialAgent: true,
       };
       this.agents.set(mayaAgent.id, mayaAgent);
 
@@ -1581,8 +1570,18 @@ export class DatabaseStorage implements IStorage {
     return db.select().from(schema.messageReactions).where(eq(schema.messageReactions.messageId, messageId));
   }
   async storeFeedback(agentId: string, userId: string, feedback: any): Promise<void> {
-    // In db mode, this might just log it or store it if we have a table for feedback arrays
-    // For now we will just use the messageReactions table, or ignore if independent
+    try {
+      await db.insert(schema.autonomyEvents).values({
+        traceId: `feedback-${agentId}-${userId}-${Date.now()}`,
+        turnId: 'feedback',
+        requestId: `feedback-${Date.now()}`,
+        conversationId: `agent-feedback:${agentId}`,
+        eventType: 'personality_feedback',
+        payload: { agentId, userId, ...feedback },
+        riskScore: 0,
+        confidence: 1,
+      });
+    } catch { /* non-critical */ }
   }
 
   // Memory (stored in conversationMemory table)

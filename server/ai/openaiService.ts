@@ -117,9 +117,8 @@ export async function* generateStreamingResponse(
     let personalityPrompt = '';
 
     if (context.userId && context.conversationHistory.length > 0) {
-      const personalityIdentity = context.projectId
-        ? `${context.projectId}:${context.agentId || agentRole}`
-        : (context.agentId || agentRole);
+      // Bug 5 fix: always use bare agentId as key (never composite projectId:agentId)
+      const personalityIdentity = context.agentId || agentRole;
 
       const messagesForAnalysis = context.conversationHistory.map(msg => ({
         content: msg.content,
