@@ -131,13 +131,19 @@ Plans:
 
 **Requirements:** DATA-01, DATA-02, DATA-03
 
+**Plans:** 2 plans
+
+Plans:
+- [ ] 04-01-PLAN.md — Production STORAGE_MODE guard (DATA-03) + end-to-end message idempotency (DATA-01)
+- [ ] 04-02-PLAN.md — Cursor-based message pagination: server envelope + frontend "Load earlier messages" UI (DATA-02)
+
 **Success Criteria:**
 1. Send the same message twice rapidly (simulated network retry) → only one message appears in the conversation
 2. Open a conversation with 200+ messages → first 50 load; "Load earlier messages" appears; clicking it loads the next 50
 3. Start the server with `NODE_ENV=production` and `STORAGE_MODE=memory` → server throws a startup error with a clear message
 4. Start the server normally → no errors; all behavior unchanged
 
-**Status:** not-started
+**Status:** planned
 
 ---
 
