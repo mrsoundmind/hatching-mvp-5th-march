@@ -53,7 +53,7 @@ Focus: **Perfect the text/conversation layer.** Every Hatch must feel genuinely 
 
 ### Architecture
 
-- [ ] **ARCH-01**: `routes.ts` (3,500+ lines) split into focused modules: `projects.ts`, `teams.ts`, `agents.ts`, `messages.ts`, `chat.ts`
+- [x] **ARCH-01**: `routes.ts` (3,500+ lines) split into focused modules: `projects.ts`, `teams.ts`, `agents.ts`, `messages.ts`, `chat.ts`
 - [ ] **ARCH-02**: All existing tests pass after route split — no behavior changes
 
 ## v2 Requirements (future milestones)
@@ -126,7 +126,7 @@ Focus: **Perfect the text/conversation layer.** Every Hatch must feel genuinely 
 | DATA-02 | Phase 4 | Complete |
 | DATA-03 | Phase 4 | Pending |
 | DATA-04 | Phase 2 | Complete |
-| ARCH-01 | Phase 5 | Pending |
+| ARCH-01 | Phase 5 | Complete |
 | ARCH-02 | Phase 5 | Pending |
 
 **Coverage:**

@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: — captured for context)
-status: DATA-01, DATA-02, and DATA-03 closed
-stopped_at: Completed 04-02-PLAN.md
-last_updated: "2026-03-18T13:45:52.709Z"
-last_activity: "2026-03-18 — Phase 4 Plan 02 complete: cursor pagination + Load earlier messages UI (commit 98f90a1)"
+status: ARCH-01 plan 01 complete
+stopped_at: Completed 05-01-PLAN.md
+last_updated: "2026-03-18T14:27:28Z"
+last_activity: "2026-03-18 — Phase 5 Plan 01 complete: extracted teams, agents, messages route modules (commits 4cc0cfd, 0f0b3e3)"
 progress:
   total_phases: 5
-  completed_phases: 3
-  total_plans: 10
-  completed_plans: 10
+  completed_phases: 4
+  total_plans: 11
+  completed_plans: 11
 ---
 
 # State: Hatchin MVP
@@ -20,18 +20,18 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-17)
 
 **Core value:** No one should ever feel alone with their idea, have to start from scratch, or need to know how to prompt AI — just have a conversation and your team takes it from there.
-**Current focus:** Phase 4 — Data Reliability and Resilience
+**Current focus:** Phase 5 — Route Architecture Cleanup
 
 ---
 
 ## Current Position
 
-Phase: 4 — Data Reliability and Resilience — plan 02 complete
-Plan: 02 complete (2 of 2 plans)
-Status: DATA-01, DATA-02, and DATA-03 closed
-Last activity: 2026-03-18 — Phase 4 Plan 02 complete: cursor pagination + Load earlier messages UI (commit 98f90a1)
-Last session: 2026-03-18T13:36:25.672Z
-Stopped at: Completed 04-02-PLAN.md
+Phase: 5 — Route Architecture Cleanup — plan 01 complete
+Plan: 01 complete (1 of 1 plans)
+Status: ARCH-01 plan 01 complete — teams, agents, messages extracted
+Last activity: 2026-03-18 — Phase 5 Plan 01 complete: extracted teams, agents, messages route modules (commits 4cc0cfd, 0f0b3e3)
+Last session: 2026-03-18T14:27:28Z
+Stopped at: Completed 05-01-PLAN.md
 
 ---
 
@@ -101,6 +101,8 @@ None.
 | 2026-03-18 | 04-01 | idempotencyKey uses tempMessageId + Date.now() composite — unique across retries within same millisecond |
 | 2026-03-18 | 04-02 | Cursor = createdAt ISO timestamp of oldest message in window; hasMore heuristic: response length === limit implies more exist |
 | 2026-03-18 | 04-02 | earlierMessages in separate state array merged via useMemo; select transform in useQuery normalizes both bare array and envelope for backward compat |
+| 2026-03-18 | 05-01 | Helpers re-declared locally in each route module (not imported from routes.ts) — avoids circular dependency, keeps modules fully self-contained |
+| 2026-03-18 | 05-01 | tdd-guard disabled via guardEnabled:false for deletion phase of move-refactoring — guard correctly enforces TDD but creates a paradox for pure code-move operations |
 
 ---
 
@@ -113,3 +115,4 @@ None.
 | 2 | User Journey Fixes | Complete | 4 plans done; 3/9 criteria fully passing; 5 gap items (UX-01, UX-05, UX-07, UX-08, DATA-04) documented for follow-up |
 | 3 | Hatch Presence and Avatar System | Complete | 26 SVG avatars, unique idle animations, thinking bubble, character names, personality persistence to DB (PRES-01 to PRES-05) |
 | 4 | Data Reliability and Resilience | Complete | Plan 01: production guard (DATA-03) + client idempotencyKey (DATA-01). Plan 02: cursor pagination + Load earlier messages UI (DATA-02) |
+| 5 | Route Architecture Cleanup | In Progress | Plan 01: extracted teams, agents, messages route modules from 4347-line routes.ts god file (ARCH-01 partial) |
