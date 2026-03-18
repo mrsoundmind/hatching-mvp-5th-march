@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: — captured for context)
-status: ARCH-01 plan 01 complete
-stopped_at: Completed 05-01-PLAN.md
-last_updated: "2026-03-18T14:27:28Z"
+status: completed
+stopped_at: Completed 05-02-PLAN.md
+last_updated: "2026-03-18T14:39:36.329Z"
 last_activity: "2026-03-18 — Phase 5 Plan 01 complete: extracted teams, agents, messages route modules (commits 4cc0cfd, 0f0b3e3)"
 progress:
   total_phases: 5
-  completed_phases: 4
-  total_plans: 11
-  completed_plans: 11
+  completed_phases: 3
+  total_plans: 13
+  completed_plans: 12
 ---
 
 # State: Hatchin MVP
@@ -30,8 +30,8 @@ Phase: 5 — Route Architecture Cleanup — plan 01 complete
 Plan: 01 complete (1 of 1 plans)
 Status: ARCH-01 plan 01 complete — teams, agents, messages extracted
 Last activity: 2026-03-18 — Phase 5 Plan 01 complete: extracted teams, agents, messages route modules (commits 4cc0cfd, 0f0b3e3)
-Last session: 2026-03-18T14:27:28Z
-Stopped at: Completed 05-01-PLAN.md
+Last session: 2026-03-18T14:39:36.326Z
+Stopped at: Completed 05-02-PLAN.md
 
 ---
 
@@ -105,6 +105,8 @@ None.
 | 2026-03-18 | 05-01 | tdd-guard disabled via guardEnabled:false for deletion phase of move-refactoring — guard correctly enforces TDD but creates a paradox for pure code-move operations |
 
 ---
+- [Phase 05-02]: Typed deps interface (RegisterProjectDeps, RegisterTaskDeps) for broadcast injection — avoids circular deps while enabling WS broadcast from route modules
+- [Phase 05-02]: broadcastToProject extracted to routes.ts helper — encapsulates activeConnections iteration, tasks.ts has zero direct WS references
 
 ## Phase History
 

@@ -153,7 +153,7 @@ Plans:
 
 **Requirements:** ARCH-01, ARCH-02
 
-**Plans:** 1/3 plans executed
+**Plans:** 2/3 plans executed
 
 Plans:
 - [ ] 05-01-PLAN.md — Extract teams.ts, agents.ts, messages.ts (self-contained, no broadcast deps)
