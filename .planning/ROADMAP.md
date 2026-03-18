@@ -149,9 +149,16 @@ Plans:
 
 ## Phase 5: Route Architecture Cleanup
 
-**Goal:** Break the 3,500-line `routes.ts` god file into focused, maintainable modules. Zero behavior changes — pure reorganization.
+**Goal:** Break the 4,347-line `routes.ts` god file into focused, maintainable modules. Zero behavior changes — pure reorganization.
 
 **Requirements:** ARCH-01, ARCH-02
+
+**Plans:** 3 plans
+
+Plans:
+- [ ] 05-01-PLAN.md — Extract teams.ts, agents.ts, messages.ts (self-contained, no broadcast deps)
+- [ ] 05-02-PLAN.md — Extract projects.ts + tasks.ts (broadcast deps via typed interfaces)
+- [ ] 05-03-PLAN.md — Extract chat.ts (WS server + streaming handler) + reduce routes.ts to orchestrator
 
 **Success Criteria:**
 1. `server/routes/projects.ts` exists and handles all `/api/projects*` routes
@@ -164,7 +171,7 @@ Plans:
 8. `npm run test:dto` passes
 9. Original `routes.ts` is deleted or reduced to only imports/registration
 
-**Status:** not-started
+**Status:** planned
 
 ---
 
