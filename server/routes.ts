@@ -2,7 +2,7 @@ import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
-import { insertMessageSchema, insertTaskSchema, type Task, type Project } from "@shared/schema";
+import { insertMessageSchema, type Project } from "@shared/schema";
 import { parseConversationId } from "@shared/conversationId";
 import { wsClientMessageSchema } from "@shared/dto/wsSchemas";
 import { randomUUID } from "crypto";
@@ -39,7 +39,6 @@ import {
   handoffTracker,
   type Agent
 } from "./ai/expertiseMatching.js";
-import { TaskDetectionAI, type TaskSuggestion, type ConversationContext } from "./ai/taskDetection.js";
 import { resolveSpeakingAuthority } from "./orchestration/resolveSpeakingAuthority";
 import { validateMessageIngress } from "./schemas/messageIngress";
 import { filterAvailableAgents, type ScopeContext } from "./orchestration/agentAvailability";
@@ -72,6 +71,7 @@ import { registerTeamRoutes } from "./routes/teams.js";
 import { registerAgentRoutes } from "./routes/agents.js";
 import { registerMessageRoutes } from "./routes/messages.js";
 import { registerProjectRoutes } from "./routes/projects.js";
+import { registerTaskRoutes } from "./routes/tasks.js";
 import {
   buildGoogleAuthorizationUrl,
   exchangeGoogleAuthorizationCode,
@@ -1308,8 +1308,24 @@ export async function registerRoutes(app: Express, sessionParser?: SessionParser
   // Expose broadcast to other server modules (e.g. background autonomy runner)
   _globalBroadcast = (conversationId, data) => broadcastToConversation(conversationId, data);
 
-  // Register project routes — must come after broadcastToConversation is defined
+  // Broadcast to all conversations belonging to a given project
+  function broadcastToProject(projectId: string, data: unknown) {
+    const payload = JSON.stringify(data);
+    for (const [conversationId, connections] of activeConnections.entries()) {
+      let parsed: { projectId: string } | null = null;
+      try { parsed = parseConversationId(conversationId); } catch { parsed = null; }
+      if (!parsed || parsed.projectId !== projectId) continue;
+      connections.forEach((connection) => {
+        if (connection.readyState === WebSocket.OPEN) {
+          connection.send(payload);
+        }
+      });
+    }
+  }
+
+  // Register project and task routes — must come after broadcastToConversation/broadcastToProject are defined
   registerProjectRoutes(app, { broadcastToConversation });
+  registerTaskRoutes(app, { broadcastToConversation, broadcastToProject });
 
   // E2.1: Multi-agent response handler for team dynamics
   async function handleMultiAgentResponse(
@@ -3275,306 +3291,6 @@ export async function registerRoutes(app: Express, sessionParser?: SessionParser
       console.error('❌ Error extracting user name:', error);
     }
   }
-
-
-  // Task Management Endpoints
-  app.get("/api/tasks", async (req, res) => {
-    try {
-      const userId = getSessionUserId(req);
-      const { projectId } = req.query;
-      if (!projectId) {
-        return res.status(400).json({ error: "Project ID is required" });
-      }
-      const ownedProject = await getOwnedProject(projectId as string, userId);
-      if (!ownedProject) {
-        return res.status(404).json({ error: "Project not found" });
-      }
-
-      const tasks = await storage.getTasksByProject(projectId as string);
-      res.json(tasks);
-    } catch (error) {
-      console.error('Error fetching tasks:', error);
-      res.status(500).json({ error: "Failed to fetch tasks" });
-    }
-  });
-
-  app.post("/api/tasks", async (req, res) => {
-    try {
-      const userId = getSessionUserId(req);
-      const ownedProject = await getOwnedProject(req.body.projectId, userId);
-      if (!ownedProject) {
-        return res.status(404).json({ error: "Project not found" });
-      }
-      const validatedTask = insertTaskSchema.parse({ ...req.body, userId });
-      const newTask = {
-        ...validatedTask,
-        id: crypto.randomUUID(),
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        completedAt: null
-      } as Task;
-      const created = await storage.createTask(newTask);
-      res.status(201).json(created);
-    } catch (error) {
-      console.error('Error creating task:', error);
-      res.status(400).json({ error: "Failed to create task" });
-    }
-  });
-
-  // Auto task extraction endpoint
-  app.post("/api/tasks/extract", async (req, res) => {
-    try {
-      const { userMessage, agentResponse, projectContext } = req.body;
-
-      if (!userMessage || !agentResponse) {
-        return res.status(400).json({ error: "User message and agent response are required" });
-      }
-
-      // Import task extractor
-      const { extractTasksFromMessage, extractTasksFallback } = await import('./ai/taskExtractor.js');
-
-      // Try AI extraction first
-      let result = await extractTasksFromMessage(userMessage, agentResponse, projectContext);
-
-      // Fallback to keyword matching if AI extraction fails
-      if (!result.hasTasks && result.confidence < 0.5) {
-        result = extractTasksFallback(userMessage, agentResponse, projectContext.availableAgents);
-      }
-
-      res.json(result);
-    } catch (error) {
-      console.error('Error extracting tasks from conversation:', error);
-      res.status(500).json({ error: "Failed to extract tasks" });
-    }
-  });
-
-  // Task Suggestion Endpoints
-  app.post("/api/task-suggestions/analyze", async (req, res) => {
-    try {
-      const { conversationId, projectId, teamId, agentId, messages: providedMessages } = req.body;
-      const userId = getSessionUserId(req);
-      if (projectId) {
-        const ownedProject = await getOwnedProject(projectId, userId);
-        if (!ownedProject) {
-          return res.status(404).json({ error: "Project not found" });
-        }
-      } else if (conversationId) {
-        const isOwned = await conversationOwnedByUser(conversationId, userId);
-        if (!isOwned) {
-          return res.status(404).json({ error: "Conversation not found" });
-        }
-      }
-
-      // Get conversation messages
-      const messages = (providedMessages && Array.isArray(providedMessages) && providedMessages.length > 0)
-        ? providedMessages
-        : await storage.getMessagesByConversation(conversationId);
-      if (!messages || messages.length === 0) {
-        return res.json({ suggestions: [] });
-      }
-
-      // Check if we should analyze this conversation
-      const analyzedMessages = messages.map(m => ({
-        role: m.messageType === 'user' ? 'user' : 'assistant',
-        content: typeof m.content === 'string' ? m.content : '',
-        timestamp: new Date(m.createdAt)
-      }));
-      const shouldAnalyze = await TaskDetectionAI.shouldAnalyzeConversation(analyzedMessages);
-      if (!shouldAnalyze) {
-        return res.json({ suggestions: [] });
-      }
-
-      // Get available agents for the project
-      const agents = await storage.getAgents();
-      const projectAgents = agents.filter(agent =>
-        agent.projectId === projectId ||
-        (teamId && agent.teamId === teamId)
-      );
-
-      // Create conversation context with proper role mapping
-      const context: ConversationContext = {
-        messages: messages.map(msg => {
-          // Map messageType to role correctly
-          let role: 'user' | 'assistant' | 'system' = 'assistant';
-          if (msg.messageType === 'user') {
-            role = 'user';
-          } else if (msg.messageType === 'agent') {
-            role = 'assistant';
-          }
-
-          const safeContent = typeof msg.content === 'string' ? msg.content : '';
-
-          devLog('🔍 Message mapping:', {
-            messageType: msg.messageType,
-            role,
-            content: safeContent.substring(0, 50) + '...'
-          });
-
-          return {
-            role,
-            content: safeContent,
-            timestamp: new Date(msg.createdAt)
-          };
-        }),
-        projectId,
-        teamId,
-        agentId,
-        availableAgents: projectAgents.map(agent => ({
-          id: agent.id,
-          name: agent.name,
-          role: agent.role,
-          expertise: typeof agent.personality === 'object' && agent.personality ? (agent.personality as any).expertise || [] : []
-        }))
-      };
-
-      // Analyze conversation for task suggestions
-      const suggestions = await TaskDetectionAI.analyzeConversationForTasks(context);
-
-      res.json({ suggestions });
-    } catch (error) {
-      console.error('Error analyzing conversation for tasks:', error);
-      res.status(500).json({ error: "Failed to analyze conversation for tasks" });
-    }
-  });
-
-  app.post("/api/task-suggestions/approve", async (req, res) => {
-    try {
-      const { approvedTasks, projectId } = req.body;
-      const userId = getSessionUserId(req);
-      if (!projectId || typeof projectId !== 'string') {
-        return res.status(400).json({ error: "projectId is required" });
-      }
-
-      const project = await getOwnedProject(projectId, userId);
-      if (!project) {
-        return res.status(404).json({ error: "Project not found" });
-      }
-
-      if (!Array.isArray(approvedTasks)) {
-        return res.status(400).json({ error: "approvedTasks must be an array" });
-      }
-
-      // Create tasks in the database
-      const createdTasks: Task[] = [];
-      for (const task of approvedTasks) {
-        let assigneeId = task?.suggestedAssignee?.id;
-        // Fallback: if only role string provided, resolve to an agent id in this project
-        if (!assigneeId && typeof task?.suggestedAssignee === 'string') {
-          const agents = await storage.getAgentsByProject(projectId);
-          const match = agents.find(a => a.role === task.suggestedAssignee);
-          assigneeId = match?.id;
-        }
-
-        const newTaskRaw = {
-          id: randomUUID(),
-          title: task.title,
-          description: task.description || "",
-          priority: task.priority || "medium",
-          status: 'todo',
-          assignee: task.suggestedAssignee && typeof task.suggestedAssignee === 'string'
-            ? task.suggestedAssignee
-            : task.suggestedAssignee?.name || null,
-          projectId: projectId,
-          teamId: task.teamId || null,
-          parentTaskId: null,
-          tags: [],
-          metadata: { createdFromChat: true }
-        };
-
-        // Validate via Zod
-        const validatedTask = insertTaskSchema.parse(newTaskRaw) as any;
-
-        // Store task
-        await storage.createTask(validatedTask);
-        createdTasks.push(validatedTask);
-      }
-
-      // Broadcast task creation to all connected clients
-      for (const [conversationId, connections] of activeConnections.entries()) {
-        let parsed: { projectId: string } | null = null;
-        try {
-          parsed = parseConversationId(conversationId);
-        } catch {
-          parsed = null;
-        }
-        if (!parsed || parsed.projectId !== projectId) continue;
-
-        const payload = JSON.stringify({
-          type: 'task_created',
-          data: { tasks: createdTasks, projectId }
-        });
-        connections.forEach((connection) => {
-          if (connection.readyState === WebSocket.OPEN) {
-            connection.send(payload);
-          }
-        });
-      }
-
-      // P2: Task acknowledgment by assigned agent (opt-in via env flag)
-      if (process.env.TASK_ACKNOWLEDGMENT_ENABLED === 'true' && createdTasks.length > 0) {
-        try {
-          const task = createdTasks[0] as any;
-          if (task.assignee) {
-            const allAgents = await storage.getAgentsByProject(projectId);
-            const assignedAgent = allAgents.find((a: any) =>
-              a.name === task.assignee || a.role === task.assignee
-            );
-            if (assignedAgent) {
-              const character = getCharacterProfile(assignedAgent.role);
-              const ackText = character
-                ? `On it — "${task.title.substring(0, 50)}" is now on my list. I'll dig into the specifics first.`
-                : `Got it, I'll work on "${task.title}".`;
-              const convId = `agent:${projectId}:${assignedAgent.id}`;
-              const ackMsg = await storage.createMessage({
-                id: randomUUID(),
-                conversationId: convId,
-                content: ackText,
-                messageType: 'agent',
-                agentId: assignedAgent.id,
-                userId: null,
-                metadata: { isTaskAck: true, taskId: task.id },
-              } as any);
-              broadcastToConversation(convId, {
-                type: 'new_message',
-                conversationId: convId,
-                message: ackMsg,
-              });
-            }
-          }
-        } catch { /* non-critical */ }
-      }
-
-      res.json({
-        success: true,
-        createdTasks,
-        message: `Successfully created ${createdTasks.length} tasks`
-      });
-    } catch (error) {
-      console.error('Error creating approved tasks:', error);
-      res.status(500).json({ error: "Failed to create approved tasks" });
-    }
-  });
-
-  // Task Mutators
-  app.put("/api/tasks/:id", async (req, res) => {
-    try {
-      const updatedTask = await storage.updateTask(req.params.id, req.body);
-      res.json(updatedTask);
-    } catch (error) {
-      console.error("Failed to update task:", error);
-      res.status(500).json({ error: "Failed to update task" });
-    }
-  });
-
-  app.delete("/api/tasks/:id", async (req, res) => {
-    try {
-      await storage.deleteTask(req.params.id);
-      res.json({ success: true });
-    } catch (error) {
-      console.error("Failed to delete task:", error);
-      res.status(500).json({ error: "Failed to delete task" });
-    }
-  });
 
   return httpServer;
 }
