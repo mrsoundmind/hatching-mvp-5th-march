@@ -148,7 +148,11 @@ export interface IStorage {
   // P5: Proactive outreach rate limiting
   getLastProactiveOutreachAt(agentId: string): Promise<Date | null>;
   setLastProactiveOutreachAt(agentId: string): Promise<void>;
+
+  // Phase 6: Background execution cost cap enforcement
+  countAutonomyEventsForProjectToday(projectId: string, dateStr: string): Promise<number>;
 }
+
 
 export class MemStorage implements IStorage {
   private users: Map<string, User>;
@@ -1259,6 +1263,11 @@ export class MemStorage implements IStorage {
       this.agents.set(agentId, { ...agent, personality: { ...personality, lastProactiveAt: new Date().toISOString() } as any });
     }
   }
+
+  // Phase 6: MemStorage has no autonomy_events table — always returns 0
+  async countAutonomyEventsForProjectToday(_projectId: string, _dateStr: string): Promise<number> {
+    return 0;
+  }
 }
 
 // ============================================================
@@ -1683,6 +1692,19 @@ export class DatabaseStorage implements IStorage {
         .set({ personality: { ...personality, lastProactiveAt: new Date().toISOString() } as any })
         .where(eq(schema.agents.id, agentId));
     }
+  }
+
+  // Phase 6: Count autonomous task execution events today for cost cap enforcement
+  async countAutonomyEventsForProjectToday(projectId: string, dateStr: string): Promise<number> {
+    const { pool: dbPool } = await import('./db.js');
+    const result = await dbPool.query(
+      `SELECT COUNT(*)::int as count FROM autonomy_events
+       WHERE project_id = $1
+       AND event_type = 'autonomous_task_execution'
+       AND "timestamp"::date = $2::date`,
+      [projectId, dateStr],
+    );
+    return result.rows[0]?.count ?? 0;
   }
 }
 

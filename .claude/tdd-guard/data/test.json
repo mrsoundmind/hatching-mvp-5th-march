@@ -1,0 +1,45 @@
+{
+  "testModules": [
+    {
+      "moduleId": "scripts/test-storage-cost-cap.ts",
+      "tests": [
+        {
+          "name": "countAutonomyEventsForProjectToday returns a number",
+          "fullName": "countAutonomyEventsForProjectToday returns a number",
+          "state": "passed"
+        }
+      ]
+    },
+    {
+      "moduleId": "scripts/test-task-graph-persistence.ts",
+      "tests": [
+        {
+          "name": "persistTaskGraph stores graph in project executionRules",
+          "fullName": "persistTaskGraph stores graph in project executionRules",
+          "state": "passed"
+        },
+        {
+          "name": "loadTaskGraph retrieves stored graph from project",
+          "fullName": "loadTaskGraph retrieves stored graph from project",
+          "state": "passed"
+        }
+      ]
+    },
+    {
+      "moduleId": "scripts/test-execution-pipeline.ts",
+      "tests": [
+        {
+          "name": "Low-risk auto-execute: status is completed with isAutonomous message",
+          "fullName": "Low-risk auto-execute: status is completed with isAutonomous message",
+          "state": "failed",
+          "errors": [
+            {
+              "message": "Cannot find module 'server/autonomy/execution/taskExecutionPipeline.js'"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "reason": "failed"
+}
