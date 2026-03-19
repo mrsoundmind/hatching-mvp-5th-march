@@ -10,7 +10,7 @@ Requirements for Autonomous Execution Loop. Each maps to roadmap phases.
 ### Background Execution
 
 - [x] **EXEC-01**: User can explicitly trigger autonomous execution by telling a Hatch to "go ahead and work on this"
-- [ ] **EXEC-02**: Hatches execute tasks in background via durable job queue (pg-boss), producing real output (plans, breakdowns, research)
+- [x] **EXEC-02**: Hatches execute tasks in background via durable job queue (pg-boss), producing real output (plans, breakdowns, research)
 - [x] **EXEC-03**: Per-project daily LLM spend cap prevents runaway cost from background execution
 - [ ] **EXEC-04**: System detects user inactivity (4+ hours) and auto-triggers queued autonomous work
 
@@ -23,15 +23,15 @@ Requirements for Autonomous Execution Loop. Each maps to roadmap phases.
 
 ### Safety & Autonomy
 
-- [ ] **SAFE-01**: Low-risk autonomous actions execute without approval; high-risk actions surface for user sign-off
+- [x] **SAFE-01**: Low-risk autonomous actions execute without approval; high-risk actions surface for user sign-off
 - [x] **SAFE-02**: Safety scoring adapted for autonomous context (no user message) with appropriate baseline risk
-- [ ] **SAFE-03**: Autonomous outputs undergo peer review by another Hatch before delivery
+- [x] **SAFE-03**: Autonomous outputs undergo peer review by another Hatch before delivery
 - [ ] **SAFE-04**: Agents build trust score over time — successful completions unlock higher autonomy thresholds
 
 ### User Experience
 
 - [ ] **UX-01**: Frontend renders interactive approval cards with Approve/Reject/Modify buttons for high-risk autonomous actions (one-click, no typing)
-- [ ] **UX-02**: "Team is working..." presence indicator visible in chat during autonomous execution
+- [x] **UX-02**: "Team is working..." presence indicator visible in chat during autonomous execution
 - [ ] **UX-03**: Maya delivers a chat summary briefing when user returns after autonomous work completed
 - [ ] **UX-04**: User can pause or cancel autonomous execution mid-run
 - [ ] **UX-05**: Browser tab title flashes / shows badge when autonomous work completes while tab is inactive
@@ -67,19 +67,19 @@ Which phases cover which requirements. Updated during roadmap creation.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | EXEC-01 | Phase 6 | Complete |
-| EXEC-02 | Phase 6 | Pending |
+| EXEC-02 | Phase 6 | Complete |
 | EXEC-03 | Phase 6 | Complete |
 | EXEC-04 | Phase 9 | Pending |
 | HAND-01 | Phase 7 | Pending |
 | HAND-02 | Phase 7 | Pending |
 | HAND-03 | Phase 7 | Pending |
 | HAND-04 | Phase 7 | Pending |
-| SAFE-01 | Phase 6 | Pending |
+| SAFE-01 | Phase 6 | Complete |
 | SAFE-02 | Phase 6 | Complete |
-| SAFE-03 | Phase 6 | Pending |
+| SAFE-03 | Phase 6 | Complete |
 | SAFE-04 | Phase 9 | Pending |
 | UX-01 | Phase 7 | Pending |
-| UX-02 | Phase 6 | Pending |
+| UX-02 | Phase 6 | Complete |
 | UX-03 | Phase 8 | Pending |
 | UX-04 | Phase 7 | Pending |
 | UX-05 | Phase 8 | Pending |

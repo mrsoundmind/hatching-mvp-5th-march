@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Autonomous Execution Loop
 status: executing
-last_updated: "2026-03-19T10:45:59.621Z"
-last_activity: 2026-03-19 — Completed 06-01 (trigger resolver + pg-boss job queue)
+last_updated: "2026-03-19T11:23:39Z"
+last_activity: 2026-03-19 — Completed 06-03 (TaskExecutionPipeline + pg-boss worker + cost cap)
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 4
-  completed_plans: 2
-  percent: 25
+  completed_plans: 3
+  percent: 75
 ---
 
 # State: Hatchin
@@ -27,11 +27,11 @@ See: .planning/PROJECT.md (updated 2026-03-19)
 ## Current Position
 
 Phase: 6 of 9 (Background Execution Foundation)
-Plan: 1 of 4 complete
+Plan: 3 of 4 complete
 Status: In Progress
-Last activity: 2026-03-19 — Completed 06-01 (trigger resolver + pg-boss job queue)
+Last activity: 2026-03-19 — Completed 06-03 (TaskExecutionPipeline + pg-boss worker + cost cap)
 
-Progress: [███░░░░░░░] 25% (v1.1 milestone)
+Progress: [███████░░░] 75% (v1.1 milestone)
 
 ---
 
@@ -44,7 +44,7 @@ Progress: [███░░░░░░░] 25% (v1.1 milestone)
 | 3 | Hatch Presence and Avatar System | Complete | 26 SVG avatars, idle animations, thinking bubble, personality persistence to DB |
 | 4 | Data Reliability and Resilience | Complete | Production guard, idempotencyKey, cursor pagination |
 | 5 | Route Architecture Cleanup | Complete | 5 route modules extracted; routes.ts reduced to 430-line orchestrator |
-| 6 | Background Execution Foundation | In Progress | Plan 01 done: trigger resolver + pg-boss job queue |
+| 6 | Background Execution Foundation | In Progress | Plans 01-03 done: trigger resolver, safety extension, execution pipeline |
 | 7 | Agent Handoffs and Approval UI | Not started | — |
 | 8 | Chat Summary and Tab Notifications | Not started | — |
 | 9 | Progressive Trust and Inactivity Trigger | Not started | — |
@@ -66,6 +66,9 @@ Progress: [███░░░░░░░] 25% (v1.1 milestone)
 - [Phase 06-background-execution-foundation]: pg-boss uses its own pg driver against DATABASE_URL while Drizzle keeps @neondatabase/serverless — two separate connection paths intentional
 - [Phase 06-background-execution-foundation]: backgroundExecution feature flag defaults to false — autonomous execution is opt-in via BACKGROUND_AUTONOMY_ENABLED=true
 - [Phase 06-background-execution-foundation]: AUTONOMOUS_SAFETY_THRESHOLDS exported separately from SAFETY_THRESHOLDS — autonomous pipeline uses it directly, needsClarification remains chat-only
+- [Phase 06-background-execution-foundation]: generateText injected as dependency into executeTask — never imports runTurn or graph.invoke (plan invariant enforced by Test 3)
+- [Phase 06-background-execution-foundation]: handleTaskJob checks cost cap FIRST before resolving task/agent/project — minimizes DB queries on cap-reached path
+- [Phase 06-background-execution-foundation]: startTaskWorker returns no-op when getJobQueue() returns null (BACKGROUND_AUTONOMY_ENABLED=false) — feature is cleanly opt-in
 
 ## Blockers / Concerns
 
