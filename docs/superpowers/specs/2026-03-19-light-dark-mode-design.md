@@ -499,7 +499,7 @@ The `rgba(108, 130, 255, ...)` glow animations (coachmark-pulse, ai-task-ring, b
 | `client/src/pages/MayaChat.tsx` | Replace hardcoded dark colors |
 | `client/src/components/LeftSidebar.tsx` | Add ThemeToggle, replace hex colors |
 | `client/src/components/CenterPanel.tsx` | Replace hex colors |
-| `client/src/components/RightSidebar.tsx` | Replace 5x `bg-[#212327]` + `#A6A7AB` |
+| `client/src/components/RightSidebar.tsx` | Replace 6x `bg-[#212327]` + `#A6A7AB` |
 | `client/src/components/ProjectTree.tsx` | Replace `bg-[#34373d]` |
 | `client/src/components/MessageBubble.tsx` | Theme-aware user bubble, text colors |
 | `client/src/components/TaskManager.tsx` | Replace hex colors |
