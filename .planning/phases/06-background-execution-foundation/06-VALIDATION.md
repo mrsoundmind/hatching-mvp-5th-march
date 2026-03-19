@@ -7,7 +7,7 @@ wave_0_complete: false
 created: 2026-03-19
 ---
 
-# Phase 6 — Validation Strategy
+# Phase 6 -- Validation Strategy
 
 > Per-phase validation contract for feedback sampling during execution.
 
@@ -38,22 +38,25 @@ created: 2026-03-19
 
 | Task ID | Plan | Wave | Requirement | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|-----------|-------------------|-------------|--------|
-| 06-01-01 | 01 | 1 | EXEC-03 | unit | `npx tsc --noEmit` | ❌ W0 | ⬜ pending |
-| 06-02-01 | 02 | 1 | EXEC-01, SAFE-02 | unit | `npx tsc --noEmit` | ❌ W0 | ⬜ pending |
-| 06-03-01 | 03 | 2 | EXEC-02, SAFE-01, SAFE-03 | integration | `npx tsc --noEmit` | ❌ W0 | ⬜ pending |
-| 06-04-01 | 04 | 2 | UX-02 | manual | browser test | N/A | ⬜ pending |
+| 06-01-01 | 01 | 1 | EXEC-01, EXEC-03 | unit | `npx tsx scripts/test-execution-trigger.ts` | W0 | pending |
+| 06-01-02 | 01 | 1 | EXEC-01 | typecheck | `npx tsc --noEmit` | N/A | pending |
+| 06-02-01 | 02 | 1 | SAFE-02 | unit | `npm run gate:safety` | exists | pending |
+| 06-03-01 | 03 | 2 | EXEC-02 | typecheck | `npx tsc --noEmit` | N/A | pending |
+| 06-03-02 | 03 | 2 | EXEC-02, EXEC-03, SAFE-01, SAFE-03, UX-02 | integration | `npx tsx scripts/test-execution-pipeline.ts` | W0 | pending |
+| 06-04-01 | 04 | 3 | UX-02 | typecheck | `npx tsc --noEmit` | N/A | pending |
+| 06-04-02 | 04 | 3 | EXEC-03, UX-02 | unit+typecheck | `npx tsx scripts/test-execution-trigger.ts` | W0 | pending |
+| 06-04-03 | 04 | 3 | UX-02 | manual | browser test | N/A | pending |
 
-*Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
+*Status: pending / green / red / flaky*
 
 ---
 
 ## Wave 0 Requirements
 
-- [ ] `scripts/test-autonomy-trigger.ts` — stubs for EXEC-01 trigger detection
-- [ ] `scripts/test-cost-cap.ts` — stubs for EXEC-03 daily spend cap enforcement
-- [ ] `scripts/test-execution-pipeline.ts` — stubs for EXEC-02 task execution + output storage
+- [ ] `scripts/test-execution-trigger.ts` -- stubs for EXEC-01 trigger detection + EXEC-03 cost cap enforcement at trigger path (Plan 01 Task 1, Plan 04 Task 2)
+- [ ] `scripts/test-execution-pipeline.ts` -- stubs for EXEC-02 task execution, output storage, cost cap enforcement at worker level, and WS event emission (Plan 03 Task 2)
 
-*Existing test infrastructure (typecheck, dto, integrity) covers type safety.*
+*Existing test infrastructure (typecheck, dto, integrity, gate:safety) covers type safety and safety scoring.*
 
 ---
 
