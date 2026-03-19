@@ -47,22 +47,34 @@ async function run(): Promise<void> {
     `start() called twice should only log "[BackgroundRunner] Started" once (idempotent), but got ${startedLogs.length} times`
   );
 
-  // Test 3: execution cron is registered in start() when FEATURE_FLAGS.backgroundExecution is true
-  // We verify this by checking the source registers a '*/15 * * * *' cron when backgroundExecution is enabled
-  assert(
-    src.includes("*/15 * * * *"),
-    "backgroundRunner.ts must register a '*/15 * * * *' execution cron"
-  );
-
-  // Test 4: backgroundRunner exports runExecutionCycleNow for test use (mirrors runHealthCheckNow)
-  // This confirms the function exists and is reachable
+  // Test 3: backgroundRunner exports runExecutionCycleNow (runtime behavioral test)
+  // runExecutionCycleNow wraps runAutonomousExecutionCycle for test use (mirrors runHealthCheckNow pattern)
   const { backgroundRunner: br } = await import("../server/autonomy/background/backgroundRunner.js");
   assert(
     typeof (br as any).runExecutionCycleNow === "function",
-    "backgroundRunner must export runExecutionCycleNow() for testing"
+    "backgroundRunner must export runExecutionCycleNow() — the function does not exist yet"
   );
 
-  console.log("PASS: test-background-runner — all 4 tests passed.");
+  // Test 4: runExecutionCycleNow resolves without throwing when storage returns empty lists
+  const mockStorage = {
+    getProjects: async () => [],
+    getAgentsByProject: async () => [],
+    getTasksByProject: async () => [],
+    getMessagesByConversation: async () => [],
+    countAutonomyEventsForProjectToday: async () => 0,
+    getProject: async () => null,
+  };
+  backgroundRunner.start({ storage: mockStorage, broadcastToConversation: () => {}, generateText: async () => "" });
+  await (br as any).runExecutionCycleNow();
+  backgroundRunner.stop();
+
+  // Test 5: source registers '*/15 * * * *' execution cron
+  assert(
+    src.includes("*/15 * * * *"),
+    "backgroundRunner.ts must register a '*/15 * * * *' execution cron in start()"
+  );
+
+  console.log("PASS: test-background-runner — all 5 tests passed.");
   process.exit(0);
 }
 
