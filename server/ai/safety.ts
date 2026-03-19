@@ -1,5 +1,10 @@
 import type { SafetyScore } from "./autonomyTypes.js";
 
+export const AUTONOMOUS_SAFETY_THRESHOLDS = {
+  peerReviewTrigger: 0.35,
+  clarificationRequiredRisk: 0.60,
+} as const;
+
 export const SAFETY_THRESHOLDS = {
   peerReviewTrigger: 0.35,
   doubleReviewTrigger: 0.65,
@@ -55,6 +60,7 @@ export function evaluateSafetyScore(input: {
   draftResponse?: string;
   conversationMode: "project" | "team" | "agent";
   projectName?: string;
+  executionContext?: "chat" | "autonomous_task";
 }): SafetyScore {
   const user = (input.userMessage || "").toLowerCase();
   const draft = (input.draftResponse || "").toLowerCase();
@@ -120,6 +126,12 @@ export function evaluateSafetyScore(input: {
       executionRisk += 0.15;
       reasons.push(`high_impact_action:${pattern.source}`);
     }
+  }
+
+  // Autonomous context raises execution risk baseline
+  if (input.executionContext === "autonomous_task") {
+    executionRisk = executionRisk + 0.10;
+    reasons.push("autonomous_context_risk_boost");
   }
 
   // Clamp all risks
