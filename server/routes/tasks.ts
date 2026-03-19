@@ -5,6 +5,24 @@ import { parseConversationId } from '@shared/conversationId';
 import { randomUUID } from 'crypto';
 import { getCharacterProfile } from '../ai/characterProfiles.js';
 import { TaskDetectionAI, type TaskSuggestion, type ConversationContext } from '../ai/taskDetection.js';
+import { z } from 'zod';
+
+const updateTaskSchema = z.object({
+  title: z.string().min(1).max(500).optional(),
+  description: z.string().max(5000).nullable().optional(),
+  status: z.enum(["todo", "in_progress", "completed", "blocked"]).optional(),
+  priority: z.enum(["low", "medium", "high", "urgent"]).optional(),
+  assignee: z.string().max(200).nullable().optional(),
+  dueDate: z.coerce.date().nullable().optional(),
+  parentTaskId: z.string().nullable().optional(),
+  tags: z.array(z.string()).optional(),
+  metadata: z.object({
+    createdFromChat: z.boolean().optional(),
+    messageId: z.string().optional(),
+    estimatedHours: z.number().optional(),
+    actualHours: z.number().optional(),
+  }).nullable().optional(),
+}).strict();
 
 export interface RegisterTaskDeps {
   broadcastToConversation: (conversationId: string, data: unknown) => void;
@@ -308,7 +326,15 @@ export function registerTaskRoutes(app: Express, deps: RegisterTaskDeps): void {
   // Task Mutators
   app.put("/api/tasks/:id", async (req, res) => {
     try {
-      const updatedTask = await storage.updateTask(req.params.id, req.body);
+      const task = await storage.getTask(req.params.id);
+      if (!task) return res.status(404).json({ error: "Task not found" });
+      const owned = await getOwnedProject(task.projectId, getSessionUserId(req));
+      if (!owned) return res.status(404).json({ error: "Task not found" });
+
+      const parsed = updateTaskSchema.safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ error: "Invalid task data", details: parsed.error.errors });
+
+      const updatedTask = await storage.updateTask(req.params.id, parsed.data);
       res.json(updatedTask);
     } catch (error) {
       console.error("Failed to update task:", error);
@@ -318,6 +344,11 @@ export function registerTaskRoutes(app: Express, deps: RegisterTaskDeps): void {
 
   app.delete("/api/tasks/:id", async (req, res) => {
     try {
+      const task = await storage.getTask(req.params.id);
+      if (!task) return res.status(404).json({ error: "Task not found" });
+      const owned = await getOwnedProject(task.projectId, getSessionUserId(req));
+      if (!owned) return res.status(404).json({ error: "Task not found" });
+
       await storage.deleteTask(req.params.id);
       res.json({ success: true });
     } catch (error) {

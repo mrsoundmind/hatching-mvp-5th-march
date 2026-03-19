@@ -4,6 +4,11 @@ import { insertTeamSchema } from '@shared/schema';
 import { buildConversationId } from '@shared/conversationId';
 import { z } from 'zod';
 
+const updateTeamSchema = z.object({
+  name: z.string().min(1).max(100).optional(),
+  emoji: z.string().max(10).optional(),
+}).strict();
+
 export function registerTeamRoutes(app: Express): void {
   const devLog = (...args: any[]) => {
     if (process.env.NODE_ENV !== 'production') {
@@ -112,7 +117,9 @@ export function registerTeamRoutes(app: Express): void {
       if (!ownedTeam) {
         return res.status(404).json({ error: "Team not found" });
       }
-      const updatedTeam = await storage.updateTeam(req.params.id, req.body);
+      const parsed = updateTeamSchema.safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ error: "Invalid team data", details: parsed.error.errors });
+      const updatedTeam = await storage.updateTeam(req.params.id, parsed.data);
       if (!updatedTeam) {
         return res.status(404).json({ error: "Team not found" });
       }
@@ -129,7 +136,9 @@ export function registerTeamRoutes(app: Express): void {
       if (!ownedTeam) {
         return res.status(404).json({ error: "Team not found" });
       }
-      const updatedTeam = await storage.updateTeam(req.params.id, req.body);
+      const parsed = updateTeamSchema.safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ error: "Invalid team data", details: parsed.error.errors });
+      const updatedTeam = await storage.updateTeam(req.params.id, parsed.data);
       if (!updatedTeam) {
         return res.status(404).json({ error: "Team not found" });
       }

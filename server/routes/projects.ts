@@ -4,6 +4,29 @@ import { insertProjectSchema } from '@shared/schema';
 import { z } from 'zod';
 import { randomUUID } from 'crypto';
 
+const updateProjectSchema = z.object({
+  name: z.string().min(1).max(200).optional(),
+  emoji: z.string().max(10).optional(),
+  description: z.string().max(5000).nullable().optional(),
+  coreDirection: z.object({
+    whatBuilding: z.string().optional(),
+    whyMatters: z.string().optional(),
+    whoFor: z.string().optional(),
+  }).nullable().optional(),
+  brain: z.object({
+    documents: z.array(z.object({
+      id: z.string(),
+      title: z.string(),
+      content: z.string(),
+      type: z.enum(["idea-development", "project-plan", "meeting-notes", "research"]),
+      createdAt: z.string(),
+    })).optional(),
+    sharedMemory: z.string().optional(),
+  }).nullable().optional(),
+  executionRules: z.string().nullable().optional(),
+  starterPack: z.string().max(100).nullable().optional(),
+}).strict();
+
 export interface RegisterProjectDeps {
   broadcastToConversation: (conversationId: string, data: unknown) => void;
 }
@@ -121,7 +144,9 @@ export function registerProjectRoutes(app: Express, deps: RegisterProjectDeps): 
       if (!ownedProject) {
         return res.status(404).json({ error: "Project not found" });
       }
-      const project = await storage.updateProject(req.params.id, req.body);
+      const parsed = updateProjectSchema.safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ error: "Invalid project data", details: parsed.error.errors });
+      const project = await storage.updateProject(req.params.id, parsed.data);
       if (!project) {
         return res.status(404).json({ error: "Project not found" });
       }
@@ -138,7 +163,9 @@ export function registerProjectRoutes(app: Express, deps: RegisterProjectDeps): 
         return res.status(404).json({ error: "Project not found" });
       }
       // Partial update support for right sidebar saves
-      const project = await storage.updateProject(req.params.id, req.body);
+      const parsed = updateProjectSchema.safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ error: "Invalid project data", details: parsed.error.errors });
+      const project = await storage.updateProject(req.params.id, parsed.data);
       if (!project) {
         return res.status(404).json({ error: "Project not found" });
       }

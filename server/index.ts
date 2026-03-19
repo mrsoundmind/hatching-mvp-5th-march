@@ -48,7 +48,16 @@ app.set("trust proxy", 1);
 
 // Fix 3a: Security headers
 app.use(helmet({
-  contentSecurityPolicy: false, // disabled to allow inline scripts in dev/Vite
+  contentSecurityPolicy: process.env.NODE_ENV === 'production' ? {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:", "https:"],
+      connectSrc: ["'self'", "wss:", "ws:"],
+      fontSrc: ["'self'"],
+    }
+  } : false, // disabled in dev to allow Vite inline scripts
 }));
 
 // Fix 3b: CORS — only allow the configured origin

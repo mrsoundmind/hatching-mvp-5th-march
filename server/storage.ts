@@ -95,6 +95,7 @@ export interface IStorage {
   deleteConversation(conversationId: string): Promise<boolean>;
 
   // Task methods
+  getTask(id: string): Promise<Task | undefined>;
   getTasksByProject(projectId: string): Promise<Task[]>;
   getTasksByAssignee(assigneeId: string): Promise<Task[]>;
   createTask(task: InsertTask): Promise<Task>;
@@ -111,6 +112,7 @@ export interface IStorage {
     after?: string;
     messageType?: string;
   }): Promise<Message[]>;
+  getMessage(id: string): Promise<Message | undefined>;
   createMessage(message: InsertMessage): Promise<Message>;
   setTypingIndicator(conversationId: string, agentId: string, isTyping: boolean, estimatedDuration?: number): Promise<void>;
 
@@ -849,6 +851,10 @@ export class MemStorage implements IStorage {
     return messages;
   }
 
+  async getMessage(id: string): Promise<Message | undefined> {
+    return this.messages.get(id);
+  }
+
   async createMessage(message: InsertMessage): Promise<Message> {
     const newMessage: Message = {
       id: randomUUID(),
@@ -1149,6 +1155,10 @@ export class MemStorage implements IStorage {
   }
 
   // Task methods
+  async getTask(id: string): Promise<Task | undefined> {
+    return this.tasks.get(id);
+  }
+
   async getTasksByProject(projectId: string): Promise<Task[]> {
     return Array.from(this.tasks.values())
       .filter(task => task.projectId === projectId);
@@ -1501,6 +1511,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Tasks
+  async getTask(id: string): Promise<Task | undefined> {
+    const rows = await db.select().from(schema.tasks).where(eq(schema.tasks.id, id));
+    return rows[0];
+  }
   async getTasksByProject(projectId: string): Promise<Task[]> {
     return db.select().from(schema.tasks).where(eq(schema.tasks.projectId, projectId));
   }
@@ -1564,6 +1578,10 @@ export class DatabaseStorage implements IStorage {
       msgs = msgs.slice(Math.max(0, msgs.length - limit));
     }
     return msgs;
+  }
+  async getMessage(id: string): Promise<Message | undefined> {
+    const rows = await db.select().from(schema.messages).where(eq(schema.messages.id, id));
+    return rows[0];
   }
   async createMessage(message: InsertMessage): Promise<Message> {
     const [msg] = await db.insert(schema.messages).values(message as any).returning();

@@ -300,7 +300,9 @@ export async function registerRoutes(app: Express, sessionParser?: SessionParser
 
   app.post("/api/personality/feedback", async (req, res) => {
     try {
-      const { agentId, userId, feedback, messageContent, agentResponse } = req.body;
+      const { agentId, feedback, messageContent, agentResponse } = req.body;
+      // Always use session userId — never trust client-supplied userId
+      const userId = (req.session as any).userId as string;
 
       if (!agentId || !userId || !feedback) {
         return res.status(400).json({ error: "Missing required fields" });

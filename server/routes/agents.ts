@@ -4,6 +4,13 @@ import { insertAgentSchema } from '@shared/schema';
 import { buildConversationId } from '@shared/conversationId';
 import { z } from 'zod';
 
+const updateAgentSchema = z.object({
+  name: z.string().min(1).max(100).optional(),
+  role: z.string().max(100).optional(),
+  personality: z.record(z.unknown()).optional(),
+  isSpecialAgent: z.boolean().optional(),
+}).strict();
+
 export function registerAgentRoutes(app: Express): void {
   const devLog = (...args: any[]) => {
     if (process.env.NODE_ENV !== 'production') {
@@ -136,7 +143,9 @@ export function registerAgentRoutes(app: Express): void {
       if (!ownedAgent) {
         return res.status(404).json({ error: "Agent not found" });
       }
-      const agent = await storage.updateAgent(req.params.id, req.body);
+      const parsed = updateAgentSchema.safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ error: "Invalid agent data", details: parsed.error.errors });
+      const agent = await storage.updateAgent(req.params.id, parsed.data);
       if (!agent) {
         return res.status(404).json({ error: "Agent not found" });
       }
@@ -153,7 +162,9 @@ export function registerAgentRoutes(app: Express): void {
       if (!ownedAgent) {
         return res.status(404).json({ error: "Agent not found" });
       }
-      const agent = await storage.updateAgent(req.params.id, req.body);
+      const parsed = updateAgentSchema.safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ error: "Invalid agent data", details: parsed.error.errors });
+      const agent = await storage.updateAgent(req.params.id, parsed.data);
       if (!agent) {
         return res.status(404).json({ error: "Agent not found" });
       }

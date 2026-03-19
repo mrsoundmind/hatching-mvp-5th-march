@@ -77,7 +77,7 @@ export function registerMessageRoutes(app: Express): void {
         return res.status(404).json({ error: "Conversation not found" });
       }
       const { limit = "50", before, after, messageType } = req.query;
-      const limitNum = parseInt(limit as string);
+      const limitNum = Math.min(Math.max(parseInt(limit as string) || 50, 1), 200);
 
       const messages = await storage.getMessagesByConversation(
         req.params.conversationId,
@@ -146,11 +146,8 @@ export function registerMessageRoutes(app: Express): void {
         conversationId: conversationId
       };
 
-      // Phase 1.2: Resolve actual userId from session
-      const sessId = (req as any).session?.userId;
-      const uid = (req.body.userId === 'user' || req.body.userId === 'current-user' || !req.body.userId)
-        ? sessId
-        : req.body.userId;
+      // Always use session userId — never trust client-supplied userId
+      const uid = getSessionUserId(req);
 
       const validatedData = insertMessageSchema.parse({
         ...messageData,
@@ -173,11 +170,8 @@ export function registerMessageRoutes(app: Express): void {
       if (!messageConversationId || !(await conversationOwnedByUser(messageConversationId, getSessionUserId(req)))) {
         return res.status(404).json({ error: "Conversation not found" });
       }
-      // Phase 1.2: Resolve actual userId from session
-      const sessIdGlobal = (req as any).session?.userId;
-      const uidGlobal = (req.body.userId === 'user' || req.body.userId === 'current-user' || !req.body.userId)
-        ? sessIdGlobal
-        : req.body.userId;
+      // Always use session userId — never trust client-supplied userId
+      const uidGlobal = getSessionUserId(req);
 
       const validatedData = insertMessageSchema.parse({
         ...req.body,
@@ -266,6 +260,12 @@ export function registerMessageRoutes(app: Express): void {
         return res.status(400).json({ error: 'Invalid reaction type' });
       }
 
+      // Verify message belongs to user's conversation
+      const msg = await storage.getMessage(messageId);
+      if (!msg || !(await conversationOwnedByUser(msg.conversationId, getSessionUserId(req)))) {
+        return res.status(404).json({ error: 'Message not found' });
+      }
+
       // Use user ID from session
       const userId = (req.session as any).userId || 'anonymous';
 
@@ -352,6 +352,10 @@ export function registerMessageRoutes(app: Express): void {
   app.get('/api/messages/:messageId/reactions', async (req, res) => {
     try {
       const { messageId } = req.params;
+      const msg = await storage.getMessage(messageId);
+      if (!msg || !(await conversationOwnedByUser(msg.conversationId, getSessionUserId(req)))) {
+        return res.status(404).json({ error: 'Message not found' });
+      }
       const reactions = await storage.getMessageReactions(messageId);
       res.json(reactions);
     } catch (error) {
@@ -364,6 +368,11 @@ export function registerMessageRoutes(app: Express): void {
   app.post("/api/training/feedback", async (req, res) => {
     try {
       const { messageId, conversationId, userMessage, agentResponse, agentRole, rating } = req.body;
+
+      // Verify conversation belongs to user
+      if (!conversationId || !(await conversationOwnedByUser(conversationId, getSessionUserId(req)))) {
+        return res.status(404).json({ error: "Conversation not found" });
+      }
 
       const trainingFeedback = trainingSystem.addFeedback({
         messageId,
