@@ -208,6 +208,57 @@ async function runWorldSensorCycle(): Promise<void> {
   }
 }
 
+async function runAutonomousExecutionCycle(): Promise<void> {
+  if (!_storage || !FEATURE_FLAGS.backgroundExecution) return;
+  devLog('[BackgroundRunner] Starting autonomous execution cycle');
+  try {
+    const projects = await _storage.getProjects();
+    const activeProjects = projects.slice(0, MAX_PROJECTS_PER_CYCLE);
+    const today = new Date().toISOString().slice(0, 10);
+    for (const project of activeProjects) {
+      try {
+        const todayCount = await _storage.countAutonomyEventsForProjectToday(project.id, today);
+        if (todayCount >= BUDGETS.maxBackgroundLlmCallsPerProjectPerDay) {
+          devLog(`[BackgroundRunner] Project ${project.id} hit daily cap (${todayCount}/${BUDGETS.maxBackgroundLlmCallsPerProjectPerDay})`);
+          continue;
+        }
+        let lastUserActivityAt: Date | null = null;
+        try {
+          const recentMessages = await _storage.getMessagesByConversation(`project:${project.id}`, { limit: 1 });
+          if (recentMessages[0]?.createdAt) lastUserActivityAt = new Date(recentMessages[0].createdAt);
+        } catch { /* non-critical */ }
+        if (lastUserActivityAt) {
+          const daysInactive = (Date.now() - lastUserActivityAt.getTime()) / 86400000;
+          if (daysInactive > 7) continue;
+        }
+        const tasks = await _storage.getTasksByProject(project.id);
+        const trigger = resolveAutonomyTrigger({
+          lastUserActivityAt,
+          pendingTasks: tasks.map((t: any) => ({ id: t.id, status: t.status })),
+          autonomyEnabled: (project.executionRules as any)?.autonomyEnabled ?? false,
+        });
+        if (!trigger.shouldExecute) continue;
+        const toQueue = trigger.tasksToExecute.slice(0, BUDGETS.maxConcurrentAutonomousTasks);
+        for (const taskId of toQueue) {
+          const task = tasks.find((t: any) => t.id === taskId);
+          if (!task) continue;
+          const agents = await _storage.getAgentsByProject(project.id);
+          const agent = task.assignee
+            ? agents.find((a: any) => a.role === task.assignee || a.name === task.assignee)
+            : agents[0];
+          if (!agent) continue;
+          await queueTaskExecution({ taskId, projectId: project.id, agentId: agent.id });
+        }
+      } catch (err) {
+        devLog(`[BackgroundRunner] Error processing project ${project.id} for execution: ${(err as Error).message}`);
+      }
+    }
+    devLog('[BackgroundRunner] Autonomous execution cycle complete');
+  } catch (err) {
+    devLog(`[BackgroundRunner] Execution cycle error: ${(err as Error).message}`);
+  }
+}
+
 export const backgroundRunner = {
   start(deps: {
     storage: any;
@@ -236,6 +287,12 @@ export const backgroundRunner = {
     });
     cronJobs.push(worldJob);
 
+    // Autonomous execution: every 15 minutes (feature-flagged)
+    if (FEATURE_FLAGS.backgroundExecution) {
+      const executionJob = cronSchedule('*/15 * * * *', runAutonomousExecutionCycle, { timezone: 'UTC' });
+      cronJobs.push(executionJob);
+    }
+
     if (!wasRunning) {
       console.log(
         "[BackgroundRunner] Started — health checks every 2h, world sensing every 6h"
@@ -258,5 +315,10 @@ export const backgroundRunner = {
     const project = await _storage.getProject(projectId);
     if (!project) throw new Error(`Project ${projectId} not found`);
     await processProjectHealthCheck(project);
+  },
+
+  // For testing: manually trigger an execution cycle
+  async runExecutionCycleNow(): Promise<void> {
+    await runAutonomousExecutionCycle();
   },
 };
