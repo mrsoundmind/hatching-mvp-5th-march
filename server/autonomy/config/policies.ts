@@ -10,6 +10,8 @@ export interface CognitiveBudgets {
   singleResponseBudgetMs: number;
   deliberationBudgetMs: number;
   safetyTriggerBudgetMs: number;
+  maxConcurrentAutonomousTasks: number;
+  maxBackgroundLlmCallsPerProjectPerDay: number;
 }
 
 export const ROUTING_GATE = {
@@ -36,6 +38,8 @@ export const BUDGETS: CognitiveBudgets = {
   singleResponseBudgetMs: Number(process.env.SINGLE_RESPONSE_BUDGET_MS ?? 4_000),
   deliberationBudgetMs: Number(process.env.DELIBERATION_BUDGET_MS ?? 12_000),
   safetyTriggerBudgetMs: Number(process.env.SAFETY_TRIGGER_BUDGET_MS ?? 1_000),
+  maxConcurrentAutonomousTasks: Number(process.env.MAX_CONCURRENT_AUTONOMOUS_TASKS ?? 3),
+  maxBackgroundLlmCallsPerProjectPerDay: Number(process.env.MAX_BACKGROUND_LLM_CALLS_PER_PROJECT_PER_DAY ?? 5),
 };
 
 export const FEATURE_FLAGS = {
@@ -44,6 +48,7 @@ export const FEATURE_FLAGS = {
   taskGraph: (process.env.FEATURE_TASK_GRAPH ?? 'true').toLowerCase() === 'true',
   toolRouter: (process.env.FEATURE_TOOL_ROUTER ?? 'true').toLowerCase() === 'true',
   autonomyDashboard: (process.env.FEATURE_AUTONOMY_DASHBOARD ?? 'true').toLowerCase() === 'true',
+  backgroundExecution: (process.env.BACKGROUND_AUTONOMY_ENABLED ?? 'false').toLowerCase() === 'true',
 };
 
 export function resolveRuntimeModeFromEnv(env = process.env): RuntimeModeName {
