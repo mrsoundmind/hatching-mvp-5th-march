@@ -41,15 +41,18 @@ The project brain is singular. No re-adding context. No onboarding every new pro
 ### Collaboration
 Future: multiple real humans working alongside their Hatch team in the same project. Real teammates and AI teammates in the same conversation — the Hatches serve the whole team, not just one person.
 
-## Next Milestone Goals
+## Current Milestone: v1.1 Autonomous Execution Loop
 
-Pending — use `/gsd:new-milestone` to define v1.1 requirements and roadmap.
+**Goal:** Hatches don't just talk — they execute. Users trigger work (or leave), Hatches hand off tasks between each other, self-review quality, and present real results. The user comes back to completed work and a chat summary of what happened.
 
-Candidate directions from the roadmap:
-- **v1.1 Multimodal Expansion** — image generation from Designer Hatch, Claude coding agent from Engineer Hatch, voice input
-- **v1.2 Autonomous Execution Loop** — Hatches hand off tasks, background execution, user wakes up to progress
-- **v1.3 B2B Company Brain** — company-level knowledge layer inherited by all projects
-- **v1.4 Collaboration** — multiple real users + AI teammates in the same project
+**Target features:**
+- Background task execution — Hatches work while user is offline
+- Agent-to-agent handoffs — PM scopes → Engineer picks up → Designer reviews
+- Risk-based autonomy — low-risk auto-approved, high-risk surfaces for approval
+- Self-policing — Hatches review each other's work, catch quality issues
+- Chat summaries — user returns to a conversational briefing of what happened
+- Progressive triggers — explicit "go ahead" now, inactivity-based trigger later
+- Real output — planning, research, task breakdown, not just conversation
 
 ## Use Cases (What "Initiating Dreams" Looks Like)
 
@@ -83,7 +86,13 @@ The common thread: **you never start from scratch, you never feel alone, you nev
 
 ### Active
 
-(Empty — define next milestone with `/gsd:new-milestone`)
+- [ ] Background task execution pipeline
+- [ ] Agent-to-agent task handoffs
+- [ ] Risk-based autonomy with safety scoring
+- [ ] Cross-agent peer review for autonomous work
+- [ ] Chat summary briefings when user returns
+- [ ] Explicit handoff triggers ("go ahead and work on this")
+- [ ] Inactivity-based autonomous trigger (progressive)
 
 ### Out of Scope (current)
 
@@ -154,4 +163,4 @@ Hatchin: user just talks. The Hatches:
 | Personality persistence to agents.personality JSONB | Survives restart, no new table needed, per-user trait adaptation | ✓ Good |
 
 ---
-*Last updated: 2026-03-19 after v1.0 milestone*
+*Last updated: 2026-03-19 after v1.1 milestone definition*
