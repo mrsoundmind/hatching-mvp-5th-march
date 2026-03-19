@@ -46,13 +46,13 @@ See archived roadmap: [milestones/v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md)
   3. Low-risk tasks complete automatically and their output (plans, breakdowns, research) appears as Hatch messages
   4. High-risk tasks surface an approval request in chat rather than executing silently
   5. No single project exceeds its daily LLM spend cap regardless of how many tasks are queued
-**Plans**: TBD
+**Plans:** 4 plans
 
 Plans:
-- [ ] 06-01: pg-boss durable job queue setup and policies.ts cost cap additions
-- [ ] 06-02: AutonomyTriggerResolver and safety.ts autonomous mode extension
-- [ ] 06-03: TaskExecutionPipeline with peer review gate and output storage
-- [ ] 06-04: backgroundRunner cron job and UX-02 working indicator
+- [ ] 06-01-PLAN.md — AutonomyTriggerResolver, policies.ts cost cap, pg-boss job queue setup
+- [ ] 06-02-PLAN.md — safety.ts autonomous execution context extension
+- [ ] 06-03-PLAN.md — TaskExecutionPipeline with peer review gate and output storage
+- [ ] 06-04-PLAN.md — backgroundRunner cron, chat.ts trigger hook, CenterPanel working indicator
 
 ### Phase 7: Agent Handoffs and Approval UI
 **Goal**: Hatches pass work to each other in character and users approve or reject high-risk actions with one click
@@ -112,7 +112,7 @@ Plans:
 | 3. Hatch Presence and Avatar System | v1.0 | 5/5 | Complete | 2026-03-19 |
 | 4. Data Reliability and Resilience | v1.0 | 3/3 | Complete | 2026-03-19 |
 | 5. Route Architecture Cleanup | v1.0 | 2/2 | Complete | 2026-03-19 |
-| 6. Background Execution Foundation | v1.1 | 0/4 | Not started | - |
+| 6. Background Execution Foundation | v1.1 | 0/4 | Planned | - |
 | 7. Agent Handoffs and Approval UI | v1.1 | 0/4 | Not started | - |
 | 8. Chat Summary and Tab Notifications | v1.1 | 0/2 | Not started | - |
 | 9. Progressive Trust and Inactivity Trigger | v1.1 | 0/2 | Not started | - |
