@@ -114,6 +114,8 @@ export function CenterPanel({
   const [hasMoreMessages, setHasMoreMessages] = useState(false);
   const [nextMessageCursor, setNextMessageCursor] = useState<string | null>(null);
   const [typingColleagues, setTypingColleagues] = useState<string[]>([]);
+  const [isTeamWorking, setIsTeamWorking] = useState(false);
+  const [teamWorkingTaskCount, setTeamWorkingTaskCount] = useState(0);
   const lastSendRef = useRef<{ conversationId: string; content: string; at: number } | null>(null);
 
   const resizeComposer = (el: HTMLTextAreaElement | null) => {
@@ -1064,6 +1066,14 @@ export function CenterPanel({
       } catch (e) {
         console.warn('Failed to dispatch task_created_from_chat event');
       }
+    }
+    else if (message.type === 'background_execution_started') {
+      setIsTeamWorking(true);
+      setTeamWorkingTaskCount(message.taskCount ?? 0);
+    }
+    else if (message.type === 'background_execution_completed' || message.type === 'task_execution_completed') {
+      setIsTeamWorking(false);
+      setTeamWorkingTaskCount(0);
     }
     else if (message.type === 'brain_updated_from_chat') {
       devLog('🧠 [ChatIntelligence] Project Brain updated from chat:', message.field, message.value);
@@ -2446,6 +2456,18 @@ export function CenterPanel({
                   </div>
                 )}
 
+
+                {/* Team working indicator — shown during background autonomous execution */}
+                {isTeamWorking && (
+                  <div className="flex items-center gap-2 px-4 py-2 text-sm text-amber-600 bg-amber-50 rounded-lg mx-4 mb-2">
+                    <div className="flex gap-1">
+                      <span className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                      <span className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                      <span className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                    </div>
+                    <span>Team is working on {teamWorkingTaskCount} task{teamWorkingTaskCount !== 1 ? 's' : ''}...</span>
+                  </div>
+                )}
 
                 {/* Auto-scroll helper */}
                 <div ref={(el) => {

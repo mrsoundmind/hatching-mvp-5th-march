@@ -56,7 +56,56 @@ import { runAutonomousKnowledgeLoop } from "../knowledge/akl/runner.js";
 import { resolveDecisionConflict } from "../autonomy/conductor/decisionAuthority.js";
 import { routeTools } from "../tools/toolRouter.js";
 import { createTaskGraph } from "../autonomy/taskGraph/taskGraphEngine.js";
-import { BUDGETS } from "../autonomy/config/policies.js";
+import { BUDGETS, FEATURE_FLAGS } from "../autonomy/config/policies.js";
+import { resolveAutonomyTrigger } from "../autonomy/triggers/autonomyTriggerResolver.js";
+import { queueTaskExecution } from "../autonomy/execution/jobQueue.js";
+
+async function checkForAutonomyTrigger(
+  userMessage: string,
+  projectId: string,
+  conversationId: string,
+  stor: any,
+  broadcastFn: (convId: string, payload: unknown) => void,
+): Promise<void> {
+  if (!FEATURE_FLAGS.backgroundExecution) return;
+  try {
+    const today = new Date().toISOString().slice(0, 10);
+    const todayCount = await stor.countAutonomyEventsForProjectToday(projectId, today);
+    if (todayCount >= BUDGETS.maxBackgroundLlmCallsPerProjectPerDay) return;
+
+    const project = await stor.getProject(projectId);
+    if (!project) return;
+
+    const tasks = await stor.getTasksByProject(projectId);
+    const trigger = resolveAutonomyTrigger({
+      userMessage,
+      lastUserActivityAt: new Date(),
+      pendingTasks: tasks.map((t: any) => ({ id: t.id, status: t.status })),
+      autonomyEnabled: (project.executionRules as any)?.autonomyEnabled ?? false,
+    });
+
+    if (!trigger.shouldExecute) return;
+
+    broadcastFn(conversationId, {
+      type: 'background_execution_started',
+      projectId,
+      taskCount: trigger.tasksToExecute.length,
+    });
+
+    const agents = await stor.getAgentsByProject(projectId);
+    for (const taskId of trigger.tasksToExecute) {
+      const task = tasks.find((t: any) => t.id === taskId);
+      if (!task) continue;
+      const agent = task.assignee
+        ? agents.find((a: any) => a.role === task.assignee || a.name === task.assignee)
+        : agents[0];
+      if (!agent) continue;
+      await queueTaskExecution({ taskId, projectId, agentId: agent.id });
+    }
+  } catch (err) {
+    console.error('[chat.ts] checkForAutonomyTrigger error:', (err as Error).message);
+  }
+}
 
 type AuthedWebSocket = WebSocket & { __userId?: string };
 
@@ -2633,6 +2682,17 @@ export function registerChatRoutes(
             },
             timestamp: new Date().toISOString()
           }, { exclude: ws });
+
+          // Check for autonomous execution trigger after streaming completes
+          if (resolvedProjectId) {
+            await checkForAutonomyTrigger(
+              userMessage?.content ?? '',
+              resolvedProjectId,
+              conversationId,
+              storage,
+              broadcastToConversation,
+            );
+          }
         }
       } finally {
         ws.off('message', cancelHandler);
