@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Autonomous Execution Loop
-status: Defining requirements
-stopped_at: —
+status: Ready to plan
+stopped_at: Roadmap created — Phase 6 ready for planning
 last_updated: "2026-03-19"
-last_activity: "2026-03-19 — Milestone v1.1 started"
+last_activity: "2026-03-19 — v1.1 roadmap created (4 phases, 17 requirements mapped)"
 progress:
-  total_phases: 0
+  total_phases: 4
   completed_phases: 0
-  total_plans: 0
+  total_plans: 12
   completed_plans: 0
 ---
 
@@ -20,16 +20,18 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-19)
 
 **Core value:** No one should ever feel alone with their idea, have to start from scratch, or need to know how to prompt AI — just have a conversation and your team takes it from there.
-**Current focus:** Defining requirements for v1.1 Autonomous Execution Loop
+**Current focus:** Phase 6 — Background Execution Foundation (ready to plan)
 
 ---
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-03-19 — Milestone v1.1 started
+Phase: 6 of 9 (Background Execution Foundation)
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-03-19 — Roadmap created, all 17 v1.1 requirements mapped
+
+Progress: [░░░░░░░░░░] 0% (v1.1 milestone)
 
 ---
 
@@ -37,12 +39,15 @@ Last activity: 2026-03-19 — Milestone v1.1 started
 
 | Phase | Name | Status | Notes |
 |-------|------|--------|-------|
-| — | Pre-GSD | Complete | Core platform: auth, streaming chat, agents, tasks, WebSocket, LangGraph |
-| 1 | Hatch Conversation Quality | Complete | All 8 gaps: graph.ts removed, emotional signature, LLM memory, first-message opener, opinion injection, open questions, userDesignation derivation, handoff acknowledgment |
-| 2 | User Journey Fixes | Complete | 7 plans: landing page, onboarding, project creation, team accordion, typing indicators, bubble colors, agentRole backfill |
-| 3 | Hatch Presence and Avatar System | Complete | 26 SVG avatars, unique idle animations, thinking bubble, character names, personality persistence to DB (PRES-01 to PRES-05) |
-| 4 | Data Reliability and Resilience | Complete | Production guard (DATA-03), client idempotencyKey (DATA-01), cursor pagination + Load earlier messages UI (DATA-02) |
-| 5 | Route Architecture Cleanup | Complete | Extracted all 5 modules (teams, agents, messages, projects, tasks, chat); routes.ts reduced to 430-line orchestrator (ARCH-01 + ARCH-02) |
+| 1 | Hatch Conversation Quality | Complete | All 8 gaps: graph.ts removed, emotional signature, LLM memory, opener, opinions, open questions |
+| 2 | User Journey Fixes | Complete | 7 plans: landing, onboarding, project creation, accordion, typing, bubble colors, backfill |
+| 3 | Hatch Presence and Avatar System | Complete | 26 SVG avatars, idle animations, thinking bubble, personality persistence to DB |
+| 4 | Data Reliability and Resilience | Complete | Production guard, idempotencyKey, cursor pagination |
+| 5 | Route Architecture Cleanup | Complete | 5 route modules extracted; routes.ts reduced to 430-line orchestrator |
+| 6 | Background Execution Foundation | Not started | — |
+| 7 | Agent Handoffs and Approval UI | Not started | — |
+| 8 | Chat Summary and Tab Notifications | Not started | — |
+| 9 | Progressive Trust and Inactivity Trigger | Not started | — |
 
 ---
 
@@ -50,15 +55,15 @@ Last activity: 2026-03-19 — Milestone v1.1 started
 
 | Date | Phase | Decision |
 |------|-------|----------|
-| 2026-03-18 | 04-01 | Guard extracted to server/productionGuard.ts for testability |
-| 2026-03-18 | 04-01 | idempotencyKey uses tempMessageId + Date.now() composite |
-| 2026-03-18 | 04-02 | Cursor = createdAt ISO timestamp; hasMore = response length === limit |
-| 2026-03-18 | 05-01 | Helpers re-declared locally in each route module — avoids circular deps |
-| 2026-03-18 | 05-02 | Typed deps interface (RegisterProjectDeps, RegisterTaskDeps) for broadcast injection |
-| 2026-03-18 | 05-03 | chat.ts receives httpServer via parameter; preserves single httpServer instance |
+| 2026-03-19 | Roadmap | pg-boss for durable job queue over existing Neon PostgreSQL — no Redis |
+| 2026-03-19 | Roadmap | Autonomous artifacts go to autonomy_events only; one Maya summary message in chat on return |
+| 2026-03-19 | Roadmap | Safety threshold stricter in autonomous mode (0.60 vs 0.80) — no user message present |
+| 2026-03-19 | Roadmap | Inactivity trigger gated behind INACTIVITY_AUTONOMY_ENABLED flag — Phase 9 only |
+| 2026-03-19 | Roadmap | Do NOT call runTurn from background execution — call generateText directly |
 
 ---
 
 ## Blockers / Concerns
 
-None.
+- Phase 6 planning: verify pg-boss compatibility with @neondatabase/serverless driver before installation (may need separate pg connection)
+- Phase 7 planning: verify conductor evaluateConductorDecision produces stable routing when called with synthetic task description as userMessage

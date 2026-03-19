@@ -66,29 +66,29 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| EXEC-01 | — | Pending |
-| EXEC-02 | — | Pending |
-| EXEC-03 | — | Pending |
-| EXEC-04 | — | Pending |
-| HAND-01 | — | Pending |
-| HAND-02 | — | Pending |
-| HAND-03 | — | Pending |
-| HAND-04 | — | Pending |
-| SAFE-01 | — | Pending |
-| SAFE-02 | — | Pending |
-| SAFE-03 | — | Pending |
-| SAFE-04 | — | Pending |
-| UX-01 | — | Pending |
-| UX-02 | — | Pending |
-| UX-03 | — | Pending |
-| UX-04 | — | Pending |
-| UX-05 | — | Pending |
+| EXEC-01 | Phase 6 | Pending |
+| EXEC-02 | Phase 6 | Pending |
+| EXEC-03 | Phase 6 | Pending |
+| EXEC-04 | Phase 9 | Pending |
+| HAND-01 | Phase 7 | Pending |
+| HAND-02 | Phase 7 | Pending |
+| HAND-03 | Phase 7 | Pending |
+| HAND-04 | Phase 7 | Pending |
+| SAFE-01 | Phase 6 | Pending |
+| SAFE-02 | Phase 6 | Pending |
+| SAFE-03 | Phase 6 | Pending |
+| SAFE-04 | Phase 9 | Pending |
+| UX-01 | Phase 7 | Pending |
+| UX-02 | Phase 6 | Pending |
+| UX-03 | Phase 8 | Pending |
+| UX-04 | Phase 7 | Pending |
+| UX-05 | Phase 8 | Pending |
 
 **Coverage:**
 - v1.1 requirements: 17 total
-- Mapped to phases: 0
-- Unmapped: 17 ⚠️
+- Mapped to phases: 17
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-03-19*
-*Last updated: 2026-03-19 after initial definition*
+*Last updated: 2026-03-19 — traceability complete after v1.1 roadmap creation*

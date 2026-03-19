@@ -3,28 +3,134 @@
 ## Milestones
 
 - ✅ **v1.0 Text-Perfect, Human-First** — Phases 1-5 (shipped 2026-03-19) — [archive](milestones/v1.0-ROADMAP.md)
+- 🚧 **v1.1 Autonomous Execution Loop** — Phases 6-9 (in progress)
+
+---
+
+<details>
+<summary>✅ v1.0 Text-Perfect, Human-First (Phases 1-5) — SHIPPED 2026-03-19</summary>
+
+See archived roadmap: [milestones/v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md)
+
+**Phases completed:**
+- Phase 1: Hatch Conversation Quality
+- Phase 2: User Journey Fixes
+- Phase 3: Hatch Presence and Avatar System
+- Phase 4: Data Reliability and Resilience
+- Phase 5: Route Architecture Cleanup
+
+</details>
+
+---
+
+### 🚧 v1.1 Autonomous Execution Loop (In Progress)
+
+**Milestone Goal:** Hatches don't just talk — they execute. Users trigger work, Hatches hand off tasks between each other, self-review quality, and present real results. The user comes back to completed work and a chat summary of what happened.
+
+## Phases
+
+- [ ] **Phase 6: Background Execution Foundation** — Safe single-agent execution pipeline with cost guardrails and explicit trigger
+- [ ] **Phase 7: Agent Handoffs and Approval UI** — Full multi-agent handoff chain with interactive approval cards and pause/cancel controls
+- [ ] **Phase 8: Chat Summary and Tab Notifications** — Maya briefing on user return and browser tab badge when work completes offline
+- [ ] **Phase 9: Progressive Trust and Inactivity Trigger** — Trust score accumulation and inactivity-based auto-trigger gated by feature flag
+
+## Phase Details
+
+### Phase 6: Background Execution Foundation
+**Goal**: Users can trigger autonomous execution and watch their Hatches produce real output safely
+**Depends on**: v1.0 platform (LangGraph, safety gates, task graph — all existing)
+**Requirements**: EXEC-01, EXEC-02, EXEC-03, SAFE-01, SAFE-02, SAFE-03, UX-02
+**Success Criteria** (what must be TRUE):
+  1. User can tell a Hatch to "go ahead and work on this" and the system acknowledges and begins execution
+  2. A "Team is working..." indicator appears in chat and remains visible while background execution runs
+  3. Low-risk tasks complete automatically and their output (plans, breakdowns, research) appears as Hatch messages
+  4. High-risk tasks surface an approval request in chat rather than executing silently
+  5. No single project exceeds its daily LLM spend cap regardless of how many tasks are queued
+**Plans**: TBD
+
+Plans:
+- [ ] 06-01: pg-boss durable job queue setup and policies.ts cost cap additions
+- [ ] 06-02: AutonomyTriggerResolver and safety.ts autonomous mode extension
+- [ ] 06-03: TaskExecutionPipeline with peer review gate and output storage
+- [ ] 06-04: backgroundRunner cron job and UX-02 working indicator
+
+### Phase 7: Agent Handoffs and Approval UI
+**Goal**: Hatches pass work to each other in character and users approve or reject high-risk actions with one click
+**Depends on**: Phase 6
+**Requirements**: HAND-01, HAND-02, HAND-03, HAND-04, UX-01, UX-04
+**Success Criteria** (what must be TRUE):
+  1. After a Hatch completes a task, the next appropriate specialist Hatch automatically picks up the relevant follow-on task
+  2. The receiving Hatch announces the handoff in chat in its own voice ("Got it, picking this up from PM")
+  3. The handoff chain cannot loop — if a cycle is detected, execution stops and the user is notified
+  4. Each Hatch in the chain has access to the previous Hatch's output when composing its response
+  5. User can approve or reject a high-risk action proposal with a single button click, no typing required
+  6. User can pause or cancel all ongoing autonomous execution at any point
+**Plans**: TBD
+
+Plans:
+- [ ] 07-01: HandoffOrchestrator with cycle detection (visitedAgentIds + maxHops)
+- [ ] 07-02: In-character handoff messages via proactiveOutreach pipeline
+- [ ] 07-03: Approval endpoints (POST /api/tasks/:id/approve and /reject) and approval card frontend component
+- [ ] 07-04: Pause/cancel controls (POST /api/projects/:id/autonomy/pause) and frontend integration
+
+### Phase 8: Chat Summary and Tab Notifications
+**Goal**: Users return to a conversational briefing from Maya and never miss completed work due to an inactive tab
+**Depends on**: Phase 7
+**Requirements**: UX-03, UX-05
+**Success Criteria** (what must be TRUE):
+  1. When a user returns after autonomous work completed, Maya delivers exactly one briefing message leading with outcomes ("Authentication module scoped — two items need your review"), not process details
+  2. The briefing does not repeat if the user sends another message shortly after; it appears once per absence session
+  3. The browser tab title shows a badge or flashing indicator when autonomous work completes while the tab is in the background
+**Plans**: TBD
+
+Plans:
+- [ ] 08-01: SummaryBriefingBuilder with idempotency guard and join_conversation trigger hook
+- [ ] 08-02: Browser tab notification (document.title badge + Page Visibility API detection)
+
+### Phase 9: Progressive Trust and Inactivity Trigger
+**Goal**: Agents earn higher autonomy through track record and the system can start working when users go idle
+**Depends on**: Phase 8
+**Requirements**: EXEC-04, SAFE-04
+**Success Criteria** (what must be TRUE):
+  1. An agent that has completed tasks successfully is offered higher-risk work without manual approval over time
+  2. After 4+ hours of user inactivity, queued autonomous work begins automatically (when feature flag enabled)
+  3. The inactivity trigger can be disabled per-project without affecting any other autonomy behavior
+**Plans**: TBD
+
+Plans:
+- [ ] 09-01: Trust score accumulation on task completion and autonomy threshold adjustment
+- [ ] 09-02: Inactivity detection cron job gated by INACTIVITY_AUTONOMY_ENABLED flag
+
+## Progress
+
+**Execution Order:** Phases execute in numeric order: 6 → 7 → 8 → 9
+
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 1. Hatch Conversation Quality | v1.0 | 8/8 | Complete | 2026-03-19 |
+| 2. User Journey Fixes | v1.0 | 7/7 | Complete | 2026-03-19 |
+| 3. Hatch Presence and Avatar System | v1.0 | 5/5 | Complete | 2026-03-19 |
+| 4. Data Reliability and Resilience | v1.0 | 3/3 | Complete | 2026-03-19 |
+| 5. Route Architecture Cleanup | v1.0 | 2/2 | Complete | 2026-03-19 |
+| 6. Background Execution Foundation | v1.1 | 0/4 | Not started | - |
+| 7. Agent Handoffs and Approval UI | v1.1 | 0/4 | Not started | - |
+| 8. Chat Summary and Tab Notifications | v1.1 | 0/2 | Not started | - |
+| 9. Progressive Trust and Inactivity Trigger | v1.1 | 0/2 | Not started | - |
 
 ---
 
 ## Future Milestones (captured for context)
 
-### v1.1 — Multimodal Expansion
-- Image generation from Designer/Creative Hatch conversations
-- Claude coding agent triggered from Engineer Hatch
-- Voice input via Whisper transcription
-
-### v1.2 — Autonomous Execution Loop
-- Hatches hand off tasks to each other without user direction
-- Background task execution (Hatches work while user is offline)
-- Hatches police each other: quality gates, peer review, safety — fully internal
-- User wakes up to progress updates, not blank state
-- Autonomous Brain updates from execution results
+### v1.2 — Notifications and Advanced Autonomy
+- Email digest of autonomous work completed while offline (NOTF-01)
+- Push notification for high-risk approval requests (NOTF-02)
+- User-configurable notification preferences (NOTF-03)
+- Proactive execution based on project health scoring (AUTO-01)
+- Execution trace narrative — detailed Hatch activity log (AUTO-02)
 
 ### v1.3 — B2B Company Brain
 - Company-level knowledge layer: brand guidelines, tone of voice, design system, product docs uploaded once
 - All projects within a company inherit company brain automatically
-- Per-project brain adds to, not replaces, company brain
-- Hatch team is pre-informed by company context from day one
 - Admin panel for company brain management
 
 ### v1.4 — Collaboration
@@ -35,3 +141,4 @@
 ---
 *Roadmap created: 2026-03-17*
 *v1.0 shipped: 2026-03-19*
+*v1.1 roadmap added: 2026-03-19*
