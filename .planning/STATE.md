@@ -4,13 +4,13 @@ milestone: v1.1
 milestone_name: Autonomous Execution Loop
 status: executing
 last_updated: "2026-03-20T16:20:29.131Z"
-last_activity: 2026-03-20 — Completed 07-03 (approve/reject endpoints + AutonomousApprovalCard + CenterPanel inline cards)
+last_activity: 2026-03-20 — Completed 07-04 (pause/resume button in working indicator, UX-04)
 progress:
   total_phases: 4
   completed_phases: 1
   total_plans: 8
-  completed_plans: 7
-  percent: 88
+  completed_plans: 8
+  percent: 100
 ---
 
 # State: Hatchin
@@ -27,11 +27,11 @@ See: .planning/PROJECT.md (updated 2026-03-19)
 ## Current Position
 
 Phase: 7 of 9 (Agent Handoffs and Approval UI)
-Plan: 3 of 4 complete (07-01, 07-02, 07-03 done) — Wave 2 approval UI complete
-Status: Executing Phase 7 — 07-04 remaining (progressive trust / final plan)
-Last activity: 2026-03-20 — Completed 07-03 (approve/reject endpoints + AutonomousApprovalCard + CenterPanel inline cards)
+Plan: 4 of 4 complete (07-01, 07-02, 07-03, 07-04 done) — Phase 7 complete
+Status: Phase 7 complete — ready for Phase 8 (Chat Summary and Tab Notifications)
+Last activity: 2026-03-20 — Completed 07-04 (pause/resume button in CenterPanel working indicator, UX-04)
 
-Progress: [█████████░] 88% Phase 7 near complete (v1.1 milestone ongoing)
+Progress: [██████████] 100% Phase 7 complete (v1.1 milestone — Phase 7 done)
 
 ---
 
@@ -77,6 +77,8 @@ Progress: [█████████░] 88% Phase 7 near complete (v1.1 miles
 - [Phase 07-agent-handoffs-and-approval-ui]: emitHandoffAnnouncement placed AFTER executeTask output is stored — output message appears in chat before announcement per research anti-patterns
 - [Phase 07-agent-handoffs-and-approval-ui]: Approval card renders above message input as persistent state instead of toast — UX-01 one-click requirement
 - [Phase 07-agent-handoffs-and-approval-ui]: Reject sets task status to todo (not blocked) so tasks remain retryable without manual unblocking
+- [Phase 07-agent-handoffs-and-approval-ui]: Pause state synced from project.executionRules on project change — persists across page refresh without extra API calls
+- [Phase 07-agent-handoffs-and-approval-ui]: background_execution_started WS event resets isAutonomyPaused to false — if server started execution, project was not paused
 
 ## Blockers / Concerns
 

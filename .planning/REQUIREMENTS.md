@@ -33,7 +33,7 @@ Requirements for Autonomous Execution Loop. Each maps to roadmap phases.
 - [x] **UX-01**: Frontend renders interactive approval cards with Approve/Reject/Modify buttons for high-risk autonomous actions (toast with risk reasons)
 - [x] **UX-02**: "Team is working..." presence indicator visible in chat during autonomous execution
 - [x] **UX-03**: Maya delivers a chat summary briefing when user returns after autonomous work completed (returnBriefing.ts)
-- [ ] **UX-04**: User can pause or cancel autonomous execution mid-run *(deferred)*
+- [x] **UX-04**: User can pause or cancel autonomous execution mid-run *(deferred)*
 - [x] **UX-05**: Browser tab title flashes / shows badge when autonomous work completes while tab is inactive
 
 ## Future Requirements
