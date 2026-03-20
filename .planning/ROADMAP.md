@@ -65,13 +65,13 @@ Plans:
   4. Each Hatch in the chain has access to the previous Hatch's output when composing its response
   5. User can approve or reject a high-risk action proposal with a single button click, no typing required
   6. User can pause or cancel all ongoing autonomous execution at any point
-**Plans**: TBD
+**Plans:** 4 plans
 
 Plans:
-- [ ] 07-01: HandoffOrchestrator with cycle detection (visitedAgentIds + maxHops)
-- [ ] 07-02: In-character handoff messages via proactiveOutreach pipeline
-- [ ] 07-03: Approval endpoints (POST /api/tasks/:id/approve and /reject) and approval card frontend component
-- [ ] 07-04: Pause/cancel controls (POST /api/projects/:id/autonomy/pause) and frontend integration
+- [ ] 07-01-PLAN.md — HandoffOrchestrator with routing via evaluateConductorDecision, cycle detection, max-hops guard
+- [ ] 07-02-PLAN.md — In-character handoff announcements with tone-safe LLM generation
+- [ ] 07-03-PLAN.md — Approve/reject REST endpoints + AutonomousApprovalCard inline component
+- [ ] 07-04-PLAN.md — Pause/resume button in working indicator via autonomyPaused flag
 
 ### Phase 8: Chat Summary and Tab Notifications
 **Goal**: Users return to a conversational briefing from Maya and never miss completed work due to an inactive tab
@@ -113,7 +113,7 @@ Plans:
 | 4. Data Reliability and Resilience | v1.0 | 3/3 | Complete | 2026-03-19 |
 | 5. Route Architecture Cleanup | v1.0 | 2/2 | Complete | 2026-03-19 |
 | 6. Background Execution Foundation | 4/4 | Complete   | 2026-03-20 | 2026-03-20 |
-| 7. Agent Handoffs and Approval UI | v1.1 | 0/4 | Not started | - |
+| 7. Agent Handoffs and Approval UI | v1.1 | 0/4 | Planning complete | - |
 | 8. Chat Summary and Tab Notifications | v1.1 | 0/2 | Not started | - |
 | 9. Progressive Trust and Inactivity Trigger | v1.1 | 0/2 | Not started | - |
 
