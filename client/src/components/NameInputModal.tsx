@@ -32,7 +32,7 @@ export function NameInputModal({ isOpen, onClose, onSubmit, isLoading }: NameInp
         // Intercept Enter at the DialogContent level too, so it never bubbles to Dialog close handler
         <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
             <DialogContent
-                className="max-w-md bg-[#1A1D23] border-[#31343A] p-0 overflow-hidden"
+                className="max-w-md bg-hatchin-panel border-hatchin-border-subtle p-0 overflow-hidden"
                 onKeyDown={(e) => { if (e.key === 'Enter') e.stopPropagation(); }}
             >
                 <DialogTitle className="sr-only">Enter your name</DialogTitle>
@@ -65,7 +65,7 @@ export function NameInputModal({ isOpen, onClose, onSubmit, isLoading }: NameInp
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: 0.2 }}
-                            className="text-3xl font-bold tracking-tight text-[#F1F1F3]"
+                            className="text-3xl font-bold tracking-tight text-hatchin-text-bright"
                         >
                             What should we call you?
                         </motion.h1>
@@ -73,7 +73,7 @@ export function NameInputModal({ isOpen, onClose, onSubmit, isLoading }: NameInp
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: 0.3 }}
-                            className="text-[#A6A7AB] text-base leading-relaxed"
+                            className="text-muted-foreground text-base leading-relaxed"
                         >
                             Your AI team needs to know who their manager is.
                         </motion.p>
@@ -94,7 +94,7 @@ export function NameInputModal({ isOpen, onClose, onSubmit, isLoading }: NameInp
                                 onKeyDown={handleKeyDown}
                                 placeholder="Your name"
                                 autoFocus
-                                className="w-full px-5 py-4 bg-[#111318] border border-[#31343A] rounded-xl text-white placeholder-[#585961] focus:outline-none focus:border-hatchin-blue focus:ring-1 focus:ring-hatchin-blue transition-all duration-300 text-lg group-hover:border-[#43444B]"
+                                className="w-full px-5 py-4 bg-hatchin-panel border border-hatchin-border-subtle rounded-xl text-foreground placeholder-muted-foreground focus:outline-none focus:border-hatchin-blue focus:ring-1 focus:ring-hatchin-blue transition-all duration-300 text-lg group-hover:border-hatchin-border-subtle"
                             />
                         </div>
 

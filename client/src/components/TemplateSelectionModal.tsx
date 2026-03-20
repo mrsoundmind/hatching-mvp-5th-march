@@ -116,15 +116,15 @@ export function TemplateSelectionModal({ isOpen, onClose, onSelectTemplate }: Te
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-6xl bg-[#1D2027] border-[#3A3E47] p-0 h-[80vh]">
+      <DialogContent className="max-w-6xl bg-hatchin-panel border-hatchin-border-subtle p-0 h-[80vh]">
         <DialogTitle className="sr-only">Starter template selection</DialogTitle>
         <DialogDescription className="sr-only">
           Choose a starter pack template to create a project with preconfigured hatches.
         </DialogDescription>
         <div className="flex h-full">
           {/* Left sidebar - Categories */}
-          <div className="w-72 bg-[#171A20] border-r border-[#343844] p-5">
-            <h3 className="text-[#F1F1F3] font-semibold mb-4 tracking-wide">Categories</h3>
+          <div className="w-72 bg-background border-r border-hatchin-border-subtle p-5">
+            <h3 className="text-hatchin-text-bright font-semibold mb-4 tracking-wide">Categories</h3>
             <div className="space-y-1">
               {categories.map((category) => (
                 <motion.button
@@ -133,22 +133,22 @@ export function TemplateSelectionModal({ isOpen, onClose, onSelectTemplate }: Te
                   onClick={() => setSelectedCategory(category.id)}
                   className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-left transition-colors ${
                     selectedCategory === category.id
-                      ? 'bg-gradient-to-r from-[#6C82FF] to-[#5C72F5] text-white'
-                      : 'text-[#A6A7AB] hover:text-[#F1F1F3] hover:bg-[#2B2F39]'
+                      ? 'bg-gradient-to-r from-hatchin-blue to-hatchin-blue/90 text-white'
+                      : 'text-muted-foreground hover:text-hatchin-text-bright hover:bg-hatchin-surface-elevated'
                   }`}
                 >
                   <div className="flex items-center gap-3">
                     {(() => {
                       const Icon = categoryIconMap[category.icon as keyof typeof categoryIconMap];
                       return (
-                        <span className={`w-6 h-6 rounded-md flex items-center justify-center ${selectedCategory === category.id ? 'bg-white/15' : 'bg-[#242833]'}`}>
+                        <span className={`w-6 h-6 rounded-md flex items-center justify-center ${selectedCategory === category.id ? 'bg-white/15' : 'bg-hatchin-surface-muted'}`}>
                           <Icon className="w-3.5 h-3.5" />
                         </span>
                       );
                     })()}
                     <span className="text-sm">{category.name}</span>
                   </div>
-                  <span className="text-xs bg-[#43444B]/70 px-2 py-1 rounded-md">
+                  <span className="text-xs bg-hatchin-border-subtle/70 px-2 py-1 rounded-md">
                     {category.count}
                   </span>
                 </motion.button>
@@ -161,16 +161,16 @@ export function TemplateSelectionModal({ isOpen, onClose, onSelectTemplate }: Te
             {/* Header */}
             <div className="flex items-center justify-between mb-6">
               <div>
-                <h2 className="text-xl font-semibold text-[#F1F1F3] tracking-tight">
+                <h2 className="text-xl font-semibold text-hatchin-text-bright tracking-tight">
                   Choose Your Starter Template
                 </h2>
-                <p className="text-[#A6A7AB] text-sm mt-1">
+                <p className="text-muted-foreground text-sm mt-1">
                   Select a pre-built team to get started quickly, or explore ideas if you're not sure what to build.
                 </p>
               </div>
               <button
                 onClick={onClose}
-                className="p-2 text-[#A6A7AB] hover:text-[#F1F1F3] transition-colors"
+                className="p-2 text-muted-foreground hover:text-hatchin-text-bright transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -178,13 +178,13 @@ export function TemplateSelectionModal({ isOpen, onClose, onSelectTemplate }: Te
 
             {/* Search */}
             <div className="relative mb-6">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-[#A6A7AB]" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <input
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Search templates..."
-                className="w-full pl-10 pr-4 py-2.5 bg-[#2A2E38] border border-[#3A3E47] rounded-xl text-[#F1F1F3] placeholder-[#8E93A3] focus:border-[#6C82FF] focus:outline-none"
+                className="w-full pl-10 pr-4 py-2.5 bg-hatchin-surface-elevated border border-hatchin-border-subtle rounded-xl text-hatchin-text-bright placeholder-muted-foreground focus:border-hatchin-blue focus:outline-none"
               />
             </div>
 
@@ -195,31 +195,31 @@ export function TemplateSelectionModal({ isOpen, onClose, onSelectTemplate }: Te
                   key={template.id}
                   whileHover={{ y: -2, scale: 1.01 }}
                   onClick={() => onSelectTemplate(template)}
-                  className="p-4 bg-[#272B35] hover:bg-[#303543] border border-[#3A3E47] rounded-xl text-left transition-all duration-200 group"
+                  className="p-4 bg-hatchin-card hover:bg-hatchin-surface-elevated border border-hatchin-border-subtle rounded-xl text-left transition-all duration-200 group"
                 >
                   <div className="flex items-start gap-3 mb-3">
                     <div className="text-2xl">{template.icon}</div>
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
-                        <h4 className="font-semibold text-[#F1F1F3]">{template.title}</h4>
-                        <div className="flex items-center gap-1 text-xs text-[#A6A7AB]">
+                        <h4 className="font-semibold text-hatchin-text-bright">{template.title}</h4>
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
                           <span>👥</span>
                           <span>{template.roles.length}</span>
                         </div>
                       </div>
-                      <p className="text-sm text-[#A6A7AB]">{template.description}</p>
+                      <p className="text-sm text-muted-foreground">{template.description}</p>
                     </div>
                   </div>
                   
                   <div className="space-y-1 mb-4">
                     {template.roles.map((role, index) => (
-                      <div key={index} className="text-xs text-[#A6A7AB]">
+                      <div key={index} className="text-xs text-muted-foreground">
                         {role}
                       </div>
                     ))}
                   </div>
                   
-                  <div className="flex items-center justify-center w-full py-2 bg-[#6C82FF] hover:bg-[#5A6FE8] text-white rounded-lg text-sm font-medium transition-colors">
+                  <div className="flex items-center justify-center w-full py-2 bg-hatchin-blue hover:bg-hatchin-blue/90 text-white rounded-lg text-sm font-medium transition-colors">
                     Use Pack
                   </div>
                 </motion.button>
