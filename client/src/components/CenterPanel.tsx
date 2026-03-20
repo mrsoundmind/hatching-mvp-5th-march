@@ -14,7 +14,8 @@ import { buildConversationId } from '@/lib/conversationId';
 import { devLog } from '@/lib/devLog';
 import { deriveChatMode, type ChatMode } from '@/lib/chatMode';
 import { useAuth } from "@/hooks/useAuth";
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
+import { AutonomousApprovalCard } from './AutonomousApprovalCard';
 
 interface ChatContext {
   mode: ChatMode;
@@ -116,6 +117,13 @@ export function CenterPanel({
   const [typingColleagues, setTypingColleagues] = useState<string[]>([]);
   const [isTeamWorking, setIsTeamWorking] = useState(false);
   const [teamWorkingTaskCount, setTeamWorkingTaskCount] = useState(0);
+  // UX-01: Inline approval cards for high-risk autonomous tasks
+  const [approvalRequests, setApprovalRequests] = useState<Array<{
+    taskId: string;
+    agentName: string;
+    riskReasons: string[];
+    projectId: string;
+  }>>([]);
   const lastSendRef = useRef<{ conversationId: string; content: string; at: number } | null>(null);
 
   const resizeComposer = (el: HTMLTextAreaElement | null) => {
@@ -1095,15 +1103,18 @@ export function CenterPanel({
       }
     }
     else if (message.type === 'task_requires_approval') {
-      // High-risk autonomous task needs user approval (SAFE-01 / UX-01)
+      // UX-01: High-risk autonomous task — show inline approval card instead of toast
       devLog('⚠️ [Autonomy] Task requires approval:', message.taskId, message.riskReasons);
       queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
-      toast({
-        title: `${message.agentName || 'Agent'} needs your approval`,
-        description: message.riskReasons?.join(', ') || 'High-risk task flagged for review',
-        variant: 'destructive',
-        duration: 15000,
-      });
+      setApprovalRequests((prev) => [
+        ...prev.filter((r) => r.taskId !== message.taskId),
+        {
+          taskId: message.taskId ?? '',
+          agentName: message.agentName ?? 'Agent',
+          riskReasons: message.riskReasons ?? [],
+          projectId: activeProject?.id ?? '',
+        },
+      ]);
       // Dispatch event so TaskManager can highlight the pending task
       try {
         window.dispatchEvent(new CustomEvent('task_requires_approval', {
@@ -1414,6 +1425,17 @@ export function CenterPanel({
 
 
   // === END TASK 3.1 ===
+
+  // UX-01: Clear approval requests that belong to the old project when switching
+  useEffect(() => {
+    if (activeProject?.id) {
+      setApprovalRequests((prev) =>
+        prev.filter((r) => r.projectId === activeProject.id),
+      );
+    } else {
+      setApprovalRequests([]);
+    }
+  }, [activeProject?.id]);
 
   // useEffect to listen to activeProjectId, activeTeamId, activeAgentId changes
   useEffect(() => {
@@ -1816,6 +1838,23 @@ export function CenterPanel({
   };
 
   // === END TASK 2.3 ===
+
+  // UX-01: Approve / reject mutations for autonomous task approval cards
+  const approveMutation = useMutation({
+    mutationFn: (taskId: string) => apiRequest(`/api/tasks/${taskId}/approve`, 'POST', {}),
+    onSuccess: (_data, taskId) => {
+      setApprovalRequests((prev) => prev.filter((r) => r.taskId !== taskId));
+      queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
+    },
+  });
+
+  const rejectMutation = useMutation({
+    mutationFn: (taskId: string) => apiRequest(`/api/tasks/${taskId}/reject`, 'POST', {}),
+    onSuccess: (_data, taskId) => {
+      setApprovalRequests((prev) => prev.filter((r) => r.taskId !== taskId));
+      queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
+    },
+  });
 
   // A1.1 & A1.4: Handle message reactions for AI training
   const reactionMutation = useMutation({
@@ -2516,6 +2555,23 @@ export function CenterPanel({
                     <span>Team is working on {teamWorkingTaskCount} task{teamWorkingTaskCount !== 1 ? 's' : ''}...</span>
                   </div>
                 )}
+
+                {/* UX-01: Inline approval cards for high-risk autonomous tasks */}
+                <AnimatePresence>
+                  {approvalRequests
+                    .filter((r) => r.projectId === activeProject?.id)
+                    .map((req) => (
+                      <AutonomousApprovalCard
+                        key={req.taskId}
+                        taskId={req.taskId}
+                        agentName={req.agentName}
+                        riskReasons={req.riskReasons}
+                        onApprove={(id) => approveMutation.mutate(id)}
+                        onReject={(id) => rejectMutation.mutate(id)}
+                        isLoading={approveMutation.isPending || rejectMutation.isPending}
+                      />
+                    ))}
+                </AnimatePresence>
 
                 {/* Auto-scroll helper */}
                 <div ref={(el) => {
