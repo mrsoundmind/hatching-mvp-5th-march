@@ -11,6 +11,7 @@ import LandingPage from "@/pages/LandingPage";
 import { useAuth } from "@/hooks/useAuth";
 import { useEffect } from "react";
 import AutonomyDashboard from "@/devtools/autonomyDashboard";
+import { ThemeProvider } from "@/components/ThemeProvider";
 
 function AuthGuard({ children }: { children: React.ReactNode }) {
   const { isSignedIn, isLoading } = useAuth();
@@ -25,7 +26,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
 
   if (isLoading) {
     return (
-      <div className="h-screen w-full bg-[#0A0A0A] flex flex-col items-center justify-center gap-5">
+      <div className="h-screen w-full bg-background flex flex-col items-center justify-center gap-5">
         <div className="relative flex items-center justify-center">
           {/* Pulsing ring — uses existing coachmark-ring keyframes from index.css */}
           <span
@@ -40,7 +41,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
             <span className="text-lg">🥚</span>
           </div>
         </div>
-        <span className="text-2xl font-bold tracking-tighter text-white select-none">
+        <span className="text-2xl font-bold tracking-tighter text-foreground select-none">
           Hatchin<span className="text-indigo-500">.</span>
         </span>
       </div>
@@ -62,7 +63,7 @@ function Router() {
       <Route path="/login" component={LoginPage} />
       <Route path="/">
         {isLoading ? (
-          <div className="h-screen w-full bg-[#0A0A0A] flex flex-col items-center justify-center gap-5">
+          <div className="h-screen w-full bg-background flex flex-col items-center justify-center gap-5">
             <div className="relative flex items-center justify-center">
               <span
                 className="absolute w-14 h-14 rounded-full border border-indigo-500/40"
@@ -76,7 +77,7 @@ function Router() {
                 <span className="text-lg">🥚</span>
               </div>
             </div>
-            <span className="text-2xl font-bold tracking-tighter text-white select-none">
+            <span className="text-2xl font-bold tracking-tighter text-foreground select-none">
               Hatchin<span className="text-indigo-500">.</span>
             </span>
           </div>
@@ -106,10 +107,12 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Router />
-      </TooltipProvider>
+      <ThemeProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Router />
+        </TooltipProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   );
 }

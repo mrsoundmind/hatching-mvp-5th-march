@@ -14,6 +14,7 @@ interface DeletedEntityData {
     agents?: Agent[];
   };
 }
+import { ThemeToggle } from "./ThemeToggle";
 import QuickStartModal from "@/components/QuickStartModal";
 import StarterPacksModal from "@/components/StarterPacksModal";
 import ProjectNameModal from "@/components/ProjectNameModal";
@@ -517,6 +518,7 @@ export function LeftSidebar({
                 <Settings className="w-4 h-4" />
                 Preferences
               </button>
+              <ThemeToggle />
 
               <div className="border-t hatchin-border my-1"></div>
               <button
