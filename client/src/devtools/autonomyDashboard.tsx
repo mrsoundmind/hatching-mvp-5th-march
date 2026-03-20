@@ -67,11 +67,11 @@ export default function AutonomyDashboard() {
   const recentTraces = useMemo(() => traces.slice(-12).reverse(), [traces]);
 
   return (
-    <div className="min-h-screen bg-[#0B0F1A] text-[#E7ECF6] p-6">
+    <div className="min-h-screen bg-background text-foreground p-6">
       <div className="max-w-7xl mx-auto space-y-6">
         <header className="flex items-center justify-between">
           <h1 className="text-2xl font-semibold">Autonomy Dashboard</h1>
-          <div className="text-sm text-[#9BA7C0]">Live trace + event view</div>
+          <div className="text-sm text-muted-foreground">Live trace + event view</div>
         </header>
 
         {error && (
@@ -82,19 +82,19 @@ export default function AutonomyDashboard() {
 
         <section className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="rounded-xl border border-white/10 bg-white/5 p-4">
-            <div className="text-xs text-[#9BA7C0]">Provider</div>
+            <div className="text-xs text-muted-foreground">Provider</div>
             <div className="text-lg">{health?.provider?.resolvedProvider || 'unknown'}</div>
           </div>
           <div className="rounded-xl border border-white/10 bg-white/5 p-4">
-            <div className="text-xs text-[#9BA7C0]">Mode</div>
+            <div className="text-xs text-muted-foreground">Mode</div>
             <div className="text-lg">{health?.provider?.runtimeMode || health?.provider?.mode || 'unknown'}</div>
           </div>
           <div className="rounded-xl border border-white/10 bg-white/5 p-4">
-            <div className="text-xs text-[#9BA7C0]">Events</div>
+            <div className="text-xs text-muted-foreground">Events</div>
             <div className="text-lg">{events.length}</div>
           </div>
           <div className="rounded-xl border border-white/10 bg-white/5 p-4">
-            <div className="text-xs text-[#9BA7C0]">Traces</div>
+            <div className="text-xs text-muted-foreground">Traces</div>
             <div className="text-lg">{traces.length}</div>
           </div>
         </section>
@@ -107,12 +107,12 @@ export default function AutonomyDashboard() {
                 <div key={`${event.timestamp}-${index}`} className="rounded-md border border-white/10 bg-black/20 p-3 text-xs">
                   <div className="flex items-center justify-between">
                     <span className="font-medium">{event.eventType}</span>
-                    <span className="text-[#9BA7C0]">{new Date(event.timestamp).toLocaleTimeString()}</span>
+                    <span className="text-muted-foreground">{new Date(event.timestamp).toLocaleTimeString()}</span>
                   </div>
-                  <div className="mt-1 text-[#9BA7C0]">
+                  <div className="mt-1 text-muted-foreground">
                     conversation: {event.conversationId || 'n/a'} · hatch: {event.hatchId || 'n/a'}
                   </div>
-                  <div className="mt-1 text-[#9BA7C0]">
+                  <div className="mt-1 text-muted-foreground">
                     latency: {event.latencyMs ?? 'n/a'}ms · risk: {event.riskScore ?? 'n/a'}
                   </div>
                 </div>
@@ -126,11 +126,11 @@ export default function AutonomyDashboard() {
               {recentTraces.map((trace) => (
                 <div key={trace.traceId} className="rounded-md border border-white/10 bg-black/20 p-3 text-xs">
                   <div className="font-medium">{trace.traceId}</div>
-                  <div className="mt-1 text-[#9BA7C0]">{trace.objective}</div>
-                  <div className="mt-1 text-[#9BA7C0]">
+                  <div className="mt-1 text-muted-foreground">{trace.objective}</div>
+                  <div className="mt-1 text-muted-foreground">
                     rounds: {trace.rounds?.length || 0} · peer reviews: {trace.review?.length || 0}
                   </div>
-                  <div className="mt-1 text-[#9BA7C0]">{new Date(trace.updatedAt).toLocaleString()}</div>
+                  <div className="mt-1 text-muted-foreground">{new Date(trace.updatedAt).toLocaleString()}</div>
                 </div>
               ))}
             </div>

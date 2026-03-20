@@ -35,7 +35,7 @@ function ChatPreview() {
     <div className="w-full rounded-xl bg-black/40 border border-white/8 p-3">
       {/* mock input */}
       <div className="flex items-center gap-2 bg-white/5 rounded-lg px-3 py-2 mb-2">
-        <span className="text-xs text-gray-300 min-h-[16px]">{displayed}</span>
+        <span className="text-xs text-muted-foreground min-h-[16px]">{displayed}</span>
         <span className="w-px h-4 bg-indigo-400 animate-pulse rounded-sm flex-shrink-0" />
       </div>
       <AnimatePresence>
@@ -85,7 +85,7 @@ function AgentHatch() {
             {a.emoji}
           </div>
           <span className="text-xs text-indigo-400/80 font-medium">{a.characterName}</span>
-          <span className="text-xs text-gray-400 text-center leading-tight whitespace-nowrap">{a.role}</span>
+          <span className="text-xs text-muted-foreground text-center leading-tight whitespace-nowrap">{a.role}</span>
         </motion.div>
       ))}
     </div>
@@ -107,7 +107,7 @@ function BrainFill() {
             initial={{ opacity: 0, x: -8 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: i * 0.65 + 0.2 }}
-            className="flex items-center gap-2 text-xs text-gray-300"
+            className="flex items-center gap-2 text-xs text-muted-foreground"
           >
             <div className="w-1.5 h-1.5 rounded-full bg-[#47DB9A] flex-shrink-0" />
             {item}
@@ -140,7 +140,7 @@ function ChatProgress() {
           )}
           <div
             className={`max-w-[80%] rounded-lg px-2 py-1.5 text-xs leading-snug ${ex.from === "user"
-              ? "bg-white/8 text-gray-200"
+              ? "bg-white/8 text-foreground"
               : "bg-indigo-500/10 border border-indigo-500/20 text-indigo-200"
               }`}
           >
@@ -163,7 +163,7 @@ const steps = [
   {
     id: 2,
     title: "Watch your team hatch",
-    description: "Maya assembles a specialized AI team for your project — designer, developer, PM — in seconds.",
+    description: "Maya assembles a specialized AI team for your project: designer, developer, PM. In seconds.",
     preview: <AgentHatch />,
   },
   {
@@ -199,7 +199,7 @@ export function OnboardingSteps({ isOpen, onClose, onComplete }: OnboardingSteps
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-xl bg-[#1A1D23] border-[#31343A] p-0 overflow-hidden">
+      <DialogContent className="max-w-xl bg-hatchin-panel border-hatchin-border-subtle p-0 overflow-hidden">
         <DialogTitle className="sr-only">Hatchin onboarding steps</DialogTitle>
         <DialogDescription className="sr-only">
           Walkthrough of how Hatchin teams and project memory work.
@@ -208,12 +208,12 @@ export function OnboardingSteps({ isOpen, onClose, onComplete }: OnboardingSteps
         <div className="relative">
           {/* Skip */}
           <div className="flex justify-between items-center p-5 pb-3">
-            <div className="text-xs text-[#505153] font-medium uppercase tracking-widest">
+            <div className="text-xs text-muted-foreground font-medium uppercase tracking-widest">
               {currentStep + 1} / {steps.length}
             </div>
             <button
               onClick={onComplete}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-[#A6A7AB] hover:text-[#F1F1F3] transition-colors text-sm"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-muted-foreground hover:text-hatchin-text-bright transition-colors text-sm"
             >
               <SkipForward className="w-3.5 h-3.5" />
               Skip
@@ -238,8 +238,8 @@ export function OnboardingSteps({ isOpen, onClose, onComplete }: OnboardingSteps
 
                 {/* Title + description */}
                 <div className="text-center space-y-2">
-                  <h2 className="text-lg font-semibold text-[#F1F1F3]">{stepData.title}</h2>
-                  <p className="text-[#A6A7AB] text-sm leading-relaxed max-w-sm mx-auto">
+                  <h2 className="text-lg font-semibold text-hatchin-text-bright">{stepData.title}</h2>
+                  <p className="text-muted-foreground text-sm leading-relaxed max-w-sm mx-auto">
                     {stepData.description}
                   </p>
                 </div>
@@ -255,7 +255,7 @@ export function OnboardingSteps({ isOpen, onClose, onComplete }: OnboardingSteps
                 onClick={() => setCurrentStep(i)}
                 className={`rounded-full transition-all duration-300 ${i === currentStep
                   ? "w-5 h-1.5 bg-hatchin-blue"
-                  : "w-1.5 h-1.5 bg-[#43444B] hover:bg-hatchin-blue/40"
+                  : "w-1.5 h-1.5 bg-hatchin-border-subtle hover:bg-hatchin-blue/40"
                   }`}
               />
             ))}
@@ -266,7 +266,7 @@ export function OnboardingSteps({ isOpen, onClose, onComplete }: OnboardingSteps
             <button
               onClick={prevStep}
               disabled={currentStep === 0}
-              className="flex items-center gap-1.5 px-4 py-2 text-[#A6A7AB] hover:text-[#F1F1F3] transition-colors disabled:opacity-30 disabled:cursor-not-allowed text-sm"
+              className="flex items-center gap-1.5 px-4 py-2 text-muted-foreground hover:text-hatchin-text-bright transition-colors disabled:opacity-30 disabled:cursor-not-allowed text-sm"
             >
               <ChevronLeft className="w-4 h-4" />
               Back

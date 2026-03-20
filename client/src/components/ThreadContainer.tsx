@@ -98,7 +98,7 @@ export function ThreadContainer({
       {/* Thread indicator line */}
       {hasReplies && !isCollapsed && (
         <div
-          className="absolute left-6 top-16 bottom-4 w-0.5 bg-gray-600 opacity-60"
+          className="absolute left-6 top-16 bottom-4 w-0.5 bg-hatchin-border-subtle opacity-60"
           style={{
             background: `linear-gradient(to bottom, 
               hsla(158, 66%, 57%, 0.3) 0%, 
@@ -126,7 +126,7 @@ export function ThreadContainer({
                   variant="ghost"
                   size="sm"
                   onClick={() => onToggleCollapse(rootMessage.id)}
-                  className="h-6 px-2 bg-gray-800/80 hover:bg-gray-700/80 border border-gray-600/50 text-xs text-gray-300 hover:text-white relative"
+                  className="h-6 px-2 bg-hatchin-surface/80 hover:bg-hatchin-surface/80 border border-hatchin-border-subtle/50 text-xs text-muted-foreground hover:text-foreground relative"
                   data-testid={`thread-toggle-${rootMessage.id}`}
                 >
                   {isCollapsed ? (
@@ -182,7 +182,7 @@ export function ThreadContainer({
 
                 {/* Participant count */}
                 {uniqueParticipants > 1 && (
-                  <div className="flex items-center gap-1 text-xs text-gray-400 bg-gray-800/60 px-2 py-1 rounded border border-gray-600/30">
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground bg-hatchin-surface/60 px-2 py-1 rounded border border-hatchin-border-subtle/30">
                     <Users className="w-3 h-3" />
                     {uniqueParticipants}
                   </div>
@@ -231,10 +231,10 @@ export function ThreadContainer({
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="ml-8 mt-2 p-3 bg-gray-800/30 border border-gray-600/30 rounded-lg"
+          className="ml-8 mt-2 p-3 bg-hatchin-surface/30 border border-hatchin-border-subtle/30 rounded-lg"
           data-testid={`thread-preview-${rootMessage.id}`}
         >
-          <div className="text-xs text-gray-400 mb-1 flex items-center gap-2">
+          <div className="text-xs text-muted-foreground mb-1 flex items-center gap-2">
             <span>
               Thread collapsed • {totalReplies} {totalReplies === 1 ? 'reply' : 'replies'}
               {uniqueParticipants > 1 && ` • ${uniqueParticipants} participants`}
@@ -277,7 +277,7 @@ export function ThreadContainer({
             )}
           </div>
           {replies.length > 0 && (
-            <div className="text-sm text-gray-300 truncate">
+            <div className="text-sm text-muted-foreground truncate">
               <span className="font-medium">{toDisplayText(replies[replies.length - 1].senderName, 'Unknown')}:</span>{' '}
               {toDisplayText(replies[replies.length - 1].content, '').substring(0, 80)}...
             </div>
