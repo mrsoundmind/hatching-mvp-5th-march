@@ -16,7 +16,7 @@ Requirements for Autonomous Execution Loop. Each maps to roadmap phases.
 
 ### Agent Handoffs
 
-- [ ] **HAND-01**: When a Hatch completes a task, the system routes the next task to the appropriate specialist based on task type
+- [x] **HAND-01**: When a Hatch completes a task, the system routes the next task to the appropriate specialist based on task type
 - [x] **HAND-02**: Hatches announce handoffs in-character in chat ("I've finished the scope, tagging @Engineer to pick this up")
 - [x] **HAND-03**: Task graph has cycle detection to prevent infinite handoff loops between agents (BFS in HandoffTracker)
 - [x] **HAND-04**: Each agent in the handoff chain receives the previous agent's output as context
@@ -70,7 +70,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | EXEC-02 | Phase 6 | Complete |
 | EXEC-03 | Phase 6 | Complete |
 | EXEC-04 | Phase 6 | Complete |
-| HAND-01 | Phase 7 | Pending |
+| HAND-01 | Phase 7 | Complete |
 | HAND-02 | Phase 7 | Complete |
 | HAND-03 | Phase 6 | Complete |
 | HAND-04 | Phase 7 | Complete |
@@ -91,4 +91,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-03-19*
-*Last updated: 2026-03-20 — 13/17 complete (SAFE-03 fixed: peer review branch added to executeTask)*
+*Last updated: 2026-03-20 — 15/17 complete (HAND-01 verified implemented, SAFE-03 fixed)*
