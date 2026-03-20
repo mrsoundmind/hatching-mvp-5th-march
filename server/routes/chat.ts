@@ -32,6 +32,7 @@ import {
   type Agent
 } from "../ai/expertiseMatching.js";
 import { resolveSpeakingAuthority } from "../orchestration/resolveSpeakingAuthority.js";
+import { generateReturnBriefing } from "../ai/returnBriefing.js";
 import { validateMessageIngress } from "../schemas/messageIngress.js";
 import { filterAvailableAgents, type ScopeContext } from "../orchestration/agentAvailability.js";
 import { assertPhase1Invariants } from "../invariants/assertPhase1.js";
@@ -39,6 +40,7 @@ import {
   getCurrentRuntimeConfig,
 } from "../llm/providerResolver.js";
 import { writeConfigSnapshot } from "../utils/configSnapshot.js";
+import { checkConversationAccess } from "../utils/conversationAccess.js";
 import { logAutonomyEvent } from "../autonomy/events/eventLogger.js";
 import {
   appendDeliberationRound,
@@ -59,6 +61,11 @@ import { createTaskGraph } from "../autonomy/taskGraph/taskGraphEngine.js";
 import { BUDGETS, FEATURE_FLAGS } from "../autonomy/config/policies.js";
 import { resolveAutonomyTrigger } from "../autonomy/triggers/autonomyTriggerResolver.js";
 import { queueTaskExecution } from "../autonomy/execution/jobQueue.js";
+import { classifyTaskIntent } from "../ai/tasks/intentClassifier.js";
+import { extractDueDate, extractPriority, checkRateLimit } from "../ai/tasks/taskCreator.js";
+import { checkForDuplicate } from "../ai/tasks/duplicateDetector.js";
+import { executeLifecycleCommand, type LifecycleContext } from "../ai/tasks/taskLifecycle.js";
+import { detectCompletionSignal } from "../ai/tasks/completionDetector.js";
 
 async function checkForAutonomyTrigger(
   userMessage: string,
@@ -81,7 +88,7 @@ async function checkForAutonomyTrigger(
       userMessage,
       lastUserActivityAt: new Date(),
       pendingTasks: tasks.map((t: any) => ({ id: t.id, status: t.status })),
-      autonomyEnabled: (project.executionRules as any)?.autonomyEnabled ?? false,
+      autonomyEnabled: project.executionRules?.autonomyEnabled ?? false,
     });
 
     if (!trigger.shouldExecute) return;
@@ -139,13 +146,9 @@ export function registerChatRoutes(
 
   const conversationOwnedByUser = async (conversationId: string, userId: string): Promise<boolean> => {
     const ownedProjectIds = await getOwnedProjectIds(userId);
-    for (const projectId of ownedProjectIds) {
-      const conversations = await storage.getConversationsByProject(projectId);
-      if (conversations.some((conversation) => conversation.id === conversationId)) {
-        return true;
-      }
-    }
-    return false;
+    return checkConversationAccess(conversationId, ownedProjectIds, (pid) =>
+      storage.getConversationsByProject(pid)
+    );
   };
 
   // Phase 1.2: WebSocket error responder helper (never throws)
@@ -254,7 +257,7 @@ export function registerChatRoutes(
     existingProject: Project;
   }): {
     coreDirection?: { whatBuilding?: string; whyMatters?: string; whoFor?: string };
-    executionRules?: string;
+    executionRules?: { autonomyEnabled?: boolean; rules?: string; taskGraph?: unknown };
     teamCulture?: string;
   } | null {
     const normalize = (input: string, max = 240) => {
@@ -273,7 +276,7 @@ export function registerChatRoutes(
 
     const patch: {
       coreDirection?: { whatBuilding?: string; whyMatters?: string; whoFor?: string };
-      executionRules?: string;
+      executionRules?: { autonomyEnabled?: boolean; rules?: string; taskGraph?: unknown };
       teamCulture?: string;
     } = {};
 
@@ -323,7 +326,7 @@ export function registerChatRoutes(
     }
 
     if (explicitRules) {
-      patch.executionRules = explicitRules;
+      patch.executionRules = { rules: explicitRules };
     }
 
     if (explicitCulture) {
@@ -527,6 +530,19 @@ export function registerChatRoutes(
               });
               break;
             }
+
+            // Bootstrap conversation if it doesn't exist in DB yet (e.g. pre-migration projects)
+            try {
+              const parsed = parseConversationId(conversationId.trim());
+              await ensureConversationExists({
+                conversationId: conversationId.trim(),
+                projectId: parsed.projectId,
+                teamId: (parsed as any).teamId ?? null,
+                agentId: (parsed as any).agentId ?? null,
+                type: (parsed as any).type ?? 'project',
+              });
+            } catch { /* non-critical */ }
+
             if (!activeConnections.has(conversationId)) {
               activeConnections.set(conversationId, new Set());
             }
@@ -535,6 +551,35 @@ export function registerChatRoutes(
               type: 'connection_confirmed',
               conversationId
             }));
+
+            // UX-03: Maya return briefing — check if user was away
+            if (conversationId.startsWith('project:')) {
+              try {
+                const parsed = parseConversationId(conversationId.trim());
+                const projId = (parsed as any).projectId;
+                if (projId && ws.__userId) {
+                  // Use 2-hour window as "away" threshold
+                  const lastSeen = new Date(Date.now() - 2 * 60 * 60 * 1000);
+                  const briefing = await generateReturnBriefing({
+                    projectId: projId,
+                    userId: ws.__userId,
+                    lastSeenAt: lastSeen,
+                    storage,
+                  });
+                  if (briefing.hasBriefing) {
+                    ws.send(JSON.stringify({
+                      type: 'return_briefing',
+                      projectId: projId,
+                      summary: briefing.summary,
+                      completedTasks: briefing.completedTasks,
+                      newMessages: briefing.newMessages,
+                    }));
+                  }
+                }
+              } catch {
+                // Non-critical — briefing is best-effort
+              }
+            }
 
             // P2: Auto-send welcome message for agent conversations with no messages yet
             if (conversationId.trim().startsWith('agent:')) {
@@ -2628,8 +2673,8 @@ export function registerChatRoutes(
                   ...chatPatch.coreDirection
                 };
               }
-              if (typeof chatPatch.executionRules === "string" && chatPatch.executionRules.trim().length > 0) {
-                mergedPatch.executionRules = chatPatch.executionRules.trim();
+              if (chatPatch.executionRules && typeof chatPatch.executionRules === "object") {
+                mergedPatch.executionRules = { ...((project as any).executionRules || {}), ...chatPatch.executionRules };
               }
               if (typeof chatPatch.teamCulture === "string" && chatPatch.teamCulture.trim().length > 0) {
                 mergedPatch.teamCulture = chatPatch.teamCulture.trim();
@@ -2801,8 +2846,8 @@ export function registerChatRoutes(
                     ...chatPatch.coreDirection
                   };
                 }
-                if (typeof chatPatch.executionRules === "string" && chatPatch.executionRules.trim().length > 0) {
-                  mergedPatch.executionRules = chatPatch.executionRules.trim();
+                if (chatPatch.executionRules && typeof chatPatch.executionRules === "object") {
+                  mergedPatch.executionRules = { ...((existingProject as any).executionRules || {}), ...chatPatch.executionRules };
                 }
                 if (typeof chatPatch.teamCulture === "string" && chatPatch.teamCulture.trim().length > 0) {
                   mergedPatch.teamCulture = chatPatch.teamCulture.trim();
