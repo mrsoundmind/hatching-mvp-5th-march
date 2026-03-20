@@ -25,7 +25,7 @@ Requirements for Autonomous Execution Loop. Each maps to roadmap phases.
 
 - [x] **SAFE-01**: Low-risk autonomous actions execute without approval; high-risk actions surface for user sign-off (frontend handler + toast)
 - [x] **SAFE-02**: Safety scoring adapted for autonomous context (no user message) with appropriate baseline risk
-- [ ] **SAFE-03**: Autonomous outputs undergo peer review by another Hatch before delivery *(partial — executeTask missing mid-risk peer review branch)*
+- [x] **SAFE-03**: Autonomous outputs undergo peer review by another Hatch before delivery
 - [ ] **SAFE-04**: Agents build trust score over time — successful completions unlock higher autonomy thresholds *(deferred)*
 
 ### User Experience
@@ -76,7 +76,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | HAND-04 | Phase 7 | Complete |
 | SAFE-01 | Phase 6 | Complete |
 | SAFE-02 | Phase 6 | Complete |
-| SAFE-03 | Phase 6 | Partial |
+| SAFE-03 | Phase 6 | Complete |
 | SAFE-04 | Phase 9 | Deferred |
 | UX-01 | Phase 6 | Complete |
 | UX-02 | Phase 6 | Complete |
@@ -91,4 +91,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-03-19*
-*Last updated: 2026-03-20 — 12/17 complete (SAFE-03 downgraded to partial after integration audit)*
+*Last updated: 2026-03-20 — 13/17 complete (SAFE-03 fixed: peer review branch added to executeTask)*

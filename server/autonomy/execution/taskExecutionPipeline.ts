@@ -4,6 +4,7 @@ import { BUDGETS } from '../config/policies.js';
 import { logAutonomyEvent } from '../events/eventLogger.js';
 import { orchestrateHandoff } from '../handoff/handoffOrchestrator.js';
 import { emitHandoffAnnouncement } from '../handoff/handoffAnnouncement.js';
+import { runPeerReview } from '../peerReview/peerReviewRunner.js';
 import type { IStorage } from '../../storage.js';
 
 export interface ExecuteTaskInput {
@@ -47,6 +48,81 @@ export async function executeTask(
       riskReasons: safety.reasons,
     });
     return { status: 'pending_approval' };
+  }
+
+  // SAFE-03: Mid-risk peer review gate (peerReviewTrigger <= risk < clarificationRequiredRisk)
+  const maxRisk = Math.max(safety.executionRisk, safety.scopeRisk);
+  if (maxRisk >= AUTONOMOUS_SAFETY_THRESHOLDS.peerReviewTrigger) {
+    const projectAgents = await input.storage.getAgentsByProject(input.task.projectId);
+    const reviewers = projectAgents
+      .filter((a) => a.id !== input.agent.id)
+      .map((a) => ({ id: a.id, name: a.name, role: a.role }));
+
+    const peerResult = await runPeerReview({
+      projectId: input.task.projectId,
+      conversationId: input.conversationId,
+      primaryHatchId: input.agent.id,
+      primaryHatchRole: input.agent.role,
+      reviewers,
+      provider: 'autonomous',
+      mode: 'autonomous',
+      confidence: 1.0 - maxRisk,
+      riskScore: maxRisk,
+      userMessage: input.task.description ?? input.task.title,
+      draftResponse: output,
+      projectName: input.project.name,
+    });
+
+    if (peerResult.clarificationRequired) {
+      await input.storage.updateTask(input.task.id, {
+        status: 'blocked',
+        metadata: { awaitingApproval: true, draftOutput: output, peerReviewBlocked: true } as any,
+      });
+      input.broadcastToConversation(input.conversationId, {
+        type: 'task_requires_approval',
+        taskId: input.task.id,
+        agentName: input.agent.name,
+        riskReasons: peerResult.reason,
+      });
+      return { status: 'pending_approval' };
+    }
+
+    // Use revised content from peer review
+    const finalOutput = peerResult.revisedContent || output;
+
+    await input.storage.createMessage({
+      conversationId: input.conversationId,
+      content: finalOutput,
+      messageType: 'agent',
+      agentId: input.agent.id,
+      userId: null,
+      metadata: { isAutonomous: true, taskId: input.task.id, peerReviewed: true } as any,
+    });
+
+    await input.storage.updateTask(input.task.id, { status: 'completed' });
+
+    await logAutonomyEvent({
+      eventType: 'autonomous_task_execution',
+      projectId: input.task.projectId,
+      hatchId: input.agent.id,
+      conversationId: input.conversationId,
+      confidence: 1.0,
+      riskScore: maxRisk,
+      latencyMs: null,
+      mode: 'autonomous',
+      provider: null,
+      teamId: null,
+      payload: { taskId: input.task.id, taskTitle: input.task.title, agentName: input.agent.name, peerReviewed: true },
+    });
+
+    input.broadcastToConversation(input.conversationId, {
+      type: 'task_execution_completed',
+      taskId: input.task.id,
+      agentId: input.agent.id,
+      agentName: input.agent.name,
+    });
+
+    return { status: 'completed' };
   }
 
   await input.storage.createMessage({
