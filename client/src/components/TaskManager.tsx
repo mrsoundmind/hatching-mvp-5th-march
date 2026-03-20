@@ -706,11 +706,11 @@ const TaskManager: React.FC<TaskManagerProps> = ({
     const indent = level > 0 ? `ml-${level * 6}` : '';
 
     return (
-      <div key={task.id} className={`${indent} ${level > 0 ? 'border-l border-gray-600 pl-4' : ''}`}>
+      <div key={task.id} className={`${indent} ${level > 0 ? 'border-l border-hatchin-border-subtle pl-4' : ''}`}>
         <div
           draggable={sectionId !== 'completed'}
           onDragStart={(e) => handleDragStart(e, task.id)}
-          className="group rounded-lg p-3 hover:bg-gray-800/60 transition-all cursor-move bg-[#33373d] mb-2"
+          className="group rounded-lg p-3 hover:bg-hatchin-panel/60 transition-all cursor-move bg-hatchin-surface mb-2"
           data-testid={`task-${task.id}`}
         >
           <div className="flex items-start gap-3">
@@ -837,7 +837,7 @@ const TaskManager: React.FC<TaskManagerProps> = ({
 
       {/* New Task Form */}
       {showNewTaskForm && (
-        <div className="mb-4 p-3 bg-gray-800/30 rounded-lg border border-gray-700">
+        <div className="mb-4 p-3 bg-hatchin-panel/30 rounded-lg border border-hatchin-border-subtle">
           <input
             type="text"
             value={newTaskTitle}
@@ -869,7 +869,7 @@ const TaskManager: React.FC<TaskManagerProps> = ({
                 setShowNewTaskForm(false);
                 setNewTaskTitle('');
               }}
-              className="px-4 py-2 bg-gray-600 text-white rounded-lg text-sm hover:bg-gray-700 transition-colors"
+              className="px-4 py-2 bg-hatchin-surface text-foreground rounded-lg text-sm hover:bg-hatchin-surface transition-colors"
               data-testid="button-cancel-task"
             >
               Cancel
@@ -915,7 +915,7 @@ const TaskManager: React.FC<TaskManagerProps> = ({
                   <ChevronDown className="w-4 h-4 hatchin-text-muted" />
                 )}
                 <span className="font-medium hatchin-text text-[12px]">{section.title}</span>
-                <span className="text-sm hatchin-text-muted bg-gray-700 px-2 py-1 rounded-full">
+                <span className="text-sm hatchin-text-muted bg-hatchin-surface px-2 py-1 rounded-full">
                   {section.tasks.length}
                 </span>
               </div>

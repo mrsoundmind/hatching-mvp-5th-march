@@ -388,6 +388,17 @@ export function CenterPanel({
   } | null>(null);
   const [isApprovingTasks, setIsApprovingTasks] = useState(false);
   const [showTaskApprovalModal, setShowTaskApprovalModal] = useState(false);
+  // UX-05: Reset tab title when user returns
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        document.title = 'Hatchin';
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, []);
+
 
   // Handle incoming WebSocket messages
   const handleIncomingMessage = (message: any) => {
@@ -1070,10 +1081,47 @@ export function CenterPanel({
     else if (message.type === 'background_execution_started') {
       setIsTeamWorking(true);
       setTeamWorkingTaskCount(message.taskCount ?? 0);
+      // UX-05: Tab notification badge
+      if (document.hidden) {
+        document.title = '\u2728 Team working... | Hatchin';
+      }
     }
     else if (message.type === 'background_execution_completed' || message.type === 'task_execution_completed') {
       setIsTeamWorking(false);
       setTeamWorkingTaskCount(0);
+      // UX-05: Tab notification badge — work complete
+      if (document.hidden) {
+        document.title = '\u2705 Work complete | Hatchin';
+      }
+    }
+    else if (message.type === 'task_requires_approval') {
+      // High-risk autonomous task needs user approval (SAFE-01 / UX-01)
+      devLog('⚠️ [Autonomy] Task requires approval:', message.taskId, message.riskReasons);
+      queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
+      toast({
+        title: `${message.agentName || 'Agent'} needs your approval`,
+        description: message.riskReasons?.join(', ') || 'High-risk task flagged for review',
+        variant: 'destructive',
+        duration: 15000,
+      });
+      // Dispatch event so TaskManager can highlight the pending task
+      try {
+        window.dispatchEvent(new CustomEvent('task_requires_approval', {
+          detail: { taskId: message.taskId, agentName: message.agentName, riskReasons: message.riskReasons }
+        }));
+      } catch (e) {
+        console.warn('Failed to dispatch task_requires_approval event');
+      }
+    }
+    else if (message.type === 'return_briefing') {
+      // UX-03: Maya return briefing — show summary of what happened while away
+      if (message.summary) {
+        toast({
+          title: 'Welcome back!',
+          description: message.summary,
+          duration: 10000,
+        });
+      }
     }
     else if (message.type === 'brain_updated_from_chat') {
       devLog('🧠 [ChatIntelligence] Project Brain updated from chat:', message.field, message.value);
@@ -2181,8 +2229,8 @@ export function CenterPanel({
               {contextDisplay.title}
             </h1>
             {currentChatContext?.mode && (
-              <span className="text-xs px-2 py-0.5 rounded-full bg-white/8 text-gray-400 border border-white/10">
-                {currentChatContext.mode === 'project' ? '🌐 All agents' :
+              <span className="text-xs px-2 py-0.5 rounded-full bg-white/8 text-muted-foreground border border-white/10">
+                {currentChatContext.mode === 'project' ? '🌐 Everyone' :
                  currentChatContext.mode === 'agent' ? `💬 1-on-1` :
                  '👥 Team chat'}
               </span>
@@ -2391,7 +2439,7 @@ export function CenterPanel({
 
                 {/* Inline Task Approval UI */}
                 {suggestedTasks.length > 0 && taskSuggestionContext && (
-                  <div className="mt-2 p-4 border border-gray-700 rounded-xl bg-[#2b2f36]">
+                  <div className="mt-2 p-4 border border-hatchin-border-subtle rounded-xl bg-hatchin-surface-elevated">
                     <div className="flex items-center justify-between mb-2">
                       <div className="hatchin-text font-medium text-sm">Suggested tasks from this conversation</div>
                       <span className="text-xs hatchin-text-muted">{suggestedTasks.length} item(s)</span>
@@ -2448,7 +2496,7 @@ export function CenterPanel({
                           setTaskSuggestionContext(null);
                           setShowTaskApprovalModal(false);
                         }}
-                        className="px-3 py-2 bg-gray-700 text-white rounded-md text-xs hover:bg-gray-600"
+                        className="px-3 py-2 bg-hatchin-surface text-foreground rounded-md text-xs hover:bg-hatchin-surface-elevated"
                       >
                         Dismiss
                       </button>
@@ -2485,7 +2533,7 @@ export function CenterPanel({
       </div>
       {/* Typing Indicator Bar */}
       {typingColleagues.length > 0 && !isStreaming && (
-        <div className="flex items-center gap-2 px-6 py-1.5 text-xs text-gray-400 border-t hatchin-border">
+        <div className="flex items-center gap-2 px-6 py-1.5 text-xs text-muted-foreground border-t hatchin-border">
           <div className="flex gap-0.5">
             <span className="animate-bounce" style={{ animationDelay: '0ms' }}>·</span>
             <span className="animate-bounce" style={{ animationDelay: '75ms' }}>·</span>
@@ -2504,14 +2552,14 @@ export function CenterPanel({
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0 flex-1">
                 <div className="text-[11px] uppercase tracking-wide text-blue-300">Replying to {replyingTo.senderName}</div>
-                <div className="mt-1 text-sm text-gray-200 truncate">
+                <div className="mt-1 text-sm text-foreground truncate">
                   {replyingTo.content.length > 100 ? `${replyingTo.content.substring(0, 100)}...` : replyingTo.content}
                 </div>
               </div>
               <button
                 type="button"
                 onClick={clearReply}
-                className="rounded-md p-1 text-gray-400 hover:text-gray-200 hover:bg-white/5 transition-colors"
+                className="rounded-md p-1 text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors"
                 aria-label="Clear reply target"
               >
                 ×

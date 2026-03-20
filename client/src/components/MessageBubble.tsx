@@ -95,14 +95,14 @@ export function MessageBubble({
   const getBubbleStyles = () => {
     if (isUser) {
       return {
-        className: 'text-gray-100 rounded-br-sm',
-        style: { backgroundColor: 'hsl(216, 8%, 18%)' }
+        className: 'text-foreground rounded-br-sm',
+        style: { backgroundColor: 'var(--hatchin-card)' }
       };
     }
 
     if (isAgent) {
       return {
-        className: 'text-gray-100 rounded-bl-sm',
+        className: 'text-foreground rounded-bl-sm',
         style: {
           backgroundColor: agentColors.bg,
           border: `1px solid ${agentColors.border}`,
@@ -111,7 +111,7 @@ export function MessageBubble({
     }
 
     return {
-      className: 'bg-gray-700 text-gray-100 rounded-bl-sm border border-gray-600',
+      className: 'bg-hatchin-surface text-foreground rounded-bl-sm border border-hatchin-border-subtle',
       style: {}
     };
   };
@@ -208,8 +208,8 @@ export function MessageBubble({
               className="flex-shrink-0 w-44 rounded-xl border border-white/10 bg-white/5 p-3 hover:bg-white/10 transition-colors cursor-default"
             >
               <div className="w-3 h-3 rounded-full mb-2" style={{ backgroundColor: item.color || '#6C82FF' }} />
-              <p className="text-xs font-semibold text-gray-200 mb-1">{item.phase}</p>
-              <p className="text-xs text-gray-400 leading-snug">{item.desc}</p>
+              <p className="text-xs font-semibold text-foreground mb-1">{item.phase}</p>
+              <p className="text-xs text-muted-foreground leading-snug">{item.desc}</p>
             </motion.div>
           ))}
         </div>
@@ -232,8 +232,8 @@ export function MessageBubble({
                 {i + 1}
               </div>
               <div>
-                <p className="text-xs font-semibold text-gray-200 mb-0.5">{feature.title || feature.name}</p>
-                <p className="text-xs text-gray-400 leading-snug">{feature.desc || feature.description}</p>
+                <p className="text-xs font-semibold text-foreground mb-0.5">{feature.title || feature.name}</p>
+                <p className="text-xs text-muted-foreground leading-snug">{feature.desc || feature.description}</p>
               </div>
             </motion.div>
           ))}
@@ -254,8 +254,8 @@ export function MessageBubble({
               className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10"
             >
               <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: member.color || '#A855F7' }} />
-              <span className="text-xs font-medium text-gray-200">{member.role}</span>
-              {member.name && <span className="text-[10px] text-gray-500">· {member.name}</span>}
+              <span className="text-xs font-medium text-foreground">{member.role}</span>
+              {member.name && <span className="text-[10px] text-muted-foreground">· {member.name}</span>}
             </motion.div>
           ))}
         </div>
@@ -292,9 +292,9 @@ export function MessageBubble({
                       {safeSenderName.charAt(0)}
                     </div>
                   )}
-                  <span className="text-sm font-medium text-gray-300">{safeSenderName}</span>
+                  <span className="text-sm font-medium text-muted-foreground">{safeSenderName}</span>
                   {isAgent && agentRole && (
-                    <span className="text-xs text-gray-500 ml-1">· {roleDef?.role ?? agentRole}</span>
+                    <span className="text-xs text-muted-foreground ml-1">· {roleDef?.role ?? agentRole}</span>
                   )}
                 </div>
               )}
@@ -346,30 +346,30 @@ export function MessageBubble({
                             const inline = !className?.includes('language-');
                             return inline ? (
                               <code
-                                className="bg-gray-800 text-green-400 px-1 py-0.5 rounded text-xs font-mono"
+                                className="bg-hatchin-panel text-green-400 px-1 py-0.5 rounded text-xs font-mono"
                                 {...props}
                               >
                                 {children}
                               </code>
                             ) : (
-                              <pre className="bg-gray-800 p-3 rounded-lg overflow-x-auto my-2">
+                              <pre className="bg-hatchin-panel p-3 rounded-lg overflow-x-auto my-2">
                                 <code className="text-green-400 text-xs font-mono" {...props}>
                                   {children}
                                 </code>
                               </pre>
                             );
                           },
-                          h1: ({ children }) => <h1 className="text-lg font-bold mb-2 text-gray-100">{children}</h1>,
-                          h2: ({ children }) => <h2 className="text-base font-bold mb-2 text-gray-100">{children}</h2>,
-                          h3: ({ children }) => <h3 className="text-sm font-bold mb-1 text-gray-100">{children}</h3>,
-                          ul: ({ children }) => <ul className="list-disc list-inside mb-2 text-gray-200">{children}</ul>,
-                          ol: ({ children }) => <ol className="list-decimal list-inside mb-2 text-gray-200">{children}</ol>,
+                          h1: ({ children }) => <h1 className="text-lg font-bold mb-2 text-foreground">{children}</h1>,
+                          h2: ({ children }) => <h2 className="text-base font-bold mb-2 text-foreground">{children}</h2>,
+                          h3: ({ children }) => <h3 className="text-sm font-bold mb-1 text-foreground">{children}</h3>,
+                          ul: ({ children }) => <ul className="list-disc list-inside mb-2 text-foreground">{children}</ul>,
+                          ol: ({ children }) => <ol className="list-decimal list-inside mb-2 text-foreground">{children}</ol>,
                           li: ({ children }) => <li className="mb-1">{children}</li>,
                           p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
-                          strong: ({ children }) => <strong className="font-semibold text-gray-100">{children}</strong>,
-                          em: ({ children }) => <em className="italic text-gray-200">{children}</em>,
+                          strong: ({ children }) => <strong className="font-semibold text-foreground">{children}</strong>,
+                          em: ({ children }) => <em className="italic text-foreground">{children}</em>,
                           blockquote: ({ children }) => (
-                            <blockquote className="border-l-2 border-gray-600 pl-3 my-2 text-gray-300 italic">
+                            <blockquote className="border-l-2 border-hatchin-border-subtle pl-3 my-2 text-muted-foreground italic">
                               {children}
                             </blockquote>
                           ),
@@ -392,7 +392,7 @@ export function MessageBubble({
               )}
 
               {/* Timestamp - moved outside bubble */}
-              <div className={`text-xs mt-1 px-1 ${isUser ? 'text-right text-gray-400' : 'text-left text-gray-500'}`}>
+              <div className={`text-xs mt-1 px-1 ${isUser ? 'text-right text-muted-foreground' : 'text-left text-muted-foreground'}`}>
                 {formatRelativeTime(message.timestamp)}
               </div>
 
@@ -430,7 +430,7 @@ export function MessageBubble({
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-7 w-7 p-0 hover:bg-green-500/20 text-gray-400 hover:text-green-400"
+                            className="h-7 w-7 p-0 hover:bg-green-500/20 text-muted-foreground hover:text-green-400"
                             onClick={() => handleReaction('thumbs_up')}
                           >
                             <ThumbsUp className="h-3 w-3" />
@@ -446,7 +446,7 @@ export function MessageBubble({
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-7 w-7 p-0 hover:bg-red-500/20 text-gray-400 hover:text-red-400"
+                            className="h-7 w-7 p-0 hover:bg-red-500/20 text-muted-foreground hover:text-red-400"
                             onClick={() => handleReaction('thumbs_down')}
                           >
                             <ThumbsDown className="h-3 w-3" />
@@ -465,7 +465,7 @@ export function MessageBubble({
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="h-7 w-7 p-0 hover:bg-blue-500/20 text-gray-400 hover:text-blue-400"
+                          className="h-7 w-7 p-0 hover:bg-blue-500/20 text-muted-foreground hover:text-blue-400"
                           onClick={handleReplyToMessage}
                         >
                           <Reply className="h-3 w-3" />
@@ -482,7 +482,7 @@ export function MessageBubble({
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-7 w-7 p-0 hover:bg-blue-500/20 text-gray-400 hover:text-blue-400"
+                        className="h-7 w-7 p-0 hover:bg-blue-500/20 text-muted-foreground hover:text-blue-400"
                         onClick={handleCopyMessage}
                       >
                         <Copy className="h-3 w-3" />

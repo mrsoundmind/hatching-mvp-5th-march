@@ -353,9 +353,9 @@ export function ProjectTree({
 
                   {/* Context Menu */}
                   {contextMenuOpen === project.id && (
-                    <div className="absolute right-2 top-6 z-50 bg-[#34373d] border border-gray-600 rounded-lg shadow-lg py-1 min-w-[120px]">
+                    <div className="absolute right-2 top-6 z-50 bg-hatchin-surface border border-hatchin-border-subtle rounded-lg shadow-lg py-1 min-w-[120px]">
                       <button
-                        className="w-full px-4 py-2 text-left text-sm text-white hover:bg-[#40444b] flex items-center gap-3 transition-colors"
+                        className="w-full px-4 py-2 text-left text-sm text-foreground hover:bg-hatchin-surface-elevated flex items-center gap-3 transition-colors"
                         onClick={() => handleRenameProject(project.id, project.name)}
                       >
                         <Edit className="w-4 h-4" />
@@ -386,22 +386,22 @@ export function ProjectTree({
                       }}
                     >
                       <div
-                        className="bg-[#34373d] border border-red-500/50 rounded-lg shadow-xl p-6 min-w-[300px] max-w-[400px]"
+                        className="bg-hatchin-surface border border-red-500/50 rounded-lg shadow-xl p-6 min-w-[300px] max-w-[400px]"
                         onClick={(e) => e.stopPropagation()}
                       >
                         <div className="flex items-center gap-3 mb-4">
                           <div className="w-8 h-8 bg-red-500/20 rounded-full flex items-center justify-center">
                             <Trash2 className="w-4 h-4 text-red-400" />
                           </div>
-                          <h3 className="text-lg font-medium text-white">Delete Project</h3>
+                          <h3 className="text-lg font-medium text-foreground">Delete Project</h3>
                         </div>
-                        <p className="text-sm text-gray-300 mb-6">
-                          Are you sure you want to delete <span className="font-medium text-white">"{project.name}"</span>?
+                        <p className="text-sm text-muted-foreground mb-6">
+                          Are you sure you want to delete <span className="font-medium text-foreground">"{project.name}"</span>?
                           This action cannot be undone.
                         </p>
                         <div className="flex gap-3 justify-end">
                           <button
-                            className="px-4 py-2 text-sm text-gray-300 hover:text-white transition-colors rounded-md hover:bg-gray-700/50"
+                            className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors rounded-md hover:bg-hatchin-surface/50"
                             onClick={(e) => {
                               e.stopPropagation();
                               setShowDeleteConfirm(null);
@@ -510,22 +510,22 @@ export function ProjectTree({
                               }}
                             >
                               <div
-                                className="bg-[#34373d] border border-red-500/50 rounded-lg shadow-xl p-6 min-w-[300px] max-w-[400px]"
+                                className="bg-hatchin-surface border border-red-500/50 rounded-lg shadow-xl p-6 min-w-[300px] max-w-[400px]"
                                 onClick={(e) => e.stopPropagation()}
                               >
                                 <div className="flex items-center gap-3 mb-4">
                                   <div className="w-8 h-8 bg-red-500/20 rounded-full flex items-center justify-center">
                                     <Trash2 className="w-4 h-4 text-red-400" />
                                   </div>
-                                  <h3 className="text-lg font-medium text-white">Delete Team</h3>
+                                  <h3 className="text-lg font-medium text-foreground">Delete Team</h3>
                                 </div>
-                                <p className="text-sm text-gray-300 mb-6">
-                                  Are you sure you want to delete <span className="font-medium text-white">"{team.name}"</span>?
+                                <p className="text-sm text-muted-foreground mb-6">
+                                  Are you sure you want to delete <span className="font-medium text-foreground">"{team.name}"</span>?
                                   This action cannot be undone.
                                 </p>
                                 <div className="flex gap-3 justify-end">
                                   <button
-                                    className="px-4 py-2 text-sm text-gray-300 hover:text-white transition-colors rounded-md hover:bg-gray-700/50"
+                                    className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors rounded-md hover:bg-hatchin-surface/50"
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       setShowTeamDeleteConfirm(null);
@@ -619,22 +619,22 @@ export function ProjectTree({
                                       }}
                                     >
                                       <div
-                                        className="bg-[#34373d] border border-red-500/50 rounded-lg shadow-xl p-6 min-w-[300px] max-w-[400px]"
+                                        className="bg-hatchin-surface border border-red-500/50 rounded-lg shadow-xl p-6 min-w-[300px] max-w-[400px]"
                                         onClick={(e) => e.stopPropagation()}
                                       >
                                         <div className="flex items-center gap-3 mb-4">
                                           <div className="w-8 h-8 bg-red-500/20 rounded-full flex items-center justify-center">
                                             <Trash2 className="w-4 h-4 text-red-400" />
                                           </div>
-                                          <h3 className="text-lg font-medium text-white">Delete Agent</h3>
+                                          <h3 className="text-lg font-medium text-foreground">Delete Agent</h3>
                                         </div>
-                                        <p className="text-sm text-gray-300 mb-6">
-                                          Are you sure you want to delete <span className="font-medium text-white">"{agent.role || agent.name}"</span>?
+                                        <p className="text-sm text-muted-foreground mb-6">
+                                          Are you sure you want to delete <span className="font-medium text-foreground">"{agent.role || agent.name}"</span>?
                                           This action cannot be undone.
                                         </p>
                                         <div className="flex gap-3 justify-end">
                                           <button
-                                            className="px-4 py-2 text-sm text-gray-300 hover:text-white transition-colors rounded-md hover:bg-gray-700/50"
+                                            className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors rounded-md hover:bg-hatchin-surface/50"
                                             onClick={(e) => {
                                               e.stopPropagation();
                                               setShowAgentDeleteConfirm(null);
@@ -730,22 +730,22 @@ export function ProjectTree({
                               }}
                             >
                               <div
-                                className="bg-[#34373d] border border-red-500/50 rounded-lg shadow-xl p-6 min-w-[300px] max-w-[400px]"
+                                className="bg-hatchin-surface border border-red-500/50 rounded-lg shadow-xl p-6 min-w-[300px] max-w-[400px]"
                                 onClick={(e) => e.stopPropagation()}
                               >
                                 <div className="flex items-center gap-3 mb-4">
                                   <div className="w-8 h-8 bg-red-500/20 rounded-full flex items-center justify-center">
                                     <Trash2 className="w-4 h-4 text-red-400" />
                                   </div>
-                                  <h3 className="text-lg font-medium text-white">Delete Agent</h3>
+                                  <h3 className="text-lg font-medium text-foreground">Delete Agent</h3>
                                 </div>
-                                <p className="text-sm text-gray-300 mb-6">
-                                  Are you sure you want to delete <span className="font-medium text-white">"{agent.name}"</span>?
+                                <p className="text-sm text-muted-foreground mb-6">
+                                  Are you sure you want to delete <span className="font-medium text-foreground">"{agent.name}"</span>?
                                   This action cannot be undone.
                                 </p>
                                 <div className="flex gap-3 justify-end">
                                   <button
-                                    className="px-4 py-2 text-sm text-gray-300 hover:text-white transition-colors rounded-md hover:bg-gray-700/50"
+                                    className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors rounded-md hover:bg-hatchin-surface/50"
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       setShowAgentDeleteConfirm(null);

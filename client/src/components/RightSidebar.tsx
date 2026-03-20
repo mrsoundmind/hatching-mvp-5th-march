@@ -157,7 +157,7 @@ export function RightSidebar({ activeProject, activeTeam, activeAgent }: RightSi
         <div className="mb-3 rounded-xl overflow-hidden border border-hatchin-blue/20">
           <div className="px-3 py-2 flex items-center gap-2">
             <div className="w-2.5 h-2.5 rounded-full bg-hatchin-blue animate-pulse flex-shrink-0" />
-            <span className="text-xs text-[#A6A7AB]">Syncing to Project Brain...</span>
+            <span className="text-xs text-muted-foreground">Syncing to Project Brain...</span>
           </div>
           <div className="h-1 w-full brain-sync-bar" />
         </div>
@@ -334,19 +334,19 @@ export function RightSidebar({ activeProject, activeTeam, activeAgent }: RightSi
             <span className="text-xs text-emerald-400">{Math.round(agentHealthScore)} score</span>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <div className="bg-gray-800/40 rounded-lg p-3">
+            <div className="bg-hatchin-panel/40 rounded-lg p-3">
               <div className="text-lg font-bold hatchin-text">{realTimeMetrics.messagesCount}</div>
               <div className="text-xs hatchin-text-muted">Messages</div>
             </div>
-            <div className="bg-gray-800/40 rounded-lg p-3">
+            <div className="bg-hatchin-panel/40 rounded-lg p-3">
               <div className="text-lg font-bold text-green-400">{realTimeMetrics.taskCompletions}</div>
               <div className="text-xs hatchin-text-muted">Tasks done</div>
             </div>
-            <div className="bg-gray-800/40 rounded-lg p-3">
+            <div className="bg-hatchin-panel/40 rounded-lg p-3">
               <div className="text-lg font-bold hatchin-text">{realTimeMetrics.milestoneReaches}</div>
               <div className="text-xs hatchin-text-muted">Milestones</div>
             </div>
-            <div className="bg-gray-800/40 rounded-lg p-3">
+            <div className="bg-hatchin-panel/40 rounded-lg p-3">
               <div className="text-lg font-bold hatchin-text">{realTimeMetrics.activeParticipants.length}</div>
               <div className="text-xs hatchin-text-muted">Participants</div>
             </div>
@@ -392,7 +392,7 @@ export function RightSidebar({ activeProject, activeTeam, activeAgent }: RightSi
       >
         <div className="ambient-glow-top" />
         <div className="flex items-center gap-2 mb-6">
-          <div className="w-8 h-8 rounded-full bg-gray-500/20 flex items-center justify-center">
+          <div className="w-8 h-8 rounded-full bg-muted-foreground/20 flex items-center justify-center">
             <span className="text-lg">{activeTeam?.emoji || '👥'}</span>
           </div>
           <div>
@@ -410,11 +410,11 @@ export function RightSidebar({ activeProject, activeTeam, activeAgent }: RightSi
           </div>
           <ProgressTimeline progress={computedProgress} />
           <div className="grid grid-cols-2 gap-3 mt-4">
-            <div className="bg-gray-800/40 rounded-lg p-3">
+            <div className="bg-hatchin-panel/40 rounded-lg p-3">
               <div className="text-lg font-bold hatchin-text">{realTimeMetrics.messagesCount}</div>
               <div className="text-xs hatchin-text-muted">Messages</div>
             </div>
-            <div className="bg-gray-800/40 rounded-lg p-3">
+            <div className="bg-hatchin-panel/40 rounded-lg p-3">
               <div className="text-lg font-bold text-green-400">{realTimeMetrics.taskCompletions}</div>
               <div className="text-xs hatchin-text-muted">Completed tasks</div>
             </div>
@@ -442,7 +442,7 @@ export function RightSidebar({ activeProject, activeTeam, activeAgent }: RightSi
           <textarea
             value={executionRules}
             onChange={(e) => updateExecutionRules(e.target.value)}
-            className="w-full hatchin-text placeholder-hatchin-text-muted resize-none focus:outline-none text-sm bg-[#212327] rounded-lg p-3 min-h-[100px] overflow-hidden mt-3"
+            className="w-full hatchin-text placeholder-hatchin-text-muted resize-none focus:outline-none text-sm bg-hatchin-surface-muted rounded-lg p-3 min-h-[100px] overflow-hidden mt-3"
             placeholder="Define how this team should execute work, validate assumptions, and escalate blockers."
           />
         </div>
@@ -475,7 +475,7 @@ export function RightSidebar({ activeProject, activeTeam, activeAgent }: RightSi
     >
       <div className="ambient-glow-top" />
       <div className="flex items-center gap-2 mb-4">
-        <div className={`w-8 h-8 rounded-full bg-gray-500/20 flex items-center justify-center ${isLoading || recentlySaved.size > 0 || isAIStreaming ? 'brain-glow' : ''}`}>
+        <div className={`w-8 h-8 rounded-full bg-muted-foreground/20 flex items-center justify-center ${isLoading || recentlySaved.size > 0 || isAIStreaming ? 'brain-glow' : ''}`}>
           <span className="text-lg">🧠</span>
         </div>
         <h2 className="font-semibold hatchin-text text-[16px]">Project Brain</h2>
@@ -483,7 +483,7 @@ export function RightSidebar({ activeProject, activeTeam, activeAgent }: RightSi
       {/* FIX 13 — Brain-sync save indicator */}
       {brainsyncBanner}
       {/* Tab Navigation */}
-      <div className="mb-6 grid grid-cols-2 gap-2 rounded-xl border border-gray-700/60 bg-black/20 p-1">
+      <div className="mb-6 grid grid-cols-2 gap-2 rounded-xl border border-hatchin-border-subtle/60 bg-black/20 p-1">
         <button
           onClick={() => setCurrentView('overview')}
           className={`flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all ${currentView === 'overview'
@@ -577,19 +577,19 @@ export function RightSidebar({ activeProject, activeTeam, activeAgent }: RightSi
           <div className={`${panelCardClass} mb-4`}>
             <h3 className="font-medium hatchin-text text-[12px] mb-3">Live Signals</h3>
             <div className="grid grid-cols-2 gap-3">
-              <div className="bg-gray-800/40 rounded-lg p-3">
+              <div className="bg-hatchin-panel/40 rounded-lg p-3">
                 <div className="text-lg font-bold hatchin-text">{realTimeMetrics.messagesCount}</div>
                 <div className="text-xs hatchin-text-muted">Messages</div>
               </div>
-              <div className="bg-gray-800/40 rounded-lg p-3">
+              <div className="bg-hatchin-panel/40 rounded-lg p-3">
                 <div className="text-lg font-bold text-green-400">{realTimeMetrics.taskCompletions}</div>
                 <div className="text-xs hatchin-text-muted">Tasks done</div>
               </div>
-              <div className="bg-gray-800/40 rounded-lg p-3">
+              <div className="bg-hatchin-panel/40 rounded-lg p-3">
                 <div className="text-lg font-bold hatchin-text">{realTimeMetrics.activeParticipants.length}</div>
                 <div className="text-xs hatchin-text-muted">Participants</div>
               </div>
-              <div className="bg-gray-800/40 rounded-lg p-3">
+              <div className="bg-hatchin-panel/40 rounded-lg p-3">
                 <div className="text-sm font-semibold hatchin-text truncate">{new Date(realTimeMetrics.lastActivity).toLocaleTimeString()}</div>
                 <div className="text-xs hatchin-text-muted">Last activity</div>
               </div>
@@ -627,7 +627,7 @@ export function RightSidebar({ activeProject, activeTeam, activeAgent }: RightSi
                     target.style.height = 'auto';
                     target.style.height = target.scrollHeight + 'px';
                   }}
-                  className="w-full hatchin-text placeholder-hatchin-text-muted resize-none focus:outline-none text-sm bg-[#212327] rounded-lg p-3 min-h-[80px] overflow-hidden"
+                  className="w-full hatchin-text placeholder-hatchin-text-muted resize-none focus:outline-none text-sm bg-hatchin-surface-muted rounded-lg p-3 min-h-[80px] overflow-hidden"
                   style={{ height: 'auto' }}
                   placeholder="Describe the project in one clear sentence."
                 />
@@ -643,7 +643,7 @@ export function RightSidebar({ activeProject, activeTeam, activeAgent }: RightSi
                     target.style.height = 'auto';
                     target.style.height = target.scrollHeight + 'px';
                   }}
-                  className="w-full hatchin-text placeholder-hatchin-text-muted resize-none focus:outline-none text-sm bg-[#212327] rounded-lg p-3 min-h-[80px] overflow-hidden"
+                  className="w-full hatchin-text placeholder-hatchin-text-muted resize-none focus:outline-none text-sm bg-hatchin-surface-muted rounded-lg p-3 min-h-[80px] overflow-hidden"
                   style={{ height: 'auto' }}
                   placeholder="What's the core purpose or motivation?"
                 />
@@ -659,7 +659,7 @@ export function RightSidebar({ activeProject, activeTeam, activeAgent }: RightSi
                     target.style.height = 'auto';
                     target.style.height = target.scrollHeight + 'px';
                   }}
-                  className="w-full hatchin-text placeholder-hatchin-text-muted resize-none focus:outline-none text-sm bg-[#212327] rounded-lg p-3 min-h-[80px] overflow-hidden"
+                  className="w-full hatchin-text placeholder-hatchin-text-muted resize-none focus:outline-none text-sm bg-hatchin-surface-muted rounded-lg p-3 min-h-[80px] overflow-hidden"
                   style={{ height: 'auto' }}
                   placeholder="Who's the target audience, customer, or beneficiary?"
                 />
@@ -722,7 +722,7 @@ export function RightSidebar({ activeProject, activeTeam, activeAgent }: RightSi
                     target.style.height = 'auto';
                     target.style.height = target.scrollHeight + 'px';
                   }}
-                  className="w-full hatchin-text placeholder-hatchin-text-muted resize-none focus:outline-none text-sm bg-[#212327] rounded-lg p-3 min-h-[100px] overflow-hidden"
+                  className="w-full hatchin-text placeholder-hatchin-text-muted resize-none focus:outline-none text-sm bg-hatchin-surface-muted rounded-lg p-3 min-h-[100px] overflow-hidden"
                   style={{ height: 'auto' }}
                   placeholder="Define team principles, constraints, standards, deadlines, budget limits, and quality requirements that everyone must follow."
                 />
@@ -772,7 +772,7 @@ export function RightSidebar({ activeProject, activeTeam, activeAgent }: RightSi
                     target.style.height = 'auto';
                     target.style.height = target.scrollHeight + 'px';
                   }}
-                  className="w-full hatchin-text placeholder-hatchin-text-muted resize-none focus:outline-none text-sm bg-[#212327] rounded-lg p-3 min-h-[100px] overflow-hidden"
+                  className="w-full hatchin-text placeholder-hatchin-text-muted resize-none focus:outline-none text-sm bg-hatchin-surface-muted rounded-lg p-3 min-h-[100px] overflow-hidden"
                   style={{ height: 'auto' }}
                   placeholder="Define brand voice, communication style, design preferences, cultural values, and how the team should interact with users and each other."
                 />
