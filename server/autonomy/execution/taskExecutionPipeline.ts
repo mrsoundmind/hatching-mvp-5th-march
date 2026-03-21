@@ -5,6 +5,8 @@ import { logAutonomyEvent } from '../events/eventLogger.js';
 import { orchestrateHandoff } from '../handoff/handoffOrchestrator.js';
 import { emitHandoffAnnouncement } from '../handoff/handoffAnnouncement.js';
 import { runPeerReview } from '../peerReview/peerReviewRunner.js';
+import { updateTrustMeta } from '../trustScoring/trustScorer.js';
+import { getAdjustedThresholds } from '../trustScoring/trustAdapter.js';
 import type { IStorage } from '../../storage.js';
 
 export interface ExecuteTaskInput {
@@ -158,7 +160,33 @@ export async function executeTask(
     agentName: input.agent.name,
   });
 
+  // SAFE-04: Update agent trust score after successful completion
+  await updateAgentTrustScore(input.storage, input.agent.id, true);
+
   return { status: 'completed' };
+}
+
+/**
+ * SAFE-04: Update agent trust score in personality JSONB.
+ * Called after task completion (success) or failure.
+ */
+async function updateAgentTrustScore(
+  storage: IStorage,
+  agentId: string,
+  success: boolean,
+): Promise<void> {
+  try {
+    const agent = await storage.getAgent(agentId);
+    if (!agent) return;
+    const personality = (agent.personality ?? {}) as Record<string, unknown>;
+    const currentTrust = personality.trustMeta as any;
+    const updatedTrust = updateTrustMeta(currentTrust, success);
+    await storage.updateAgent(agentId, {
+      personality: { ...personality, trustMeta: updatedTrust } as any,
+    });
+  } catch {
+    // Non-critical — trust update failure should not break task execution
+  }
 }
 
 export async function handleTaskJob(

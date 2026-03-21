@@ -151,6 +151,13 @@ export interface IStorage {
 
   // Phase 6: Background execution cost cap enforcement
   countAutonomyEventsForProjectToday(projectId: string, dateStr: string): Promise<number>;
+
+  // SAFE-04: Count autonomy events by agent for trust scoring
+  countAutonomyEventsByAgent(
+    agentId: string,
+    projectId: string,
+    eventType: string,
+  ): Promise<number>;
 }
 
 
@@ -1268,6 +1275,15 @@ export class MemStorage implements IStorage {
   async countAutonomyEventsForProjectToday(_projectId: string, _dateStr: string): Promise<number> {
     return 0;
   }
+
+  // SAFE-04: MemStorage has no autonomy_events — always returns 0
+  async countAutonomyEventsByAgent(
+    _agentId: string,
+    _projectId: string,
+    _eventType: string,
+  ): Promise<number> {
+    return 0;
+  }
 }
 
 // ============================================================
@@ -1703,6 +1719,23 @@ export class DatabaseStorage implements IStorage {
        AND event_type = 'autonomous_task_execution'
        AND "timestamp"::date = $2::date`,
       [projectId, dateStr],
+    );
+    return result.rows[0]?.count ?? 0;
+  }
+
+  // SAFE-04: Count autonomy events by agent for trust scoring
+  async countAutonomyEventsByAgent(
+    agentId: string,
+    projectId: string,
+    eventType: string,
+  ): Promise<number> {
+    const { pool: dbPool } = await import('./db.js');
+    const result = await dbPool.query(
+      `SELECT COUNT(*)::int as count FROM autonomy_events
+       WHERE hatch_id = $1
+       AND project_id = $2
+       AND event_type = $3`,
+      [agentId, projectId, eventType],
     );
     return result.rows[0]?.count ?? 0;
   }
