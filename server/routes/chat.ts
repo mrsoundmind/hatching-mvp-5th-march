@@ -38,6 +38,7 @@ import { filterAvailableAgents, type ScopeContext } from "../orchestration/agent
 import { assertPhase1Invariants } from "../invariants/assertPhase1.js";
 import {
   getCurrentRuntimeConfig,
+  generateChatWithRuntimeFallback,
 } from "../llm/providerResolver.js";
 import { writeConfigSnapshot } from "../utils/configSnapshot.js";
 import { checkConversationAccess } from "../utils/conversationAccess.js";
@@ -552,28 +553,43 @@ export function registerChatRoutes(
               conversationId
             }));
 
-            // UX-03: Maya return briefing — check if user was away
+            // UX-03: Maya return briefing — DB-backed 15-min threshold with idempotency
             if (conversationId.startsWith('project:')) {
               try {
                 const parsed = parseConversationId(conversationId.trim());
                 const projId = (parsed as any).projectId;
                 if (projId && ws.__userId) {
-                  // Use 2-hour window as "away" threshold
-                  const lastSeen = new Date(Date.now() - 2 * 60 * 60 * 1000);
-                  const briefing = await generateReturnBriefing({
-                    projectId: projId,
-                    userId: ws.__userId,
-                    lastSeenAt: lastSeen,
-                    storage,
-                  });
-                  if (briefing.hasBriefing) {
-                    ws.send(JSON.stringify({
-                      type: 'return_briefing',
+                  const ABSENCE_THRESHOLD_MS = 15 * 60 * 1000; // 15 minutes
+                  const { lastSeenAt, lastBriefedAt } = await storage.getProjectTimestamps(projId);
+                  const now = new Date();
+
+                  // Update lastSeenAt on every join (tracks presence)
+                  await storage.setProjectLastSeenAt(projId, now);
+
+                  // Only brief if user was absent for 15+ minutes
+                  if (lastSeenAt && (now.getTime() - lastSeenAt.getTime()) >= ABSENCE_THRESHOLD_MS) {
+                    const briefing = await generateReturnBriefing({
                       projectId: projId,
-                      summary: briefing.summary,
-                      completedTasks: briefing.completedTasks,
-                      newMessages: briefing.newMessages,
-                    }));
+                      userId: ws.__userId,
+                      lastBriefedAt,    // null-safe: returnBriefing handles null by using epoch
+                      storage,
+                      broadcastToConversation,
+                      generateText: async (prompt: string, system: string) => {
+                        const result = await generateChatWithRuntimeFallback({
+                          messages: [
+                            { role: 'system', content: system },
+                            { role: 'user', content: prompt },
+                          ],
+                          temperature: 0.7,
+                        });
+                        return result.content;
+                      },
+                    });
+
+                    if (briefing.hasBriefing) {
+                      // Update lastBriefedAt to prevent re-triggering in this absence session
+                      await storage.setProjectLastBriefedAt(projId, now);
+                    }
                   }
                 }
               } catch {
