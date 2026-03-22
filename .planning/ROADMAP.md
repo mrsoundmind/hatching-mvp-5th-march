@@ -81,7 +81,7 @@ Plans:
   1. When a user returns after autonomous work completed, Maya delivers exactly one briefing message leading with outcomes ("Authentication module scoped — two items need your review"), not process details
   2. The briefing does not repeat if the user sends another message shortly after; it appears once per absence session
   3. The browser tab title shows a badge or flashing indicator when autonomous work completes while the tab is in the background
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 
 Plans:
 - [ ] 08-01-PLAN.md — Maya return briefing with LLM voice, DB-backed idempotency, 15-min absence threshold
@@ -114,7 +114,7 @@ Plans:
 | 5. Route Architecture Cleanup | v1.0 | 2/2 | Complete | 2026-03-19 |
 | 6. Background Execution Foundation | 4/4 | Complete   | 2026-03-20 | 2026-03-20 |
 | 7. Agent Handoffs and Approval UI | 4/4 | Complete   | 2026-03-20 | - |
-| 8. Chat Summary and Tab Notifications | v1.1 | 0/2 | Not started | - |
+| 8. Chat Summary and Tab Notifications | 1/2 | In Progress|  | - |
 | 9. Progressive Trust and Inactivity Trigger | v1.1 | 0/2 | Not started | - |
 
 ---
