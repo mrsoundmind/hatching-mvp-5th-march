@@ -158,6 +158,12 @@ export interface IStorage {
     projectId: string,
     eventType: string,
   ): Promise<number>;
+
+  // UX-03: Absence tracking for return briefing
+  getProjectTimestamps(projectId: string): Promise<{ lastSeenAt: Date | null; lastBriefedAt: Date | null }>;
+  setProjectLastSeenAt(projectId: string, timestamp: Date): Promise<void>;
+  setProjectLastBriefedAt(projectId: string, timestamp: Date): Promise<void>;
+  getAutonomyEventsSince(projectId: string, since: Date): Promise<Array<{ eventType: string; agentId: string | null; payload: unknown; createdAt: Date }>>;
 }
 
 
@@ -219,6 +225,8 @@ export class MemStorage implements IStorage {
       executionRules: {},
       teamCulture: null,
       brain: {},
+      lastSeenAt: null,
+      lastBriefedAt: null,
     };
     this.projects.set(saasProject.id, saasProject);
 
@@ -451,6 +459,8 @@ export class MemStorage implements IStorage {
       executionRules: (insertProject.executionRules as any) || {},
       teamCulture: insertProject.teamCulture || null,
       brain: insertProject.brain || {} as any,
+      lastSeenAt: insertProject.lastSeenAt ?? null,
+      lastBriefedAt: insertProject.lastBriefedAt ?? null,
     };
     this.projects.set(id, project);
     return project;
@@ -1284,6 +1294,20 @@ export class MemStorage implements IStorage {
   ): Promise<number> {
     return 0;
   }
+
+  // UX-03: MemStorage has no real absence tracking — return nulls/no-ops
+  async getProjectTimestamps(_projectId: string): Promise<{ lastSeenAt: Date | null; lastBriefedAt: Date | null }> {
+    return { lastSeenAt: null, lastBriefedAt: null };
+  }
+  async setProjectLastSeenAt(_projectId: string, _timestamp: Date): Promise<void> {
+    // no-op in MemStorage
+  }
+  async setProjectLastBriefedAt(_projectId: string, _timestamp: Date): Promise<void> {
+    // no-op in MemStorage
+  }
+  async getAutonomyEventsSince(_projectId: string, _since: Date): Promise<Array<{ eventType: string; agentId: string | null; payload: unknown; createdAt: Date }>> {
+    return [];
+  }
 }
 
 // ============================================================
@@ -1738,6 +1762,55 @@ export class DatabaseStorage implements IStorage {
       [agentId, projectId, eventType],
     );
     return result.rows[0]?.count ?? 0;
+  }
+
+  // UX-03: Absence tracking for return briefing
+  async getProjectTimestamps(projectId: string): Promise<{ lastSeenAt: Date | null; lastBriefedAt: Date | null }> {
+    const { pool: dbPool } = await import('./db.js');
+    const result = await dbPool.query(
+      `SELECT last_seen_at, last_briefed_at FROM projects WHERE id = $1`,
+      [projectId],
+    );
+    const row = result.rows[0];
+    if (!row) return { lastSeenAt: null, lastBriefedAt: null };
+    return {
+      lastSeenAt: row.last_seen_at ? new Date(row.last_seen_at) : null,
+      lastBriefedAt: row.last_briefed_at ? new Date(row.last_briefed_at) : null,
+    };
+  }
+
+  async setProjectLastSeenAt(projectId: string, timestamp: Date): Promise<void> {
+    const { pool: dbPool } = await import('./db.js');
+    await dbPool.query(
+      `UPDATE projects SET last_seen_at = $1 WHERE id = $2`,
+      [timestamp, projectId],
+    );
+  }
+
+  async setProjectLastBriefedAt(projectId: string, timestamp: Date): Promise<void> {
+    const { pool: dbPool } = await import('./db.js');
+    await dbPool.query(
+      `UPDATE projects SET last_briefed_at = $1 WHERE id = $2`,
+      [timestamp, projectId],
+    );
+  }
+
+  async getAutonomyEventsSince(projectId: string, since: Date): Promise<Array<{ eventType: string; agentId: string | null; payload: unknown; createdAt: Date }>> {
+    const { pool: dbPool } = await import('./db.js');
+    const result = await dbPool.query(
+      `SELECT event_type, hatch_id, payload, "timestamp" FROM autonomy_events
+       WHERE project_id = $1
+         AND "timestamp" > $2
+         AND event_type IN ('task_completed', 'task_failed', 'proposal_approved', 'autonomous_task_execution')
+       ORDER BY "timestamp" ASC`,
+      [projectId, since],
+    );
+    return result.rows.map((row: any) => ({
+      eventType: row.event_type as string,
+      agentId: (row.payload?.agentId ?? row.hatch_id ?? null) as string | null,
+      payload: row.payload,
+      createdAt: new Date(row.timestamp),
+    }));
   }
 }
 

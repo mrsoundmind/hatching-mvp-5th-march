@@ -52,6 +52,8 @@ export const projects = pgTable("projects", {
     taskGraph?: unknown;
   }>().default({}),
   teamCulture: text("team_culture"),
+  lastSeenAt: timestamp("last_seen_at"),
+  lastBriefedAt: timestamp("last_briefed_at"),
 }, (table) => ({
   userIdIdx: index("projects_user_id_idx").on(table.userId),
 }));
@@ -238,6 +240,7 @@ export const autonomyEvents = pgTable("autonomy_events", {
   projectIdIdx: index("autonomy_events_project_id_idx").on(table.projectId),
   conversationIdIdx: index("autonomy_events_conversation_id_idx").on(table.conversationId),
   timestampIdx: index("autonomy_events_timestamp_idx").on(table.timestamp),
+  projectEventTimeIdx: index("autonomy_events_project_event_time_idx").on(table.projectId, table.eventType, table.timestamp),
 }));
 
 export const deliberationTraces = pgTable("deliberation_traces", {
