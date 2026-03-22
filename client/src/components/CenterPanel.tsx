@@ -1,5 +1,5 @@
 import { Send, PauseCircle, PlayCircle } from "lucide-react";
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import type { Project, Team, Agent } from "@shared/schema";
 import { getRoleDefinition } from "@shared/roleRegistry";
@@ -158,6 +158,8 @@ export function CenterPanel({
   }, [isThinking]);
   const streamingTimeoutRef = useRef<number | null>(null);
   const pendingResponseTimeoutRef = useRef<number | null>(null);
+  // UX-05: Flash interval ref for tab title flashing
+  const flashIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const clearStreamingTimeout = () => {
     if (streamingTimeoutRef.current) {
@@ -397,16 +399,68 @@ export function CenterPanel({
   } | null>(null);
   const [isApprovingTasks, setIsApprovingTasks] = useState(false);
   const [showTaskApprovalModal, setShowTaskApprovalModal] = useState(false);
+
+  // UX-05: Flashing tab title utility functions
+  const startFlashingTitle = useCallback((count: number, label: string) => {
+    if (flashIntervalRef.current) clearInterval(flashIntervalRef.current);
+    const notifText = `(${count}) ${label} | Hatchin`;
+    let toggle = true;
+    flashIntervalRef.current = setInterval(() => {
+      document.title = toggle ? notifText : 'Hatchin';
+      toggle = !toggle;
+    }, 1500); // 1.5s — midpoint of user's 1-2s discretion range
+  }, []);
+
+  const stopFlashingTitle = useCallback(() => {
+    if (flashIntervalRef.current) {
+      clearInterval(flashIntervalRef.current);
+      flashIntervalRef.current = null;
+    }
+    document.title = 'Hatchin';
+  }, []);
+
+  // UX-05: Notification API helpers
+  const requestNotificationPermission = useCallback(() => {
+    if (!('Notification' in window)) return;
+    if (Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }, []);
+
+  const fireCompletionNotification = useCallback((projectName: string, summary: string) => {
+    if (!('Notification' in window)) return;
+    if (Notification.permission !== 'granted') return;
+    try {
+      const n = new Notification(projectName, {
+        body: summary,
+        icon: '/favicon.ico',
+      });
+      n.onclick = () => {
+        window.focus();
+        n.close();
+      };
+    } catch {
+      // Non-critical — some browsers may block programmatic notifications
+    }
+  }, []);
+
   // UX-05: Reset tab title when user returns
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (!document.hidden) {
-        document.title = 'Hatchin';
+        stopFlashingTitle(); // was just: document.title = 'Hatchin'
       }
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, []);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      // Cleanup flash interval on unmount
+      if (flashIntervalRef.current) {
+        clearInterval(flashIntervalRef.current);
+        flashIntervalRef.current = null;
+      }
+    };
+  }, [stopFlashingTitle]);
 
 
   // Handle incoming WebSocket messages
@@ -719,7 +773,7 @@ export function CenterPanel({
       setIsThinking(false);
       devLog('📦 Streaming chunk:', message.chunk);
       if (message.messageId === streamingMessageId.current) {
-        setStreamingContent(message.accumulatedContent);
+        setStreamingContent(message.accumulatedContent ?? '');
 
         // Update the streaming message content with create-or-merge logic
         setAllMessages(prev => {
@@ -1089,9 +1143,13 @@ export function CenterPanel({
     }
     else if (message.type === 'background_execution_started') {
       setIsTeamWorking(true);
-      setTeamWorkingTaskCount(message.taskCount ?? 0);
+      if (message.taskCount != null) {
+        setTeamWorkingTaskCount(message.taskCount);
+      }
       // UX-04: execution started means not paused — reset pause state
       setIsAutonomyPaused(false);
+      // UX-05: Request notification permission contextually
+      requestNotificationPermission();
       // UX-05: Tab notification badge
       if (document.hidden) {
         document.title = '\u2728 Team working... | Hatchin';
@@ -1100,14 +1158,24 @@ export function CenterPanel({
     else if (message.type === 'background_execution_completed' || message.type === 'task_execution_completed') {
       setIsTeamWorking(false);
       setTeamWorkingTaskCount(0);
-      // UX-05: Tab notification badge — work complete
+      // UX-05: Flashing tab title (Slack/Gmail pattern)
       if (document.hidden) {
-        document.title = '\u2705 Work complete | Hatchin';
+        const count = message.completedCount ?? message.taskCount ?? 1;
+        startFlashingTitle(count, 'Work complete');
+        // UX-05: OS notification
+        const projectName = activeProject?.name ?? 'Hatchin';
+        const pendingCount = (message as any).pendingApprovalCount ?? 0;
+        const summary = pendingCount > 0
+          ? `${count} task${count > 1 ? 's' : ''} completed, ${pendingCount} need${pendingCount > 1 ? '' : 's'} review`
+          : `${count} task${count > 1 ? 's' : ''} completed`;
+        fireCompletionNotification(projectName, summary);
       }
     }
     else if (message.type === 'task_requires_approval') {
       // UX-01: High-risk autonomous task — show inline approval card instead of toast
       devLog('⚠️ [Autonomy] Task requires approval:', message.taskId, message.riskReasons);
+      const currentProjectId = activeProject?.id;
+      if (!currentProjectId) return; // Skip if no active project — card would be non-functional
       queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
       setApprovalRequests((prev) => [
         ...prev.filter((r) => r.taskId !== message.taskId),
@@ -1115,7 +1183,7 @@ export function CenterPanel({
           taskId: message.taskId ?? '',
           agentName: message.agentName ?? 'Agent',
           riskReasons: message.riskReasons ?? [],
-          projectId: activeProject?.id ?? '',
+          projectId: currentProjectId,
         },
       ]);
       // Dispatch event so TaskManager can highlight the pending task
@@ -1127,15 +1195,19 @@ export function CenterPanel({
         console.warn('Failed to dispatch task_requires_approval event');
       }
     }
-    else if (message.type === 'return_briefing') {
-      // UX-03: Maya return briefing — show summary of what happened while away
-      if (message.summary) {
-        toast({
-          title: 'Welcome back!',
-          description: message.summary,
-          duration: 10000,
-        });
-      }
+    else if (message.type === 'task_approval_rejected') {
+      // Remove rejected approval card (handles multi-tab sync)
+      setApprovalRequests((prev) => prev.filter((r) => r.taskId !== message.taskId));
+      queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
+    }
+    else if (message.type === 'task_execution_failed') {
+      // Notify user when an autonomous task fails
+      setIsTeamWorking(false);
+      toast({
+        title: 'Task failed',
+        description: `${message.agentName ?? 'Agent'} couldn't complete the task: ${message.error ?? 'Unknown error'}`,
+        duration: 8000,
+      });
     }
     else if (message.type === 'brain_updated_from_chat') {
       devLog('🧠 [ChatIntelligence] Project Brain updated from chat:', message.field, message.value);
@@ -1849,18 +1921,24 @@ export function CenterPanel({
 
   // UX-01: Approve / reject mutations for autonomous task approval cards
   const approveMutation = useMutation({
-    mutationFn: (taskId: string) => apiRequest(`/api/tasks/${taskId}/approve`, 'POST', {}),
+    mutationFn: (taskId: string) => apiRequest('POST', `/api/tasks/${taskId}/approve`, {}),
     onSuccess: (_data, taskId) => {
       setApprovalRequests((prev) => prev.filter((r) => r.taskId !== taskId));
       queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
     },
+    onError: (_err, taskId) => {
+      setApprovalRequests((prev) => prev.filter((r) => r.taskId !== taskId));
+    },
   });
 
   const rejectMutation = useMutation({
-    mutationFn: (taskId: string) => apiRequest(`/api/tasks/${taskId}/reject`, 'POST', {}),
+    mutationFn: (taskId: string) => apiRequest('POST', `/api/tasks/${taskId}/reject`, {}),
     onSuccess: (_data, taskId) => {
       setApprovalRequests((prev) => prev.filter((r) => r.taskId !== taskId));
       queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
+    },
+    onError: (_err, taskId) => {
+      setApprovalRequests((prev) => prev.filter((r) => r.taskId !== taskId));
     },
   });
 
@@ -1883,7 +1961,7 @@ export function CenterPanel({
       reactionType: 'thumbs_up' | 'thumbs_down';
       agentId?: string;
     }) => {
-      return await apiRequest(`/api/messages/${messageId}/reactions`, 'POST', {
+      return await apiRequest('POST', `/api/messages/${messageId}/reactions`, {
         reactionType,
         agentId,
         feedbackData: {
