@@ -31,7 +31,7 @@ See archived roadmap: [milestones/v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md)
 
 - [x] **Phase 6: Background Execution Foundation** — Safe single-agent execution pipeline with cost guardrails and explicit trigger
 - [x] **Phase 7: Agent Handoffs and Approval UI** — Full multi-agent handoff chain with interactive approval cards and pause/cancel controls (completed 2026-03-20)
-- [ ] **Phase 8: Chat Summary and Tab Notifications** — Maya briefing on user return and browser tab badge when work completes offline
+- [x] **Phase 8: Chat Summary and Tab Notifications** — Maya briefing on user return and browser tab badge when work completes offline (completed 2026-03-22)
 - [ ] **Phase 9: Progressive Trust and Inactivity Trigger** — Trust score accumulation and inactivity-based auto-trigger gated by feature flag
 
 ## Phase Details
@@ -81,7 +81,7 @@ Plans:
   1. When a user returns after autonomous work completed, Maya delivers exactly one briefing message leading with outcomes ("Authentication module scoped — two items need your review"), not process details
   2. The briefing does not repeat if the user sends another message shortly after; it appears once per absence session
   3. The browser tab title shows a badge or flashing indicator when autonomous work completes while the tab is in the background
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [ ] 08-01-PLAN.md — Maya return briefing with LLM voice, DB-backed idempotency, 15-min absence threshold
@@ -114,7 +114,7 @@ Plans:
 | 5. Route Architecture Cleanup | v1.0 | 2/2 | Complete | 2026-03-19 |
 | 6. Background Execution Foundation | 4/4 | Complete   | 2026-03-20 | 2026-03-20 |
 | 7. Agent Handoffs and Approval UI | 4/4 | Complete   | 2026-03-20 | - |
-| 8. Chat Summary and Tab Notifications | 1/2 | In Progress|  | - |
+| 8. Chat Summary and Tab Notifications | 2/2 | Complete   | 2026-03-22 | - |
 | 9. Progressive Trust and Inactivity Trigger | v1.1 | 0/2 | Not started | - |
 
 ---

@@ -3,11 +3,11 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Autonomous Execution Loop
 status: completed
-last_updated: "2026-03-22T16:26:29.493Z"
-last_activity: 2026-03-22 — Completed 08-02 (flashing tab title + OS notification for background work completion, UX-05)
+last_updated: "2026-03-22T16:30:10.242Z"
+last_activity: 2026-03-22 — Completed 08-02 (flashing tab title + OS notification, UX-05)
 progress:
   total_phases: 4
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 10
   completed_plans: 10
   percent: 90
@@ -80,6 +80,9 @@ Progress: [█████████░] 90% (10/10 plans done across phases 1
 - [Phase 07-agent-handoffs-and-approval-ui]: Pause state synced from project.executionRules on project change — persists across page refresh without extra API calls
 - [Phase 07-agent-handoffs-and-approval-ui]: background_execution_started WS event resets isAutonomyPaused to false — if server started execution, project was not paused
 - [Phase 08-chat-summary-and-tab-notifications]: Flash interval set to 1500ms — midpoint of 1-2s discretion range; return_briefing toast removed as dead code after 08-01; notification permission requested contextually on background_execution_started
+- [Phase 08]: DB-backed lastSeenAt/lastBriefedAt on projects table tracks absence across server restarts
+- [Phase 08]: 15-minute absence threshold for return briefing (down from hardcoded 2-hour window)
+- [Phase 08]: Return briefing stored as real agent message and broadcast as new_message — not a separate return_briefing WS event
 
 ## Blockers / Concerns
 
