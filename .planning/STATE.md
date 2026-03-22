@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Autonomous Execution Loop
-status: executing
-last_updated: "2026-03-20T16:20:29.131Z"
-last_activity: 2026-03-20 — Completed 07-04 (pause/resume button in working indicator, UX-04)
+status: completed
+last_updated: "2026-03-22T16:26:29.493Z"
+last_activity: 2026-03-22 — Completed 08-02 (flashing tab title + OS notification for background work completion, UX-05)
 progress:
   total_phases: 4
-  completed_phases: 1
-  total_plans: 8
-  completed_plans: 8
-  percent: 100
+  completed_phases: 2
+  total_plans: 10
+  completed_plans: 10
+  percent: 90
 ---
 
 # State: Hatchin
@@ -26,12 +26,12 @@ See: .planning/PROJECT.md (updated 2026-03-19)
 
 ## Current Position
 
-Phase: 7 of 9 (Agent Handoffs and Approval UI)
-Plan: 4 of 4 complete (07-01, 07-02, 07-03, 07-04 done) — Phase 7 complete
-Status: Phase 7 complete — ready for Phase 8 (Chat Summary and Tab Notifications)
-Last activity: 2026-03-20 — Completed 07-04 (pause/resume button in CenterPanel working indicator, UX-04)
+Phase: 8 of 9 (Chat Summary and Tab Notifications)
+Plan: 2 of 2 complete (08-01, 08-02 done) — Phase 8 complete
+Status: Phase 8 complete — ready for Phase 9 (Progressive Trust and Inactivity Trigger)
+Last activity: 2026-03-22 — Completed 08-02 (flashing tab title + OS notification, UX-05)
 
-Progress: [██████████] 100% Phase 7 complete (v1.1 milestone — Phase 7 done)
+Progress: [█████████░] 90% (10/10 plans done across phases 1-8)
 
 ---
 
@@ -45,8 +45,8 @@ Progress: [██████████] 100% Phase 7 complete (v1.1 milestone
 | 4 | Data Reliability and Resilience | Complete | Production guard, idempotencyKey, cursor pagination |
 | 5 | Route Architecture Cleanup | Complete | 5 route modules extracted; routes.ts reduced to 430-line orchestrator |
 | 6 | Background Execution Foundation | Complete | All 4 plans done: trigger resolver, safety extension, execution pipeline, cron wiring + CenterPanel indicator |
-| 7 | Agent Handoffs and Approval UI | Not started | — |
-| 8 | Chat Summary and Tab Notifications | Not started | — |
+| 7 | Agent Handoffs and Approval UI | Complete | Handoff orchestrator, announcement, approval cards, pause/resume |
+| 8 | Chat Summary and Tab Notifications | Complete | Return briefing as new_message, flashing tab title + OS notification |
 | 9 | Progressive Trust and Inactivity Trigger | Not started | — |
 
 ---
@@ -79,6 +79,7 @@ Progress: [██████████] 100% Phase 7 complete (v1.1 milestone
 - [Phase 07-agent-handoffs-and-approval-ui]: Reject sets task status to todo (not blocked) so tasks remain retryable without manual unblocking
 - [Phase 07-agent-handoffs-and-approval-ui]: Pause state synced from project.executionRules on project change — persists across page refresh without extra API calls
 - [Phase 07-agent-handoffs-and-approval-ui]: background_execution_started WS event resets isAutonomyPaused to false — if server started execution, project was not paused
+- [Phase 08-chat-summary-and-tab-notifications]: Flash interval set to 1500ms — midpoint of 1-2s discretion range; return_briefing toast removed as dead code after 08-01; notification permission requested contextually on background_execution_started
 
 ## Blockers / Concerns
 
