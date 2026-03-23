@@ -27,8 +27,8 @@ export async function generateReturnBriefing(input: BriefingInput): Promise<Brie
   }
 
   // Build data context from events
-  const completedEvents = events.filter(e => e.eventType === 'task_completed');
-  const failedEvents = events.filter(e => e.eventType === 'task_failed');
+  const completedEvents = events.filter(e => e.eventType === 'task_completed' || e.eventType === 'autonomous_task_execution');
+  const failedEvents = events.filter(e => e.eventType === 'task_failed' || e.eventType === 'autonomous_task_failed');
   const approvedEvents = events.filter(e => e.eventType === 'proposal_approved');
   const completedCount = completedEvents.length;
   const failedCount = failedEvents.length;

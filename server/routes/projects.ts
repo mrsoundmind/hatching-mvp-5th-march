@@ -25,6 +25,8 @@ const updateProjectSchema = z.object({
   }).nullable().optional(),
   executionRules: z.object({
     autonomyEnabled: z.boolean().optional(),
+    autonomyPaused: z.boolean().optional(),
+    inactivityAutonomyEnabled: z.boolean().optional(),
     rules: z.string().optional(),
     taskGraph: z.unknown().optional(),
   }).nullable().optional(),
@@ -211,11 +213,20 @@ export function registerProjectRoutes(app: Express, deps: RegisterProjectDeps): 
         return res.status(404).json({ error: "Project not found" });
       }
 
+      const brainDocSchema = z.object({
+        title: z.string().min(1).max(500).default("Untitled Document"),
+        content: z.string().max(50000).default(""),
+        type: z.enum(['idea-development', 'project-plan', 'meeting-notes', 'research']).default('idea-development'),
+      });
+      const parsed = brainDocSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Invalid document data", details: parsed.error.errors });
+      }
       const newDocument = {
         id: randomUUID(),
-        title: req.body.title || "Untitled Document",
-        content: req.body.content || "",
-        type: req.body.type || 'idea-development',
+        title: parsed.data.title,
+        content: parsed.data.content,
+        type: parsed.data.type,
         createdAt: new Date().toISOString()
       };
 
@@ -240,10 +251,17 @@ export function registerProjectRoutes(app: Express, deps: RegisterProjectDeps): 
         return res.status(404).json({ error: "Project not found" });
       }
 
+      const brainUpdateSchema = z.object({
+        sharedMemory: z.string().max(100000).optional(),
+      });
+      const parsed = brainUpdateSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Invalid brain data", details: parsed.error.errors });
+      }
       const existingBrain = project.brain || { documents: [], sharedMemory: "" };
       const updatedBrain = {
         ...existingBrain,
-        sharedMemory: req.body.sharedMemory !== undefined ? req.body.sharedMemory : existingBrain.sharedMemory
+        sharedMemory: parsed.data.sharedMemory !== undefined ? parsed.data.sharedMemory : existingBrain.sharedMemory
       };
 
       const updatedProject = await storage.updateProject(project.id, { brain: updatedBrain });
