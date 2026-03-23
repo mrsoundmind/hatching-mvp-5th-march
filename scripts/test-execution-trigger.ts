@@ -86,7 +86,64 @@ function run(): void {
   // Test 9: BUDGETS.maxConcurrentAutonomousTasks defaults to 3
   assert(BUDGETS.maxConcurrentAutonomousTasks === 3, `should default to 3, got ${BUDGETS.maxConcurrentAutonomousTasks}`);
 
-  console.log("PASS: test-execution-trigger — all 9 tests passed.");
+  // Test 10: Inactivity trigger fires after 3 hours with pending tasks
+  const threeHoursAgo = new Date(Date.now() - 3 * 60 * 60 * 1000);
+  const result10 = resolveAutonomyTrigger({
+    userMessage: undefined,
+    pendingTasks: [{ id: "t1", status: "todo" }, { id: "t2", status: "todo" }],
+    autonomyEnabled: true,
+    lastUserActivityAt: threeHoursAgo,
+  });
+  assert(result10.shouldExecute === true, `Test 10: shouldExecute should be true, got ${result10.shouldExecute}`);
+  assert(result10.reason === "inactivity", `Test 10: reason should be 'inactivity', got ${result10.reason}`);
+  assert(result10.tasksToExecute.length === 1, `Test 10: should queue only 1 task (blast radius), got ${result10.tasksToExecute.length}`);
+  assert(result10.tasksToExecute[0] === "t1", `Test 10: should queue first todo task, got ${result10.tasksToExecute[0]}`);
+
+  // Test 11: Under inactivity threshold (30 min) — no trigger
+  const thirtyMinAgo = new Date(Date.now() - 30 * 60 * 1000);
+  const result11 = resolveAutonomyTrigger({
+    userMessage: undefined,
+    pendingTasks: [{ id: "t1", status: "todo" }],
+    autonomyEnabled: true,
+    lastUserActivityAt: thirtyMinAgo,
+  });
+  assert(result11.shouldExecute === false, `Test 11: shouldExecute should be false (under threshold), got ${result11.shouldExecute}`);
+
+  // Test 12: Inactivity with autonomyEnabled=false — no trigger
+  const result12 = resolveAutonomyTrigger({
+    userMessage: undefined,
+    pendingTasks: [{ id: "t1", status: "todo" }],
+    autonomyEnabled: false,
+    lastUserActivityAt: threeHoursAgo,
+  });
+  assert(result12.shouldExecute === false, `Test 12: shouldExecute should be false (autonomy disabled), got ${result12.shouldExecute}`);
+  assert(result12.reason === "none", `Test 12: reason should be 'none', got ${result12.reason}`);
+
+  // Test 13: null lastUserActivityAt — no inactivity trigger possible
+  const result13 = resolveAutonomyTrigger({
+    userMessage: undefined,
+    pendingTasks: [{ id: "t1", status: "todo" }],
+    autonomyEnabled: true,
+    lastUserActivityAt: null,
+  });
+  assert(result13.shouldExecute === false, `Test 13: shouldExecute should be false (null activity), got ${result13.shouldExecute}`);
+
+  // Test 14: Inactivity returns exactly 1 task even with 5 pending
+  const result14 = resolveAutonomyTrigger({
+    userMessage: undefined,
+    pendingTasks: [
+      { id: "t1", status: "todo" },
+      { id: "t2", status: "todo" },
+      { id: "t3", status: "todo" },
+      { id: "t4", status: "todo" },
+      { id: "t5", status: "todo" },
+    ],
+    autonomyEnabled: true,
+    lastUserActivityAt: threeHoursAgo,
+  });
+  assert(result14.tasksToExecute.length === 1, `Test 14: blast radius should be 1 task, got ${result14.tasksToExecute.length}`);
+
+  console.log("PASS: test-execution-trigger — all 14 tests passed.");
   process.exit(0);
 }
 
