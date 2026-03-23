@@ -32,7 +32,7 @@ See archived roadmap: [milestones/v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md)
 - [x] **Phase 6: Background Execution Foundation** — Safe single-agent execution pipeline with cost guardrails and explicit trigger
 - [x] **Phase 7: Agent Handoffs and Approval UI** — Full multi-agent handoff chain with interactive approval cards and pause/cancel controls (completed 2026-03-20)
 - [x] **Phase 8: Chat Summary and Tab Notifications** — Maya briefing on user return and browser tab badge when work completes offline (completed 2026-03-22)
-- [ ] **Phase 9: Progressive Trust and Inactivity Trigger** — Trust score accumulation and inactivity-based auto-trigger gated by feature flag
+- [x] **Phase 9: Progressive Trust and Inactivity Trigger** — Trust score accumulation and inactivity-based auto-trigger gated by feature flag (completed 2026-03-23)
 
 ## Phase Details
 
@@ -95,7 +95,7 @@ Plans:
   1. An agent that has completed tasks successfully is offered higher-risk work without manual approval over time
   2. After 4+ hours of user inactivity, queued autonomous work begins automatically (when feature flag enabled)
   3. The inactivity trigger can be disabled per-project without affecting any other autonomy behavior
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [ ] 09-01-PLAN.md — Trust schema type fix + behavioral verification tests for SAFE-04
@@ -115,7 +115,7 @@ Plans:
 | 6. Background Execution Foundation | 4/4 | Complete   | 2026-03-20 | 2026-03-20 |
 | 7. Agent Handoffs and Approval UI | 4/4 | Complete   | 2026-03-20 | - |
 | 8. Chat Summary and Tab Notifications | 2/2 | Complete   | 2026-03-22 | - |
-| 9. Progressive Trust and Inactivity Trigger | 1/2 | In Progress|  | - |
+| 9. Progressive Trust and Inactivity Trigger | 2/2 | Complete   | 2026-03-23 | - |
 
 ---
 

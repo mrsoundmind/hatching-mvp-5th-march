@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Autonomous Execution Loop
-status: planning
-last_updated: "2026-03-23T02:32:34.615Z"
-last_activity: 2026-03-23 — Completed 09-01 (trustMeta schema type + 10 behavioral trust scoring tests)
+status: completed
+last_updated: "2026-03-23T02:36:34.555Z"
+last_activity: 2026-03-23 — Completed 09-02 (inactivityAutonomyEnabled flag + 14 behavioral tests)
 progress:
   total_phases: 4
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 12
-  completed_plans: 11
-  percent: 90
+  completed_plans: 12
+  percent: 100
 ---
 
 # State: Hatchin
@@ -27,11 +27,11 @@ See: .planning/PROJECT.md (updated 2026-03-19)
 ## Current Position
 
 Phase: 9 of 9 (Progressive Trust and Inactivity Trigger)
-Plan: 1 of 2 complete (09-01 done) — Phase 9 in progress
-Status: 09-01 complete — trust schema type + behavioral tests done; 09-02 next
-Last activity: 2026-03-23 — Completed 09-01 (trustMeta schema type + 10 behavioral trust scoring tests)
+Plan: 2 of 2 complete (09-02 done) — Phase 9 complete
+Status: ALL PLANS COMPLETE — v1.1 milestone done
+Last activity: 2026-03-23 — Completed 09-02 (inactivityAutonomyEnabled flag + 14 behavioral tests)
 
-Progress: [█████████░] 92% (11/12 plans done)
+Progress: [██████████] 100% (12/12 plans done)
 
 ---
 
@@ -47,7 +47,7 @@ Progress: [█████████░] 92% (11/12 plans done)
 | 6 | Background Execution Foundation | Complete | All 4 plans done: trigger resolver, safety extension, execution pipeline, cron wiring + CenterPanel indicator |
 | 7 | Agent Handoffs and Approval UI | Complete | Handoff orchestrator, announcement, approval cards, pause/resume |
 | 8 | Chat Summary and Tab Notifications | Complete | Return briefing as new_message, flashing tab title + OS notification |
-| 9 | Progressive Trust and Inactivity Trigger | In Progress | 09-01 done: trustMeta schema type + 10 behavioral tests; 09-02 pending |
+| 9 | Progressive Trust and Inactivity Trigger | Complete | 09-01: trustMeta schema + 10 tests; 09-02: inactivityAutonomyEnabled flag + 14 tests |
 
 ---
 
@@ -84,6 +84,8 @@ Progress: [█████████░] 92% (11/12 plans done)
 - [Phase 08]: 15-minute absence threshold for return briefing (down from hardcoded 2-hour window)
 - [Phase 08]: Return briefing stored as real agent message and broadcast as new_message — not a separate return_briefing WS event
 - [Phase 09-progressive-trust-and-inactivity-trigger]: trustMeta shape inlined in schema.ts rather than importing TrustMeta from server/ — shared/ must not import from server/
+- [Phase 09]: inactivityAutonomyEnabled defaults to false — opt-in per project; explicit triggers bypass flag
+- [Phase 09]: lastSeenAt used for inactivity detection (not last message) — tracks user presence, not agent activity
 
 ## Blockers / Concerns
 
