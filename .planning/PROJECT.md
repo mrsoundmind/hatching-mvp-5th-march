@@ -12,9 +12,22 @@ No one should ever feel alone with their idea, have to start from scratch, or ne
 
 ## Current State
 
-**Shipped:** v1.0 — Text-Perfect, Human-First (2026-03-19)
-**Codebase:** ~47,000 LOC TypeScript across 162 files
+**Shipped:** v1.1 — Autonomous Execution Loop (2026-03-23)
+**Previous:** v1.0 — Text-Perfect, Human-First (2026-03-19)
+**Codebase:** ~50,000+ LOC TypeScript
 **Branch:** `reconcile-codex` (active development)
+
+### What v1.1 Delivered
+- Background task execution via pg-boss durable job queue — Hatches produce real output (plans, research, breakdowns)
+- Agent-to-agent handoffs — PM scopes, Engineer picks up, Designer reviews; BFS cycle detection prevents loops
+- Three-tier safety gates — low-risk auto-complete, mid-risk peer review, high-risk surfaces for user approval
+- Progressive trust scoring — agents earn higher autonomy through successful completions (up to +0.15 threshold boost)
+- Maya return briefing — LLM-generated conversational summary when user returns after 15+ min absence
+- Tab notifications — flashing title + OS Notification API when background work completes
+- Inactivity auto-trigger — queued work starts after 2+ hours idle (per-project opt-in)
+- Per-project daily LLM cost cap prevents runaway spend
+- Inline approval cards (Approve/Reject) for high-risk autonomous actions
+- Pause/resume control for all autonomous execution
 
 ### What v1.0 Delivered
 - Domain-specific conversation quality — each Hatch responds with genuine expertise, not generic AI
@@ -31,7 +44,7 @@ No one should ever feel alone with their idea, have to start from scratch, or ne
 ### Autonomous Execution
 The end state is a team that works while you sleep. Human conversation initiates and guides — but execution happens autonomously. Hatches hand off tasks to each other without being asked (Engineer picks up what the PM leaves, Designer gets looped in when UI decisions arise). Hatches police each other — quality gates, peer review, safety checks — all internally coordinated. The user wakes up to progress, not a blank canvas.
 
-This autonomous foundation is already partially built (LangGraph state machine, peer review gates, task detection). The next layer is closing the loop: autonomous handover, background execution, and a Hatch that knows when to act vs when to ask.
+v1.1 shipped the core autonomous loop: background execution via pg-boss, agent-to-agent handoffs with cycle detection, three-tier safety gates, progressive trust scoring, and inactivity-based auto-trigger. The next layer is proactive autonomy — Hatches that notice problems, initiate work without being asked, and coordinate across projects.
 
 ### B2B: Company-Level Intelligence
 When selling to companies, Hatchin is curated to that company's DNA — once. Brand guidelines, tone of voice, design system, product knowledge, company values — uploaded at the company level, not per-project. Every project inside that company inherits this automatically. A Sales Hatch already knows the product. A Designer Hatch already knows the brand. An Engineer Hatch already knows the stack.
@@ -41,18 +54,9 @@ The project brain is singular. No re-adding context. No onboarding every new pro
 ### Collaboration
 Future: multiple real humans working alongside their Hatch team in the same project. Real teammates and AI teammates in the same conversation — the Hatches serve the whole team, not just one person.
 
-## Current Milestone: v1.1 Autonomous Execution Loop
+## Next Milestone
 
-**Goal:** Hatches don't just talk — they execute. Users trigger work (or leave), Hatches hand off tasks between each other, self-review quality, and present real results. The user comes back to completed work and a chat summary of what happened.
-
-**Target features:**
-- Background task execution — Hatches work while user is offline
-- Agent-to-agent handoffs — PM scopes → Engineer picks up → Designer reviews
-- Risk-based autonomy — low-risk auto-approved, high-risk surfaces for approval
-- Self-policing — Hatches review each other's work, catch quality issues
-- Chat summaries — user returns to a conversational briefing of what happened
-- Progressive triggers — explicit "go ahead" now, inactivity-based trigger later
-- Real output — planning, research, task breakdown, not just conversation
+Not yet defined. Run `/gsd:new-milestone` to start the next cycle.
 
 ## Use Cases (What "Initiating Dreams" Looks Like)
 
@@ -83,16 +87,13 @@ The common thread: **you never start from scratch, you never feel alone, you nev
 - ✓ Personality evolution persisted to database (PRES-05) — v1.0
 - ✓ Message idempotency + cursor pagination (DATA-01–03) — v1.0
 - ✓ Modular route architecture (ARCH-01–02) — v1.0
-
-### Active
-
-- [ ] Background task execution pipeline
-- [ ] Agent-to-agent task handoffs
-- [ ] Risk-based autonomy with safety scoring
-- [ ] Cross-agent peer review for autonomous work
-- [ ] Chat summary briefings when user returns
-- [ ] Explicit handoff triggers ("go ahead and work on this")
-- [ ] Inactivity-based autonomous trigger (progressive)
+- ✓ Background task execution via pg-boss (EXEC-01–03) — v1.1
+- ✓ Agent-to-agent handoffs with cycle detection (HAND-01–04) — v1.1
+- ✓ Three-tier safety gates for autonomous execution (SAFE-01–03) — v1.1
+- ✓ Progressive trust scoring (SAFE-04) — v1.1
+- ✓ Maya return briefing + tab notifications (UX-03, UX-05) — v1.1
+- ✓ Inline approval cards + pause/resume (UX-01, UX-02, UX-04) — v1.1
+- ✓ Inactivity-based autonomous trigger (EXEC-04) — v1.1
 
 ### Out of Scope (current)
 
@@ -133,12 +134,15 @@ Hatchin: user just talks. The Hatches:
 - Genuine reactions, not assistant-speak
 - Never start with "Great!" or sycophantic openers
 
-**Architecture (post v1.0):**
+**Architecture (post v1.1):**
 - `server/routes.ts` — 430-line thin orchestrator
 - `server/routes/` — 6 focused modules (teams, agents, messages, projects, tasks, chat)
-- Personality evolution persisted to `agents.personality` JSONB
-- Message idempotency via `checkIdempotencyKey()` in WS handler
-- Cursor-based pagination in storage + API + frontend
+- `server/autonomy/` — execution pipeline, handoff orchestrator, peer review, trust scoring, event logger, background runner
+- pg-boss durable job queue for background task execution
+- Three-tier safety gates: auto-complete / peer review / user approval
+- Progressive trust via `trustMeta` in `agents.personality` JSONB
+- Inactivity trigger via `project.lastSeenAt` + `inactivityAutonomyEnabled` flag
+- Maya return briefing via `returnBriefing.ts` (LLM-generated, stored as real message)
 
 ## Constraints
 
@@ -161,6 +165,12 @@ Hatchin: user just talks. The Hatches:
 | Anti-prompting as core design principle | Differentiator — not another AI chat tool | ✓ Good — validated through v1.0 user journey |
 | Route modularization via deps injection | Avoids circular imports while enabling WS broadcast from route modules | ✓ Good |
 | Personality persistence to agents.personality JSONB | Survives restart, no new table needed, per-user trait adaptation | ✓ Good |
+| pg-boss for durable job queue (v1.1) | Runs on existing Neon PostgreSQL — no Redis needed | ✓ Good — reliable background execution |
+| generateText injection (not runTurn) for autonomous execution | Isolates background pipeline from chat graph — simpler, testable | ✓ Good — clean separation |
+| Stricter safety thresholds in autonomous mode (0.60 vs 0.80) | No user present to catch mistakes — higher bar for auto-approval | ✓ Good |
+| Inactivity trigger gated per-project (not global flag) | Users opt-in per project; no surprise autonomous work | ✓ Good |
+| Return briefing as real agent message (not separate WS event) | Briefing appears in chat history, survives page refresh | ✓ Good |
+| Trust scoring via successRate * maturityFactor (bounded 0–1) | Simple, predictable, needs 10+ completions to reach full trust | ✓ Good |
 
 ---
-*Last updated: 2026-03-19 after v1.1 milestone definition*
+*Last updated: 2026-03-23 after v1.1 milestone completion*
