@@ -86,6 +86,7 @@ export const agents = pgTable("agents", {
     welcomeMessage?: string;
     adaptedTraits?: Record<string, Record<string, number>>;
     adaptationMeta?: Record<string, { interactionCount: number; adaptationConfidence: number; lastUpdated: string }>;
+    trustMeta?: { tasksCompleted: number; tasksFailed: number; trustScore: number; lastUpdated: string };
   }>().default({}),
   isSpecialAgent: boolean("is_special_agent").notNull().default(false),
 }, (table) => ({
