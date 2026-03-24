@@ -75,7 +75,11 @@ See archived roadmap: [milestones/v1.2-ROADMAP.md](milestones/v1.2-ROADMAP.md)
   3. User sees a stats card at the top of the Activity tab showing tasks completed, handoffs, and cost spent today
   4. User can filter the feed by event type, agent, or time range using filter chips without a page reload
   5. Agent avatars in the left sidebar and project tree show a pulsing ring when that agent is actively executing a background task
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 11-01-PLAN.md — Data foundation: typed event registry, sidebar hooks, backend stats/events endpoints
+- [ ] 11-02-PLAN.md — Tab shell: 3-tab RightSidebar restructure with CSS-hide, badges, empty states
+- [ ] 11-03-PLAN.md — Activity feed UI: stats card, filter chips, feed items, agent working avatar
 
 ### Phase 12: Handoff Visualization
 **Goal**: Users can see handoff chains between agents — both in the chat as styled cards and in the sidebar as a timeline
@@ -135,7 +139,7 @@ See archived roadmap: [milestones/v1.2-ROADMAP.md](milestones/v1.2-ROADMAP.md)
 | 8. Chat Summary and Tab Notifications | v1.1 | — | Complete | 2026-03-23 |
 | 9. Progressive Trust and Inactivity Trigger | v1.1 | — | Complete | 2026-03-23 |
 | 10. Billing + LLM Intelligence | v1.2 | — | Complete | 2026-03-23 |
-| 11. Sidebar Shell + Activity Feed | v1.3 | 0/? | Not started | - |
+| 11. Sidebar Shell + Activity Feed | v1.3 | 0/3 | Planned | - |
 | 12. Handoff Visualization | v1.3 | 0/? | Not started | - |
 | 13. Approvals Hub + Task Pipeline | v1.3 | 0/? | Not started | - |
 | 14. Brain Redesign + Autonomy Settings | v1.3 | 0/? | Not started | - |
