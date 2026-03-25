@@ -16,6 +16,12 @@ import { deriveChatMode, type ChatMode } from '@/lib/chatMode';
 import { useAuth } from "@/hooks/useAuth";
 import { motion, AnimatePresence } from 'framer-motion';
 import { AutonomousApprovalCard } from './AutonomousApprovalCard';
+import UpgradeModal from './UpgradeModal';
+import { HandoffCard } from './chat/HandoffCard';
+import { DeliberationCard } from './chat/DeliberationCard';
+import { dispatchAutonomyEvent, AUTONOMY_EVENTS } from '@/lib/autonomyEvents';
+import type { HandoffAnnouncedPayload } from '@/lib/autonomyEvents';
+// UsageBar removed — will redesign as notification-only in v1.2 billing
 
 interface ChatContext {
   mode: ChatMode;
@@ -86,6 +92,8 @@ export function CenterPanel({
 
   // Add Hatch Modal state
   const [showAddHatchModal, setShowAddHatchModal] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [upgradeReason, setUpgradeReason] = useState<string | undefined>();
 
   // Message input state (for deterministic send gating)
   const [inputValue, setInputValue] = useState('');
@@ -126,6 +134,16 @@ export function CenterPanel({
     projectId: string;
   }>>([]);
   const lastSendRef = useRef<{ conversationId: string; content: string; at: number } | null>(null);
+
+  // Deliberation state for multi-agent coordination indicator
+  const [deliberationState, setDeliberationState] = useState<{
+    sessionId: string;
+    agentNames: string[];
+    roundCount: number;
+    status: 'ongoing' | 'resolved';
+    summary?: string;
+  } | null>(null);
+  const deliberationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const resizeComposer = (el: HTMLTextAreaElement | null) => {
     if (!el) return;
@@ -215,6 +233,9 @@ export function CenterPanel({
     return () => {
       clearPendingResponseTimeout();
       clearStreamingTimeout();
+      if (deliberationTimeoutRef.current) {
+        clearTimeout(deliberationTimeoutRef.current);
+      }
     };
   }, []);
 
@@ -511,10 +532,10 @@ export function CenterPanel({
         id: messageId || `msg-${Date.now()}`,
         content: message.message.content,
         senderId: message.message.messageType === 'system'
-          ? 'system'
+          ? 'maya-fallback'
           : (message.message.agentId || message.message.userId),
         senderName: message.message.messageType === 'system'
-          ? 'System'
+          ? 'Maya'
           : (message.message.agentId
             ? getActualAgentName(message.message.agentId)
             : toDisplayText(message.message.senderName, 'You')),
@@ -528,6 +549,22 @@ export function CenterPanel({
         threadDepth: message.message.threadDepth || 0,
         metadata: message.message.metadata
       };
+
+      // Dispatch handoff event to sidebar activity feed
+      if ((message.message.metadata as any)?.isHandoffAnnouncement === true) {
+        const toAgent = activeProjectAgents.find(
+          a => a.id === (message.message.metadata as any)?.nextAgentId
+        );
+        dispatchAutonomyEvent<HandoffAnnouncedPayload>(AUTONOMY_EVENTS.HANDOFF_ANNOUNCED, {
+          fromAgentId: message.message.agentId || '',
+          fromAgentName: newMessage.senderName,
+          toAgentId: (message.message.metadata as any)?.nextAgentId || '',
+          toAgentName: toAgent?.name ?? 'Team',
+          taskTitle: (message.message.metadata as any)?.taskTitle ?? message.message.content,
+          traceId: (message.message.metadata as any)?.traceId ?? message.message.id,
+          projectId: activeProject?.id || '',
+        });
+      }
 
       // Validate conversation context - only process messages for current context
       const isCurrentConversation = currentChatContext?.conversationId === newMessage.conversationId;
@@ -629,7 +666,11 @@ export function CenterPanel({
         return;
       }
 
-      const convId = currentChatContext?.conversationId || '';
+      const convId = currentChatContext?.conversationId;
+      if (!convId) {
+        devLog('⏭️ Skipping streaming_started — no active conversation');
+        return;
+      }
       const convMsgs = allMessages[convId] || [];
       const hasDuplicate = convMsgs.some(m =>
         m.id === message.messageId ||
@@ -911,16 +952,16 @@ export function CenterPanel({
       const failedStreamingId = streamingMessageId.current;
       const normalizedErrorCode = typeof message.code === 'string' ? message.code : 'STREAMING_GENERATION_FAILED';
       const fallbackErrorMessageByCode: Record<string, string> = {
-        OPENAI_NOT_CONFIGURED: 'I’m temporarily unavailable right now. Please retry in a moment.',
-        OPENAI_RATE_LIMITED: 'I’m handling high traffic right now. Please retry in a minute.',
-        OPENAI_AUTH_FAILED: 'I’m temporarily unavailable right now. Please retry in a moment.',
-        OPENAI_MODEL_UNAVAILABLE: 'I’m temporarily unavailable right now. Please retry in a moment.',
-        CONVERSATION_BUSY: 'I’m finishing the previous response. Please wait a moment and try again.',
-        STREAMING_GENERATION_FAILED: 'I’m still here, but this reply could not be completed. Please try again.'
+        OPENAI_NOT_CONFIGURED: "Hmm, I couldn't connect to my brain for a second there. Give it another try?",
+        OPENAI_RATE_LIMITED: "We're getting a lot of traffic right now - give me a minute and try again.",
+        OPENAI_AUTH_FAILED: "Something's off on my end. Try again in a moment - I'll be right here.",
+        OPENAI_MODEL_UNAVAILABLE: "My thinking engine is temporarily offline. Try again in a sec.",
+        CONVERSATION_BUSY: "Still working on my last thought - give me a moment to finish up.",
+        STREAMING_GENERATION_FAILED: "I started a reply but it didn't come through. Mind sending that again?"
       };
       const normalizedErrorMessage = (typeof message.error === 'string' && message.error.trim().length > 0)
         ? message.error
-        : (fallbackErrorMessageByCode[normalizedErrorCode] || 'Something went wrong while generating a reply. Please retry.');
+        : (fallbackErrorMessageByCode[normalizedErrorCode] || "Something tripped me up - try sending that again?");
 
       setIsStreaming(false);
       streamingMessageId.current = null;
@@ -962,13 +1003,13 @@ export function CenterPanel({
             cleanedMessages.push({
               id: `sys-streaming-error-${normalizedErrorCode}-${Date.now()}`,
               content: normalizedErrorMessage,
-              senderId: 'system',
-              senderName: 'System',
+              senderId: 'maya-fallback',
+              senderName: 'Maya',
               messageType: 'agent' as const,
               timestamp: new Date().toISOString(),
               conversationId,
               status: 'delivered' as const,
-              metadata: { systemNotice: true, errorCode: normalizedErrorCode }
+              metadata: { systemNotice: true, errorCode: normalizedErrorCode, agentRole: 'pm' }
             });
           }
 
@@ -1229,6 +1270,53 @@ export function CenterPanel({
       }
     }
     // ─── END Chat Intelligence Events ────────────────────────────────────────
+    // ─── Billing Events ─────────────────────────────────────────────────────
+    else if (message.type === 'upgrade_required') {
+      if (message.reason === 'rate_limit') {
+        // Rate limit — just show a toast, no upgrade modal
+        toast({ title: 'Slow down', description: message.message || 'You\'re sending messages too fast.', duration: 4000 });
+      } else {
+        // Daily cap or feature gate — show upgrade modal
+        setUpgradeReason(message.reason);
+        setShowUpgradeModal(true);
+      }
+    }
+    // ─── END Billing Events ─────────────────────────────────────────────────
+    else if (message.type === 'conductor_decision') {
+      const payload = message as any;
+      // Only show deliberation card when review is required (mid/high risk)
+      if (payload.reviewRequired || (payload.reviewerCount && payload.reviewerCount >= 1)) {
+        const agentNames: string[] = [];
+        if (payload.selectedAgent) agentNames.push(payload.selectedAgent);
+        if (payload.reviewers) agentNames.push(...(payload.reviewers as string[]));
+
+        // Clear any existing timeout
+        if (deliberationTimeoutRef.current) {
+          clearTimeout(deliberationTimeoutRef.current);
+        }
+
+        setDeliberationState(prev => ({
+          sessionId: payload.traceId || `delib-${Date.now()}`,
+          agentNames: agentNames.length > 0 ? agentNames : prev?.agentNames || ['Agents'],
+          roundCount: (prev?.roundCount || 0) + 1,
+          status: 'ongoing',
+        }));
+
+        // Auto-resolve after 30 seconds
+        deliberationTimeoutRef.current = setTimeout(() => {
+          setDeliberationState(prev => prev ? { ...prev, status: 'resolved' } : null);
+        }, 30000);
+      }
+    } else if (message.type === 'synthesis_completed') {
+      if (deliberationTimeoutRef.current) {
+        clearTimeout(deliberationTimeoutRef.current);
+      }
+      setDeliberationState(prev => prev ? {
+        ...prev,
+        status: 'resolved',
+        summary: (message as any).synthesis || 'Coordination complete',
+      } : null);
+    }
   };
 
   // === SUBTASK 3.1.4: Message Persistence Integration ===
@@ -1262,8 +1350,8 @@ export function CenterPanel({
       return {
         id: msg.id,
         content: msg.content,
-        senderId: msg.messageType === 'system' ? 'system' : (msg.agentId || msg.userId || 'unknown'),
-        senderName: msg.messageType === 'system' ? 'System' : (msg.agentId ? (() => {
+        senderId: msg.messageType === 'system' ? 'maya-fallback' : (msg.agentId || msg.userId || 'unknown'),
+        senderName: msg.messageType === 'system' ? 'Maya' : (msg.agentId ? (() => {
           const agent = activeProjectAgents.find((a: any) => a.id === msg.agentId);
           return agent ? agent.name : msg.agentId.replace('-', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase());
         })() : 'You'),
@@ -1690,10 +1778,10 @@ export function CenterPanel({
     switch (currentChatContext.mode) {
       case 'project':
         return {
-          // Header identity in project mode is hard-locked to PM Maya
+          // Header identity in project mode is hard-locked to Maya
           // and derived ONLY from mode (not from agents list).
           title: 'Maya',
-          subtitle: 'Project Manager',
+          subtitle: 'Idea Partner',
           participants,
           placeholder: "Message your team...",
           welcomeTitle: 'Talk to your entire project team',
@@ -1753,7 +1841,7 @@ export function CenterPanel({
       (window as any).HATCHIN_UI_AUDIT &&
       currentChatContext?.mode === 'project'
     ) {
-      if (contextDisplay.title !== 'Maya' || contextDisplay.subtitle !== 'Project Manager') {
+      if (contextDisplay.title !== 'Maya' || contextDisplay.subtitle !== 'Idea Partner') {
         devLog('HEADER_INVARIANT_VIOLATION', {
           mode: currentChatContext.mode,
           title: contextDisplay.title,
@@ -2366,7 +2454,7 @@ export function CenterPanel({
               {contextDisplay.title}
             </h1>
             {currentChatContext?.mode && (
-              <span className="text-xs px-2 py-0.5 rounded-full bg-white/8 text-muted-foreground border border-white/10">
+              <span className="text-xs px-2 py-0.5 rounded-full bg-[var(--hatchin-surface)] hatchin-text-muted border border-[var(--hatchin-border-subtle)]">
                 {currentChatContext.mode === 'project' ? '🌐 Everyone' :
                  currentChatContext.mode === 'agent' ? `💬 1-on-1` :
                  '👥 Team chat'}
@@ -2377,7 +2465,7 @@ export function CenterPanel({
           <button
             onClick={() => setShowAddHatchModal(true)}
             disabled={!activeProject}
-            className="hatchin-bg-blue text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-opacity-90 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="btn-primary-glow px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 btn-press disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="10" />
@@ -2434,7 +2522,7 @@ export function CenterPanel({
       {/* Message Display Area */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {isTestMode && (
-          <div className="px-6 py-2 border-b hatchin-border bg-amber-500/10 text-amber-200 text-xs">
+          <div className="px-6 py-2 border-b hatchin-border bg-amber-500/10 text-amber-700 dark:text-amber-200 text-xs">
             Test Mode: Local AI model ({runtimeProviderLabel}). Responses are for system testing only.
           </div>
         )}
@@ -2477,8 +2565,22 @@ export function CenterPanel({
           /* Message List - Show when messages exist */
           (<>
             <div className="relative flex-1 min-h-0">
+              {/* Connection status banner */}
+              {connectionStatus !== 'connected' && (
+                <div className={`flex items-center justify-center gap-2 py-1.5 text-xs font-medium ${
+                  connectionStatus === 'connecting' ? 'bg-yellow-500/10 text-yellow-500' :
+                  connectionStatus === 'error' ? 'bg-red-500/10 text-red-500' :
+                  'bg-gray-500/10 text-gray-400'
+                }`} role="status" aria-live="assertive">
+                  <div className={`w-2 h-2 rounded-full ${connectionConfig.bgColor}`} />
+                  {connectionConfig.text}
+                  {connectionStatus === 'disconnected' && (
+                    <span className="text-muted-foreground">— messages may not sync</span>
+                  )}
+                </div>
+              )}
               {/* Messages Container */}
-              <div className="h-full overflow-y-auto hide-scrollbar p-6 space-y-4">
+              <div className="h-full overflow-y-auto hide-scrollbar p-6 space-y-4" role="log" aria-label="Chat messages" aria-live="polite">
                 {messagesLoading && (
                   <div className="flex items-center justify-center py-4">
                     <div className="hatchin-text-muted text-sm">Loading conversation...</div>
@@ -2505,12 +2607,28 @@ export function CenterPanel({
                     currentMessages[index - 1].senderId === message.senderId &&
                     (new Date(message.timestamp).getTime() - new Date(currentMessages[index - 1].timestamp).getTime()) < 300000;
 
+                  // Handoff announcement → render HandoffCard instead of MessageBubble
+                  const isHandoff = (message.metadata as any)?.isHandoffAnnouncement === true;
+                  if (isHandoff) {
+                    const toAgent = activeProjectAgents.find(
+                      a => a.id === (message.metadata as any)?.nextAgentId
+                    );
+                    return (
+                      <HandoffCard
+                        key={message.id}
+                        fromAgentName={message.senderName}
+                        fromAgentRole={(message.metadata as any)?.agentRole}
+                        toAgentName={toAgent?.name ?? 'Team'}
+                        toAgentRole={toAgent?.role}
+                        taskTitle={(message.metadata as any)?.taskTitle ?? message.content}
+                        timestamp={message.timestamp}
+                      />
+                    );
+                  }
+
                   return (
-                    <motion.div
+                    <div
                       key={message.id}
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.2 }}
                     >
                       <MessageBubble
                         message={{
@@ -2539,7 +2657,7 @@ export function CenterPanel({
                           color: chatContextColor
                         }}
                       />
-                    </motion.div>
+                    </div>
                   );
                 })}
 
@@ -2675,6 +2793,20 @@ export function CenterPanel({
                   </div>
                 )}
 
+                {/* Deliberation indicator — shown when multi-agent coordination is underway */}
+                <AnimatePresence>
+                  {deliberationState && (
+                    <DeliberationCard
+                      key={deliberationState.sessionId}
+                      agentNames={deliberationState.agentNames}
+                      roundCount={deliberationState.roundCount}
+                      status={deliberationState.status}
+                      summary={deliberationState.summary}
+                      onDismiss={() => setDeliberationState(null)}
+                    />
+                  )}
+                </AnimatePresence>
+
                 {/* UX-01: Inline approval cards for high-risk autonomous tasks */}
                 <AnimatePresence>
                   {approvalRequests
@@ -2701,7 +2833,7 @@ export function CenterPanel({
               </div>
 
               {/* Bottom fade to separate long chat history from input composer */}
-              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[#171A21] via-[#171A21]/85 to-transparent" />
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[var(--premium-bg-end)] via-[var(--premium-bg-end)]/85 to-transparent" />
             </div>
           </>)
         )}
@@ -2720,7 +2852,7 @@ export function CenterPanel({
         </div>
       )}
       {/* Chat Input */}
-      <div className="p-6 hatchin-border border-t">
+      <div className="p-6">
         {/* C1.2: Reply preview */}
         {replyingTo && (
           <div className="mb-3 rounded-lg border border-blue-500/30 bg-blue-500/10 px-3 py-2.5">
@@ -2743,7 +2875,7 @@ export function CenterPanel({
           </div>
         )}
 
-        <form onSubmit={handleChatSubmit} className={`relative rounded-lg ${isStreaming || isThinking ? 'ai-thinking-ring' : ''}`}>
+        <form onSubmit={handleChatSubmit} className="relative rounded-lg">
           <textarea
             ref={messageInputRef}
             data-testid="input-message"
@@ -2763,7 +2895,7 @@ export function CenterPanel({
               }
             }}
             aria-label="Message input"
-            className="w-full hatchin-bg-card hatchin-border border rounded-lg px-4 pr-14 py-3 text-sm hatchin-text placeholder-hatchin-text-muted focus:outline-none focus:ring-2 focus:ring-hatchin-blue focus:border-transparent resize-none min-h-[48px] max-h-[180px] overflow-y-auto"
+            className="w-full premium-message-input px-4 pr-14 py-3 text-sm hatchin-text placeholder-hatchin-text-muted focus:outline-none resize-none min-h-[48px] max-h-[180px] overflow-y-auto"
           />
           {/* B1.3: Show stop button during streaming, send button otherwise */}
           {isStreaming ? (
@@ -2788,7 +2920,7 @@ export function CenterPanel({
             <button
               type="submit"
               aria-label="Send message"
-              className="absolute right-3 bottom-2 w-8 h-8 rounded-full hatchin-blue hover:bg-white/10 flex items-center justify-center transition-colors"
+              className="absolute right-3 bottom-2 w-8 h-8 rounded-full btn-primary-glow flex items-center justify-center btn-press"
             >
               <Send className="w-4 h-4" />
             </button>
@@ -2803,6 +2935,13 @@ export function CenterPanel({
         activeProject={activeProject || null}
         existingAgents={activeProjectAgents}
         activeTeamId={activeTeamId}
+      />
+
+      {/* Upgrade Modal */}
+      <UpgradeModal
+        open={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        reason={upgradeReason}
       />
 
       {/* Task Approval Modal */}
@@ -2830,6 +2969,10 @@ export function CenterPanel({
 
             if (response.ok) {
               devLog('✅ Tasks created successfully');
+              // Notify RightSidebar of new tasks
+              try {
+                window.dispatchEvent(new CustomEvent('tasks_updated', { detail: { projectId: taskSuggestionContext?.projectId } }));
+              } catch { }
               // Close modal
               setShowTaskApprovalModal(false);
               setSuggestedTasks([]);

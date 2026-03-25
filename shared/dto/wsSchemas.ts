@@ -120,6 +120,9 @@ const requiredServerSchemas = z.union([
     type: z.literal('conductor_decision'),
   }).passthrough(),
   z.object({
+    type: z.literal('synthesis_completed'),
+  }).passthrough(),
+  z.object({
     type: z.literal('safety_intervention'),
   }).passthrough(),
   z.object({
@@ -190,6 +193,20 @@ const requiredServerSchemas = z.union([
   z.object({
     type: z.literal('background_execution_completed'),
   }).passthrough(),
+  z.object({
+    type: z.literal('task_execution_failed'),
+  }).passthrough(),
+  z.object({
+    type: z.literal('handoff_cycle_detected'),
+    projectId: z.string(),
+    chain: z.array(z.string()),
+  }),
+  z.object({
+    type: z.literal('handoff_chain_completed'),
+    projectId: z.string(),
+    reason: z.string(),
+    hops: z.number(),
+  }),
   // Smart task detection events
   z.object({
     type: z.literal('task_created_direct'),
@@ -206,6 +223,25 @@ const requiredServerSchemas = z.union([
     summary: z.string(),
     completedTasks: z.number(),
     newMessages: z.number(),
+  }),
+  z.object({
+    type: z.literal('task_approval_rejected'),
+    taskId: z.string(),
+  }),
+  // Billing events
+  z.object({
+    type: z.literal('upgrade_required'),
+    reason: z.string(),
+    currentUsage: z.number(),
+    limit: z.number(),
+    upgradeUrl: z.string(),
+  }),
+  z.object({
+    type: z.literal('usage_warning'),
+    reason: z.literal('approaching_limit'),
+    currentUsage: z.number(),
+    limit: z.number(),
+    percentUsed: z.number(),
   }),
 ]);
 
