@@ -22,6 +22,7 @@ type RightSidebarAction =
   | { type: 'UPDATE_PREFERENCES'; payload: Partial<RightSidebarUserPreferences> }
   | { type: 'UPDATE_LAST_SAVED'; payload: { section: string; timestamp: number } }
   | { type: 'LOAD_PREFERENCES'; payload: RightSidebarUserPreferences }
+  | { type: 'SET_ACTIVE_TAB'; payload: 'activity' | 'brain' | 'approvals' }
   | { type: 'RESET_STATE' };
 
 // State reducer function
@@ -89,11 +90,15 @@ function rightSidebarReducer(state: RightSidebarState, action: RightSidebarActio
         }
       };
     
+    case 'SET_ACTIVE_TAB':
+      return { ...state, activeTab: action.payload };
+
     case 'LOAD_PREFERENCES':
       return {
         ...state,
         preferences: { ...defaultPreferences, ...action.payload },
-        expandedSections: { ...defaultPreferences.expandedSections, ...action.payload.expandedSections }
+        expandedSections: { ...defaultPreferences.expandedSections, ...action.payload.expandedSections },
+        activeTab: action.payload.activeTab || state.activeTab,
       };
     
     case 'RESET_STATE':
@@ -126,6 +131,7 @@ const defaultPreferences: RightSidebarUserPreferences = {
   autoSaveDelay: 2000, // 2 seconds
   showTimestamps: true,
   compactMode: false,
+  activeTab: 'activity',
 };
 
 const defaultState: RightSidebarState = {
@@ -139,6 +145,7 @@ const defaultState: RightSidebarState = {
   expandedSections: defaultPreferences.expandedSections,
   recentlySaved: new Set(),
   activeView: 'none',
+  activeTab: 'activity',
   preferences: defaultPreferences,
   isLoading: false,
   error: null,
@@ -311,6 +318,14 @@ export function useRightSidebarState(
     dispatch({ type: 'SET_ERROR', payload: error });
   }, []);
 
+  const setActiveTab = useCallback((tab: 'activity' | 'brain' | 'approvals') => {
+    dispatch({ type: 'SET_ACTIVE_TAB', payload: tab });
+    setTimeout(() => {
+      const updatedPreferences = { ...state.preferences, activeTab: tab };
+      savePreferences(updatedPreferences);
+    }, 0);
+  }, [savePreferences, state.preferences]);
+
   return {
     state,
     actions: {
@@ -324,6 +339,7 @@ export function useRightSidebarState(
       resetPreferences,
       setLoading,
       setError,
+      setActiveTab,
     },
   };
 }

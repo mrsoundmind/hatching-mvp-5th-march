@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, boolean, jsonb, timestamp, index, doublePrecision } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, boolean, jsonb, timestamp, index, uniqueIndex, doublePrecision } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -10,6 +10,13 @@ export const users = pgTable("users", {
   avatarUrl: text("avatar_url"),
   provider: text("provider").notNull().default("google"),
   providerSub: text("provider_sub").notNull().unique(),
+  // Billing & Tier
+  tier: text("tier").notNull().default("free").$type<"free" | "pro">(),
+  stripeCustomerId: text("stripe_customer_id"),
+  stripeSubscriptionId: text("stripe_subscription_id"),
+  subscriptionStatus: text("subscription_status").notNull().default("none").$type<"none" | "active" | "past_due" | "cancelled">(),
+  subscriptionPeriodEnd: timestamp("subscription_period_end"),
+  graceExpiresAt: timestamp("grace_expires_at"),
   // Legacy fallback fields (deprecated)
   username: text("username").unique(),
   password: text("password"),
@@ -169,7 +176,7 @@ export const messageReactions = pgTable("message_reactions", {
 export const conversationMemory = pgTable("conversation_memory", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   conversationId: varchar("conversation_id").references(() => conversations.id).notNull(),
-  memoryType: text("memory_type").notNull().$type<"context" | "summary" | "key_points" | "decisions">(),
+  memoryType: text("memory_type").notNull().$type<"context" | "summary" | "key_points" | "decisions" | "compaction_summary">(),
   content: text("content").notNull(),
   importance: integer("importance").notNull().default(5), // 1-10 scale
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -264,6 +271,33 @@ export const deliberationTraces = pgTable("deliberation_traces", {
   conversationIdIdx: index("deliberation_traces_conversation_id_idx").on(table.conversationId),
 }));
 
+// Billing & Usage Tracking
+export const usageDailySummary = pgTable("usage_daily_summary", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  date: text("date").notNull(), // YYYY-MM-DD format
+  totalMessages: integer("total_messages").notNull().default(0),
+  totalPromptTokens: integer("total_prompt_tokens").notNull().default(0),
+  totalCompletionTokens: integer("total_completion_tokens").notNull().default(0),
+  totalTokens: integer("total_tokens").notNull().default(0),
+  estimatedCostCents: integer("estimated_cost_cents").notNull().default(0),
+  standardModelMessages: integer("standard_model_messages").notNull().default(0),
+  premiumModelMessages: integer("premium_model_messages").notNull().default(0),
+  autonomyExecutions: integer("autonomy_executions").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  userDateIdx: uniqueIndex("usage_daily_user_date_idx").on(table.userId, table.date),
+}));
+
+// Stripe webhook idempotency
+export const processedWebhooks = pgTable("processed_webhooks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  stripeEventId: text("stripe_event_id").notNull().unique(),
+  eventType: text("event_type").notNull(),
+  processedAt: timestamp("processed_at").defaultNow().notNull(),
+});
+
 export const insertProjectSchema = createInsertSchema(projects).omit({
   id: true,
 }).extend({
@@ -352,6 +386,17 @@ export const insertDeliberationTraceSchema = createInsertSchema(deliberationTrac
   updatedAt: true,
 });
 
+export const insertUsageDailySummarySchema = createInsertSchema(usageDailySummary).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertProcessedWebhookSchema = createInsertSchema(processedWebhooks).omit({
+  id: true,
+  processedAt: true,
+});
+
 // Type Exports
 export type InsertProject = z.infer<typeof insertProjectSchema>;
 export type Project = typeof projects.$inferSelect;
@@ -378,6 +423,12 @@ export type AutonomyEventRow = typeof autonomyEvents.$inferSelect;
 export type InsertDeliberationTrace = z.infer<typeof insertDeliberationTraceSchema>;
 export type DeliberationTraceRow = typeof deliberationTraces.$inferSelect;
 
+// Billing Type Exports
+export type InsertUsageDailySummary = z.infer<typeof insertUsageDailySummarySchema>;
+export type UsageDailySummary = typeof usageDailySummary.$inferSelect;
+export type InsertProcessedWebhook = z.infer<typeof insertProcessedWebhookSchema>;
+export type ProcessedWebhook = typeof processedWebhooks.$inferSelect;
+
 // Right Sidebar Specific Types
 export interface RightSidebarExpandedSections {
   coreDirection: boolean;
@@ -401,6 +452,7 @@ export interface RightSidebarUserPreferences {
   autoSaveDelay: number; // milliseconds
   showTimestamps: boolean;
   compactMode: boolean;
+  activeTab?: 'activity' | 'brain' | 'approvals';
 }
 
 export interface RightSidebarState {
@@ -417,6 +469,9 @@ export interface RightSidebarState {
   expandedSections: RightSidebarExpandedSections;
   recentlySaved: Set<string>;
   activeView: 'project' | 'team' | 'agent' | 'none';
+
+  // Active sidebar tab
+  activeTab: 'activity' | 'brain' | 'approvals';
 
   // User preferences
   preferences: RightSidebarUserPreferences;
