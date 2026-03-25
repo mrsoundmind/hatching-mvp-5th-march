@@ -106,7 +106,10 @@ Plans:
   2. The Activity tab sidebar shows a vertical handoff chain timeline with animated connectors linking the sequence of agents involved in a multi-agent run
   3. User can initiate a manual handoff by clicking "Hand off to..." in the chat input and selecting a target agent from a dropdown
   4. When multiple agents are coordinating, user sees a collapsible deliberation indicator card in chat that can be expanded to show coordination details
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 12-01-PLAN.md — HandoffCard + DeliberationCard in chat, CenterPanel wiring, handoff event dispatch
+- [ ] 12-02-PLAN.md — HandoffChainTimeline in sidebar, manual handoff dropdown in chat input
 
 ### Phase 13: Approvals Hub + Task Pipeline
 **Goal**: Users have a dedicated approvals surface and can see task progress across pipeline stages without digging through chat
@@ -220,8 +223,8 @@ Plans:
 | 8. Chat Summary and Tab Notifications | v1.1 | — | Complete | 2026-03-23 |
 | 9. Progressive Trust and Inactivity Trigger | v1.1 | — | Complete | 2026-03-23 |
 | 10. Billing + LLM Intelligence | v1.2 | — | Complete | 2026-03-23 |
-| 11. Sidebar Shell + Activity Feed | 3/3 | Complete   | 2026-03-25 | - |
-| 12. Handoff Visualization | v1.3 | 0/? | Not started | - |
+| 11. Sidebar Shell + Activity Feed | v1.3 | 3/3 | Complete | 2026-03-25 |
+| 12. Handoff Visualization | v1.3 | 0/2 | Not started | - |
 | 13. Approvals Hub + Task Pipeline | v1.3 | 0/? | Not started | - |
 | 14. Brain Redesign + Autonomy Settings | v1.3 | 0/? | Not started | - |
 | 15. Polish | v1.3 | 0/? | Not started | - |
