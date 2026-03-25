@@ -1,642 +1,685 @@
 # Architecture Research
 
-**Domain:** Autonomy Visibility UI — tabbed sidebar revamp, real-time activity feed, file upload, task pipeline (v1.3)
-**Researched:** 2026-03-24
-**Confidence:** HIGH (primary patterns derived from direct codebase inspection + verified against React ecosystem best practices)
+**Domain:** Deliverable/Artifact system added to existing AI team chat app (Hatchin v2.0)
+**Researched:** 2026-03-25
+**Confidence:** HIGH — based on direct codebase analysis, no external speculation
 
-> **Note:** This file supersedes the v1.1 backend architecture research. v1.3 is primarily a frontend milestone. The backend architecture from v1.1 remains valid and is documented in CLAUDE.md sections on the autonomy subsystem.
-
----
-
-## Standard Architecture
-
-### System Overview
-
-```
-┌────────────────────────────────────────────────────────────────────────────────┐
-│                            home.tsx (Layout Root)                               │
-│  ┌──────────────┐   ┌──────────────────────────────┐   ┌─────────────────────┐ │
-│  │  LeftSidebar │   │        CenterPanel            │   │    RightSidebar     │ │
-│  │              │   │  ┌────────────────────────┐   │   │  ┌───────────────┐  │ │
-│  │  ProjectTree │   │  │  WebSocket (SINGLE     │   │   │  │ SidebarShell  │  │ │
-│  │  AgentList   │   │  │  connection owner)     │   │   │  │  (tab bar +   │  │ │
-│  │  [working    │   │  │  handleIncomingMessage │   │   │  │   mount/unmnt)│  │ │
-│  │   avatar     │   │  │  → dispatch Custom-    │   │   │  ├───────────────┤  │ │
-│  │   state]     │   │  │    Event to window     │   │   │  │  ActivityTab  │  │ │
-│  └──────────────┘   │  └────────────────────────┘   │   │  │  BrainDocsTab │  │ │
-│                     │  ┌────────────────────────┐   │   │  │  ApprovalsTab │  │ │
-│                     │  │  Message list           │   │   │  └───────────────┘  │ │
-│                     │  │  HandoffCard (inline)   │   │   │                     │ │
-│                     │  │  ApprovalCard (inline)  │   │   │  [window event      │ │
-│                     │  └────────────────────────┘   │   │   subscribers]      │ │
-│                     └──────────────────────────────────  └─────────────────────┘ │
-├────────────────────────────────────────────────────────────────────────────────┤
-│                       CustomEvent Bridge (window object)                        │
-│  ai_streaming_active     autonomy_handoff_announced   autonomy_task_executing   │
-│  project_brain_updated   autonomy_task_completed      autonomy_peer_review_*    │
-│  tasks_updated           autonomy_approval_required   agent_working_state       │
-│  task_created_from_chat  brain_updated_from_chat                                │
-├────────────────────────────────────────────────────────────────────────────────┤
-│                        TanStack Query (REST — on demand)                        │
-│  /api/autonomy/events?projectId=   /api/autonomy/pending-approvals             │
-│  /api/projects/:id (brain + docs)  /api/tasks?projectId=                       │
-├────────────────────────────────────────────────────────────────────────────────┤
-│                        Backend (read-only from frontend perspective)            │
-│  autonomy_events table   projects.brain JSONB   tasks table                    │
-│  deliberation_traces     agents.personality.trustMeta                          │
-└────────────────────────────────────────────────────────────────────────────────┘
-```
-
-### Component Responsibilities
-
-| Component | Responsibility | Communicates With |
-|-----------|----------------|-------------------|
-| `CenterPanel.tsx` | Single WebSocket owner, streaming, message rendering, CustomEvent dispatch for all autonomy WS events | All sidebar components via window events; home.tsx via props |
-| `RightSidebar.tsx` (shell) | Tab bar render, active tab state persisted in localStorage, mount/unmount tab panels on demand | Child tab panels via props; useRightSidebarState hook |
-| `SidebarTabBar.tsx` | Tab button strip (Activity / Brain & Docs / Approvals), badge counts | RightSidebar via props |
-| `ActivityTab.tsx` | Feed container: composes FeedItem list, StatsCard, Filters, EmptyState | useAutonomyFeed hook |
-| `ActivityFeedItem.tsx` | Single event row: icon, agent name, human-readable label, relative time | Pure display, no external deps |
-| `AutonomyStatsCard.tsx` | Aggregate counts: completions, handoffs, total cost | Computed from useAutonomyFeed.events |
-| `FeedFilters.tsx` | Filter chip row: event type, agent, time range | Controlled by ActivityTab state |
-| `HandoffChainTimeline.tsx` | Visual node-chain for a multi-hop handoff trace | autonomy_events data grouped by traceId |
-| `DeliberationCard.tsx` | Expandable peer review / deliberation summary | Single autonomy_event with type=peer_review_* |
-| `EmptyFeedState.tsx` | Compelling empty state (no events yet) | Pure display |
-| `ApprovalsTab.tsx` | Pending approvals list, badge count | TanStack Query /api/autonomy/pending-approvals |
-| `ApprovalItem.tsx` | Single pending approval: description, risk reasons, Approve/Reject buttons | POST /api/action-proposals/:id/approve|reject |
-| `TaskPipelineView.tsx` | Horizontal scroll lane view of tasks by status | TanStack Query /api/tasks |
-| `BrainDocsTab.tsx` | Brain fields editor + documents list | TanStack Query, /api/projects/:id/documents |
-| `DocumentUpload.tsx` | File input, upload progress, extracted text preview | POST /api/projects/:id/documents (multer) |
-| `DocumentViewer.tsx` | Expandable document entry with extracted text | Pure display |
-| `AutonomySettings.tsx` | Inactivity toggle, cost cap, autonomy level sliders | PATCH /api/projects/:id |
-| `WorkOutputViewer.tsx` | Browse deliverables from background agent execution | TanStack Query /api/autonomy/events (filtered) |
-| `HandoffCard.tsx` | Styled card for handoff announcement rendered inside chat | MessageBubble (receives via message.metadata.isHandoff) |
-| `HandoffButton.tsx` | "Hand off to..." button near message input | CenterPanel, sends WS message |
-| `useAutonomyFeed.ts` | Combines REST initial load + WS event appends, filter state, computed stats | TanStack Query + window CustomEvents |
-| `useAgentWorkingState.ts` | Tracks Set of agentIds currently executing background tasks | window CustomEvents from CenterPanel |
-| `AgentAvatar.tsx` (modified) | Add `isWorking` prop: pulsing ring animation around avatar | Receives agentWorkingIds from LeftSidebar / ProjectTree |
+> **Note:** This file supersedes the v1.3 frontend architecture research. v2.0 adds a deliverable production layer on top of the existing autonomy pipeline. The v1.3 sidebar architecture (SidebarTabBar, ActivityTab, etc.) remains valid and is assumed shipped.
 
 ---
 
-## Recommended Project Structure
+## System Overview
+
+### Where the New System Sits in the Existing Architecture
 
 ```
+FRONTEND (React 18)
+┌──────────────────┬───────────────────────────┬───────────────────────────────┐
+│   LeftSidebar    │       CenterPanel          │       RightSidebar            │
+│                  │                            │  (tabs: Activity/Brain/       │
+│  NEW: Package    │  MODIFIED:                 │   Approvals — from v1.3)      │
+│  list under      │  - Render DeliverableCard  │                               │
+│  project tree    │    for deliverable_created │  NEW: ArtifactPanel overlay   │
+│                  │    WS event                │  - Slides over sidebar        │
+│                  │  - activeDeliverableId     │  - Claude desktop pattern     │
+│                  │    in WS message metadata  │  - Version history drawer     │
+│                  │    when panel open         │  - Iterate via chat input     │
+└──────────────────┴───────────────────────────┴───────────────────────────────┘
+                           │ CustomEvent bridge (existing pattern)
+                           │
+BACKEND (Express + Drizzle ORM)
+┌──────────────────┬───────────────────────────┬───────────────────────────────┐
+│ server/routes/   │   server/ai/              │  server/autonomy/             │
+│                  │                            │                               │
+│ NEW:             │  MODIFIED: chat.ts         │  MODIFIED: handoff            │
+│ deliverables.ts  │  - detect [[DELIVERABLE:]] │  orchestrator to carry        │
+│ packages.ts      │    block post-stream       │  deliverableContext in        │
+│                  │  - call deliverable-       │  structuredHandoff            │
+│                  │    Generator after         │                               │
+│                  │    streaming completes     │  NEW: deliverable             │
+│                  │                            │  ChainOrchestrator.ts         │
+│                  │  NEW:                      │  (seeds task graph from       │
+│                  │  deliverableGenerator.ts   │   deliverable type registry)  │
+└──────────────────┴───────────────────────────┴───────────────────────────────┘
+                           │
+SHARED
+┌──────────────────┬───────────────────────────┬───────────────────────────────┐
+│  shared/         │  shared/roleRegistry.ts   │  shared/dto/wsSchemas.ts      │
+│  schema.ts       │  MODIFIED: +deliverable   │  MODIFIED: +4 deliverable     │
+│  MODIFIED:       │  Types: string[]          │  WS event types               │
+│  +deliverables   │                            │                               │
+│  +packages       │  shared/roleIntelligence  │  shared/                      │
+│  +deliverable_   │  MODIFIED: +deliverable   │  deliverableTypeRegistry.ts   │
+│   versions       │  Prompt: string           │  NEW: role → types map +      │
+│                  │                            │  chain dependency graph       │
+└──────────────────┴───────────────────────────┴───────────────────────────────┘
+                           │
+DATABASE (Neon PostgreSQL via Drizzle)
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  NEW: deliverables table    NEW: packages table                              │
+│  NEW: deliverable_versions table (immutable iteration history)               │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Component Responsibilities
+
+### New Components
+
+| Component | Responsibility | Lives In |
+|-----------|----------------|----------|
+| `deliverables` DB table | Persistent artifact storage with current content | `shared/schema.ts` |
+| `packages` DB table | Named groups of linked deliverables | `shared/schema.ts` |
+| `deliverable_versions` DB table | Immutable version snapshots, iteration history | `shared/schema.ts` |
+| `server/routes/deliverables.ts` | CRUD + versioning endpoints, export trigger | `server/routes/` |
+| `server/routes/packages.ts` | Package CRUD, progress aggregation | `server/routes/` |
+| `server/ai/deliverableGenerator.ts` | Role-aware LLM prompt for document production and iteration | `server/ai/` |
+| `server/autonomy/deliverableChainOrchestrator.ts` | Seeds task graph from deliverable type chain; delegates execution to existing handoff orchestrator | `server/autonomy/` |
+| `shared/deliverableTypeRegistry.ts` | Role → deliverable types map; chain dependency graph (which types unlock which) | `shared/` |
+| `client/src/components/ArtifactPanel.tsx` | Full deliverable viewer/editor overlay, version history, export button | `client/src/components/` |
+| `client/src/components/DeliverableCard.tsx` | Chat bubble variant that announces a deliverable with title + open button | `client/src/components/` |
+| `client/src/components/PackageView.tsx` | Package progress overview with linked deliverable list | `client/src/components/` |
+| `client/src/hooks/useDeliverable.ts` | TanStack Query for loading deliverable + version list | `client/src/hooks/` |
+| `client/src/hooks/useArtifactPanel.ts` | Panel open/close state + active deliverable ID tracking | `client/src/hooks/` |
+
+### Modified Existing Components
+
+| Component | What Changes | Why |
+|-----------|--------------|-----|
+| `shared/schema.ts` | Add 3 tables, insert schemas, type exports | Deliverable persistence |
+| `shared/roleRegistry.ts` | Add optional `deliverableTypes?: string[]` to `RoleDefinition` | Role → deliverable type mapping used by UI |
+| `shared/roleIntelligence.ts` | Add optional `deliverablePrompt?: string` to `RoleIntelligence` | Role-specific LLM prompt for document generation |
+| `shared/dto/wsSchemas.ts` | Add 4 WS event types: `deliverable_created`, `deliverable_updated`, `package_progress`, `deliverable_chain_started` | Real-time artifact events |
+| `server/storage.ts` | Add 8 `IStorage` interface methods + implementations in both `MemStorage` and `DatabaseStorage` | Storage abstraction requirement |
+| `server/routes.ts` | Register `registerDeliverableRoutes()` and `registerPackageRoutes()` | Route wiring |
+| `server/routes/chat.ts` | Add `handleDeliverableEmission()` called post-stream; detect `metadata.activeDeliverableId` for iteration path | Deliverable creation + iteration hooks |
+| `server/ai/actionParser.ts` | Add `parseDeliverableBlock()` for `[[DELIVERABLE: type: title]]` blocks | Reuse existing parse infrastructure |
+| `server/autonomy/handoff/handoffOrchestrator.ts` | Add `deliverableContext` field to `structuredHandoff` when upstream task produced a deliverable | Chain document passing |
+| `server/autonomy/config/policies.ts` | Add `MAX_DELIVERABLE_CHAIN_DEPTH` constant | Chain depth guard |
+| `client/src/components/CenterPanel.tsx` | Handle `deliverable_created` WS event; dispatch `open_artifact_panel` CustomEvent; tag outgoing messages with `activeDeliverableId` when panel is open | UI wiring |
+| `client/src/components/RightSidebar.tsx` | Listen for `open_artifact_panel` CustomEvent; render `ArtifactPanel` as overlay | Panel container |
+| `client/src/components/MessageBubble.tsx` | Handle `messageType: 'deliverable'` to render `DeliverableCard` | New message type |
+| `client/src/hooks/useRealTimeUpdates.ts` | Add 4 new WS event cases dispatching CustomEvents for deliverable events | Event pipeline |
+
+---
+
+## Recommended Project Structure (New Files Only)
+
+```
+shared/
+├── schema.ts                          # MODIFIED: +deliverables, packages, deliverable_versions
+├── roleRegistry.ts                    # MODIFIED: +deliverableTypes?: string[] per role
+├── roleIntelligence.ts                # MODIFIED: +deliverablePrompt?: string per role
+├── deliverableTypeRegistry.ts         # NEW: types, chain graph, owner roles
+└── dto/
+    └── wsSchemas.ts                   # MODIFIED: +4 deliverable WS event types
+
+server/
+├── routes/
+│   ├── deliverables.ts                # NEW: CRUD + versioning endpoints
+│   └── packages.ts                    # NEW: package CRUD + progress
+├── ai/
+│   ├── actionParser.ts                # MODIFIED: +parseDeliverableBlock()
+│   └── deliverableGenerator.ts        # NEW: role-aware deliverable production + iteration
+└── autonomy/
+    └── deliverableChainOrchestrator.ts # NEW: seeds task graph from chain registry
+
 client/src/
 ├── components/
-│   ├── sidebar/                      # New — all RightSidebar tab content
-│   │   ├── SidebarTabBar.tsx          # Tab button strip
-│   │   ├── ActivityTab.tsx            # Tab container
-│   │   ├── ActivityFeedItem.tsx       # Single event row
-│   │   ├── AutonomyStatsCard.tsx      # Completion/handoff/cost summary
-│   │   ├── FeedFilters.tsx            # Filter chips
-│   │   ├── HandoffChainTimeline.tsx   # Multi-hop node chain
-│   │   ├── DeliberationCard.tsx       # Peer review trace card
-│   │   ├── EmptyFeedState.tsx         # Empty state visual
-│   │   ├── ApprovalsTab.tsx           # Tab container
-│   │   ├── ApprovalItem.tsx           # Single approval action
-│   │   ├── TaskPipelineView.tsx       # Horizontal status lanes
-│   │   ├── TaskPipelineCard.tsx       # Single task card in pipeline
-│   │   ├── BrainDocsTab.tsx           # Tab container (replaces brain section)
-│   │   ├── DocumentUpload.tsx         # File input + progress + preview
-│   │   ├── DocumentViewer.tsx         # Expandable doc entry
-│   │   ├── AutonomySettings.tsx       # Inactivity toggle, cost cap, level
-│   │   └── WorkOutputViewer.tsx       # Deliverable browser
-│   ├── chat/                          # New — chat-embedded autonomy visuals
-│   │   ├── HandoffCard.tsx            # Handoff announcement styled card
-│   │   └── HandoffButton.tsx          # "Hand off to..." button in input area
-│   ├── avatars/
-│   │   └── BaseAvatar.tsx             # Modified: add AvatarState.working + pulse
-│   ├── RightSidebar.tsx               # Decomposed to thin shell + SidebarTabBar
-│   ├── CenterPanel.tsx                # Modified: dispatch autonomy CustomEvents
-│   └── MessageBubble.tsx              # Modified: render HandoffCard for handoff msgs
-│
-├── hooks/
-│   ├── useAutonomyFeed.ts             # New: REST bootstrap + WS-append feed state
-│   ├── useAgentWorkingState.ts        # New: track executing agent IDs
-│   └── useRightSidebarState.ts        # Modified: add activeTab to state
-│
-└── lib/
-    └── autonomyEventLabels.ts         # New: event type → human label + icon map
+│   ├── ArtifactPanel.tsx              # NEW: deliverable viewer overlay
+│   ├── DeliverableCard.tsx            # NEW: chat bubble for deliverable announcement
+│   ├── PackageView.tsx                # NEW: package overview + linked deliverables
+│   ├── CenterPanel.tsx                # MODIFIED: deliverable WS event + panel dispatch
+│   ├── RightSidebar.tsx               # MODIFIED: mount ArtifactPanel overlay
+│   └── MessageBubble.tsx              # MODIFIED: deliverable messageType
+└── hooks/
+    ├── useDeliverable.ts              # NEW: TanStack Query hook
+    └── useArtifactPanel.ts            # NEW: panel state management
 ```
 
-### Structure Rationale
+---
 
-- **`components/sidebar/`:** All tab panel content lives here. When RightSidebar is a thin shell, each panel is self-contained and independently testable. Prevents the monolith from reassembling.
-- **`components/chat/`:** HandoffCard and HandoffButton render inside CenterPanel, not the sidebar. Separating by render context (chat vs sidebar) clarifies ownership.
-- **`hooks/useAutonomyFeed.ts`:** All feed logic (REST fetch, WS append, filter state, computed stats) lives in one hook. ActivityTab, AutonomyStatsCard, and ApprovalsTab badge all share the same hook instance without prop drilling.
-- **`lib/autonomyEventLabels.ts`:** Centralizes event type → human string + icon mapping used by both ActivityFeedItem and AutonomyStatsCard. Avoids duplicating a 50-entry switch statement.
+## Data Model
+
+### New Tables — Add to `shared/schema.ts`
+
+```typescript
+// Deliverable: a single artifact produced by an agent
+export const deliverables = pgTable("deliverables", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").references(() => projects.id).notNull(),
+  packageId: varchar("package_id"),              // nullable — references packages.id once packages table exists
+  agentId: varchar("agent_id").references(() => agents.id).notNull(),
+  messageId: varchar("message_id"),              // nullable — announcement message in chat
+  title: text("title").notNull(),
+  deliverableType: text("deliverable_type").notNull(),  // "prd", "tech-spec", "design-brief", etc.
+  content: text("content").notNull(),            // current version content (Markdown)
+  version: integer("version").notNull().default(1),
+  status: text("status").notNull()
+    .$type<"draft" | "in_review" | "approved" | "exported">()
+    .default("draft"),
+  upstreamDeliverableId: varchar("upstream_deliverable_id"),  // nullable self-reference for chain
+  handoffChain: jsonb("handoff_chain").$type<string[]>().default([]),  // agentIds in order
+  metadata: jsonb("metadata").$type<{
+    wordCount?: number;
+    exportedAt?: string;
+    pdfUrl?: string;
+    taskId?: string;
+    conversationId?: string;
+  }>().default({}),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  projectIdIdx: index("deliverables_project_id_idx").on(table.projectId),
+  agentIdIdx: index("deliverables_agent_id_idx").on(table.agentId),
+}));
+
+// Package: named group of linked deliverables
+export const packages = pgTable("packages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").references(() => projects.id).notNull(),
+  name: text("name").notNull(),               // "Launch Package", "Content Sprint"
+  description: text("description"),
+  status: text("status").notNull()
+    .$type<"planning" | "in_progress" | "complete">()
+    .default("planning"),
+  deliverableCount: integer("deliverable_count").notNull().default(0),
+  completedCount: integer("completed_count").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  projectIdIdx: index("packages_project_id_idx").on(table.projectId),
+}));
+
+// Version snapshots: immutable history
+export const deliverableVersions = pgTable("deliverable_versions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  deliverableId: varchar("deliverable_id").references(() => deliverables.id).notNull(),
+  version: integer("version").notNull(),
+  content: text("content").notNull(),
+  changeDescription: text("change_description"),
+  triggeredBy: text("triggered_by").notNull()
+    .$type<"user" | "agent" | "iteration">(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  deliverableIdIdx: index("deliverable_versions_deliverable_id_idx").on(table.deliverableId),
+}));
+```
+
+**Design rationale:**
+- `content` stays on `deliverables` row (current version) — fast reads without joining versions table
+- `deliverable_versions` is append-only — never update, only insert on each iteration
+- `upstreamDeliverableId` is nullable self-reference — encodes chain graph without a separate join table
+- `packageId` is nullable — deliverables can exist standalone before grouping
+- `text` for content (not JSONB) — searchable, works with future `tsvector` full-text search, simpler to render in frontend
 
 ---
 
 ## Architectural Patterns
 
-### Pattern 1: Wrap-Then-Decompose for RightSidebar
+### Pattern 1: Deliverable Intent Detection via Action Block Extension
 
-**What:** Add the tab shell to `RightSidebar.tsx` first — wrapping all existing content inside a "Brain & Docs" tab — then extract inner content panels into separate files in subsequent commits. Never refactor structure and add features in the same commit.
+The chat pipeline in `server/routes/chat.ts` already parses `[[ACTION: ...]]` blocks from agent responses via `server/ai/actionParser.ts`. Deliverable detection reuses this exact infrastructure.
 
-**When to use:** Any time you restructure a large component that must remain functional throughout. The existing 850-line RightSidebar must not break existing brain editing, task notifications, or streaming indicators during the refactor.
+**When to use:** Agent responds to a deliverable-type request (write a PRD, draft a tech spec, etc.)
 
-**Trade-offs:** Creates a brief period where the inner component is still monolithic inside its tab wrapper, but all tests and UI remain green throughout. Acceptable trade-off.
+**How it works:**
+1. System prompt for deliverable-capable roles includes: "If you are producing a deliverable document, begin your response with `[[DELIVERABLE: type: title]]`."
+2. `actionParser.ts` gets a new `parseDeliverableBlock()` function (parallel to existing `parseAction()`).
+3. Post-stream handler in `chat.ts` calls `parseDeliverableBlock()` on the completed response.
+4. If found: strip the block from persisted message content, call `deliverableGenerator.createFromResponse()`, broadcast `deliverable_created` WS event.
 
-**Example:**
+**Trade-offs:** Post-stream detection means the deliverable is created after the chat response — small latency. The alternative (dedicated endpoint) requires the user to explicitly request a deliverable, which breaks the "just talk" philosophy.
+
 ```typescript
-// Phase 1: RightSidebar becomes a shell. Existing content wraps into brain tab.
-export function RightSidebar({ activeProject, activeTeam, activeAgent }: RightSidebarProps) {
-  const [activeTab, setActiveTab] = usePersistedTab(activeProject?.id ?? 'none', 'activity');
-  const { pendingApprovalCount } = useAutonomyFeed(activeProject?.id);
+// Extension to server/ai/actionParser.ts
+export interface ParsedDeliverable {
+  type: string;   // "prd", "tech-spec", "design-brief", etc.
+  title: string;
+}
 
-  return (
-    <div className="flex flex-col h-full">
-      <SidebarTabBar
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-        pendingApprovals={pendingApprovalCount}
-      />
-      {activeTab === 'activity' && (
-        <ActivityTab projectId={activeProject?.id} />
-      )}
-      {activeTab === 'brain' && (
-        // Existing brain content mounts here — unchanged in Phase 11
-        <ExistingBrainContent activeProject={activeProject} ... />
-      )}
-      {activeTab === 'approvals' && (
-        <ApprovalsTab projectId={activeProject?.id} />
-      )}
-    </div>
-  );
+export function parseDeliverableBlock(content: string): ParsedDeliverable | null {
+  const match = content.match(/\[\[DELIVERABLE:\s*([^:]+?):\s*(.+?)\]\]/i);
+  if (!match) return null;
+  return { type: match[1].trim().toLowerCase(), title: match[2].trim() };
 }
 ```
 
-### Pattern 2: CenterPanel as WS Publisher, Sidebar as Window-Event Subscriber
+### Pattern 2: ArtifactPanel as CustomEvent-Driven Overlay
 
-**What:** CenterPanel owns the single WebSocket connection and remains the only WS subscriber. When CenterPanel receives an autonomy-relevant WS event, it dispatches a typed CustomEvent on `window`. Sidebar components subscribe in `useEffect` via `addEventListener`. This pattern is already established in the codebase — extending it rather than replacing it.
+The ArtifactPanel follows the exact same cross-component communication pattern already established in v1.3 for AI streaming state, tasks, and autonomy events. It uses `window.dispatchEvent` / `window.addEventListener`.
 
-**When to use:** Anytime a downstream component needs to react to WebSocket events but must not own the WS connection. The single WS connection handles auth, conversation scoping, and reconnect — duplicating these elsewhere is a maintenance liability.
+**When to use:** When user clicks DeliverableCard in chat, or when `deliverable_created` WS event fires for the active project.
 
-**Existing dispatched events (already in CenterPanel):**
-- `ai_streaming_active` — brain save lock in RightSidebar
-- `project_brain_updated` — auto-sync in useRightSidebarState
-- `task_created_from_chat` — task badge in RightSidebar
-- `tasks_updated` — task badge in RightSidebar
+**How it works:**
+- CenterPanel dispatches `open_artifact_panel` CustomEvent with `deliverableId`
+- RightSidebar listens, sets `activeDeliverableId` state, renders `ArtifactPanel` as an absolute-positioned overlay
+- ArtifactPanel listens for `deliverable_updated` WS events (re-dispatched from CenterPanel) and re-fetches via `useDeliverable`
+- Closing dispatches `close_artifact_panel` CustomEvent
 
-**New events to add for v1.3:**
+**Trade-offs:** Overlay keeps RightSidebar tab state intact (CSS-hide, preserves scroll/draft — same decision as v1.3). Creating a new route (`/deliverables/:id`) breaks conversation context — user needs both chat and document visible.
 
-| CustomEvent Name | WS Trigger | Detail Payload |
-|----------------|-----------|----------------|
-| `autonomy_handoff_announced` | `handoff_announced` | `{ projectId, fromAgentId, fromAgentName, toAgentName, taskTitle, traceId }` |
-| `autonomy_task_executing` | `task_execution_started` | `{ projectId, agentId, agentName, taskTitle, taskId }` |
-| `autonomy_task_completed` | `task_execution_completed` | `{ projectId, agentId, taskTitle, taskId, output }` |
-| `autonomy_peer_review_started` | `peer_review_started` | `{ projectId, reviewerName, subjectName }` |
-| `autonomy_peer_review_completed` | `peer_review_completed` | `{ projectId, reviewerName, passed, summary }` |
-| `autonomy_approval_required` | `approval_required` (already fires inline) | same shape, forwarded to ApprovalsTab too |
-| `agent_working_state` | `task_execution_started` + `task_execution_completed` | `{ projectId, agentId, working: boolean }` |
-
-**Trade-offs:** CustomEvents are not type-safe by default. Mitigation: create typed dispatch/subscribe helpers in `client/src/lib/autonomyEvents.ts`.
-
-**Example — type-safe helpers:**
 ```typescript
-// client/src/lib/autonomyEvents.ts
-interface AutonomyEventMap {
-  autonomy_handoff_announced: { projectId: string; fromAgentName: string; toAgentName: string; taskTitle: string; traceId: string };
-  agent_working_state: { projectId: string; agentId: string; working: boolean };
-  // ... all other events
-}
+// CenterPanel — when deliverable card clicked or deliverable_created fires:
+window.dispatchEvent(new CustomEvent('open_artifact_panel', {
+  detail: { deliverableId: string, autoOpen: boolean }
+}));
 
-export function dispatchAutonomyEvent<K extends keyof AutonomyEventMap>(
-  name: K, detail: AutonomyEventMap[K]
-): void {
-  window.dispatchEvent(new CustomEvent(name, { detail }));
-}
-
-export function onAutonomyEvent<K extends keyof AutonomyEventMap>(
-  name: K,
-  handler: (detail: AutonomyEventMap[K]) => void
-): () => void {
-  const listener = (e: Event) => handler((e as CustomEvent<AutonomyEventMap[K]>).detail);
-  window.addEventListener(name, listener);
-  return () => window.removeEventListener(name, listener);
-}
-```
-
-**Critical scope guard:** Always filter by `projectId` in every subscriber. The WS connection is global; sidebar shows only active project events.
-
-### Pattern 3: useAutonomyFeed — REST Bootstrap + WS Append (No Polling)
-
-**What:** On mount (or projectId change), fetch the last 50 events from `GET /api/autonomy/events?projectId=X&limit=50` via TanStack Query. Store as initial feed. Subsequent live events arrive via CustomEvent and are prepended to local state without re-fetching. Never use `refetchInterval` for live updates.
-
-**When to use:** Any real-time feed needing historical context on load that must stay current after. REST for history, WS-derived events for live — no polling.
-
-**Trade-offs:** Feed state diverges from server state after tab switch or background updates that bypass the WS (e.g., server restart). Acceptable for v1.3: manually invalidate the TanStack Query cache when ActivityTab becomes visible (use `useEffect` on `activeTab === 'activity'`).
-
-**Example:**
-```typescript
-export function useAutonomyFeed(projectId: string | undefined) {
-  const [liveEvents, setLiveEvents] = useState<FeedEvent[]>([]);
-  const [filters, setFilters] = useState<FeedFilters>({ eventType: 'all', agentId: null });
-
-  // REST: initial load
-  const { data: initialData, isLoading } = useQuery({
-    queryKey: ['/api/autonomy/events', projectId],
-    queryFn: () => apiRequest(`/api/autonomy/events?projectId=${projectId}&limit=50`),
-    enabled: !!projectId,
-    staleTime: 30_000,
-    refetchOnWindowFocus: false, // avoid refetch clobbering live events
-  });
-
-  // Reset live events when project changes
-  useEffect(() => { setLiveEvents([]); }, [projectId]);
-
-  // WS: append new events via CustomEvents
-  const appendFeedEvent = useCallback((event: FeedEvent) => {
-    setLiveEvents(prev => [event, ...prev].slice(0, 200)); // cap at 200 live events
-  }, []);
-
-  useEffect(() => {
-    if (!projectId) return;
-    const cleanup = [
-      onAutonomyEvent('autonomy_handoff_announced', d => d.projectId === projectId && appendFeedEvent(toFeedEvent('handoff', d))),
-      onAutonomyEvent('autonomy_task_executing', d => d.projectId === projectId && appendFeedEvent(toFeedEvent('executing', d))),
-      onAutonomyEvent('autonomy_task_completed', d => d.projectId === projectId && appendFeedEvent(toFeedEvent('completed', d))),
-      onAutonomyEvent('autonomy_peer_review_started', d => d.projectId === projectId && appendFeedEvent(toFeedEvent('peer_review_started', d))),
-      onAutonomyEvent('autonomy_peer_review_completed', d => d.projectId === projectId && appendFeedEvent(toFeedEvent('peer_review_completed', d))),
-      onAutonomyEvent('autonomy_approval_required', d => d.projectId === projectId && appendFeedEvent(toFeedEvent('approval_required', d))),
-    ];
-    return () => cleanup.forEach(fn => fn());
-  }, [projectId, appendFeedEvent]);
-
-  // Merge: live first, historical deduped
-  const allEvents = useMemo(() => {
-    const historical = initialData?.events ?? [];
-    const liveIds = new Set(liveEvents.map(e => e.id));
-    const merged = [...liveEvents, ...historical.filter(e => !liveIds.has(e.id))];
-    return applyFilters(merged, filters);
-  }, [liveEvents, initialData, filters]);
-
-  const pendingApprovalCount = useMemo(
-    () => allEvents.filter(e => e.type === 'approval_required' && !e.resolved).length,
-    [allEvents]
-  );
-
-  return { events: allEvents, isLoading, filters, setFilters, pendingApprovalCount };
-}
-```
-
-### Pattern 4: Constrained-Width Pipeline View (No Library)
-
-**What:** For task pipeline inside the sidebar (~280px wide), use a horizontally scrollable flex container with compact columns per status. Full kanban libraries assume 600px+ and provide drag-and-drop that is not needed in v1.3. A right-edge gradient fade hints at scrollable content.
-
-**When to use:** Showing pipeline state in a sidebar where the primary value is visibility, not interaction. Add drag-and-drop only if the pipeline moves to a full-page view in a future milestone.
-
-**Trade-offs:** Horizontal scroll is somewhat hidden from users unfamiliar with the pattern. Mitigate with the gradient fade and an optional "scroll to done →" pill button.
-
-**Example:**
-```typescript
-const PIPELINE_STAGES = ['queued', 'assigned', 'in-progress', 'review', 'done'] as const;
-
-export function TaskPipelineView({ tasks }: { tasks: Task[] }) {
-  const byStage = useMemo(() => groupTasksByStatus(tasks), [tasks]);
-  const scrollRef = useRef<HTMLDivElement>(null);
-
-  return (
-    <div className="relative">
-      {/* Fade hint for scrollable overflow */}
-      <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-background to-transparent pointer-events-none z-10" />
-      <div ref={scrollRef} className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-border">
-        {PIPELINE_STAGES.map(stage => (
-          <div key={stage} className="flex-shrink-0 w-36">
-            <p className="text-xs font-medium text-muted-foreground mb-1.5 capitalize">{stage}</p>
-            <div className="flex flex-col gap-1">
-              {(byStage[stage] ?? []).map(task => (
-                <TaskPipelineCard key={task.id} task={task} />
-              ))}
-              {!(byStage[stage]?.length) && (
-                <div className="h-10 border border-dashed border-border rounded-md flex items-center justify-center">
-                  <span className="text-xs text-muted-foreground/50">—</span>
-                </div>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-```
-
-### Pattern 5: File Upload — multer memoryStorage + pdf-parse + JSONB Append
-
-**What:** Use `multer({ storage: multer.memoryStorage() })` (no disk writes). After upload, run `pdf-parse` on `req.file.buffer`. Append a new document entry (extracted text only, no raw bytes) to `projects.brain.documents` JSONB array via PATCH. No S3 or external storage at MVP scale.
-
-**When to use:** Documents are modest in size (< 5MB), infrequent per project (< 20), and are uploaded to give Hatches context rather than for retrieval of the original file.
-
-**Trade-offs:** Extracted text stored in JSONB means no re-download of original. Acceptable: users upload to improve Hatch context, not archive files. The extracted text (capped at 10K chars) adds modest overhead to the `brain` column which is already read per prompt.
-
-**Backend implementation shape:**
-```typescript
-// server/routes/projects.ts
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
-
-app.post('/api/projects/:id/documents', requireAuth, upload.single('file'), async (req, res) => {
-  const project = await storage.getProject(req.params.id);
-  if (!project || (project as any).userId !== req.session.userId) return res.status(404).json({ error: 'Not found' });
-  if (!req.file) return res.status(400).json({ error: 'No file provided' });
-
-  let extractedText = '';
-  if (req.file.mimetype === 'application/pdf') {
-    const pdfData = await pdfParse(req.file.buffer);
-    extractedText = pdfData.text.slice(0, 10_000);
-  } else if (req.file.mimetype.startsWith('text/')) {
-    extractedText = req.file.buffer.toString('utf-8').slice(0, 10_000);
-  }
-
-  const newDoc = {
-    id: crypto.randomUUID(),
-    name: req.file.originalname,
-    uploadedAt: new Date().toISOString(),
-    mimeType: req.file.mimetype,
-    charCount: extractedText.length,
-    extractedText,
+// RightSidebar — listens:
+React.useEffect(() => {
+  const handler = (e: Event) => {
+    const { deliverableId } = (e as CustomEvent<{ deliverableId: string }>).detail;
+    setActiveDeliverableId(deliverableId);
+    setPanelOpen(true);
   };
+  window.addEventListener('open_artifact_panel', handler);
+  return () => window.removeEventListener('open_artifact_panel', handler);
+}, []);
+```
 
-  const currentBrain = (project.brain as any) ?? {};
-  await storage.updateProject(project.id, {
-    brain: { ...currentBrain, documents: [...(currentBrain.documents ?? []), newDoc] }
+### Pattern 3: Iteration via Chat Input Tag
+
+When ArtifactPanel is open, the user's chat input becomes the iteration interface — no separate "edit mode" UI needed. The frontend tags outgoing WS messages with `activeDeliverableId` from `useArtifactPanel`.
+
+**When to use:** User types "add a competitive analysis section" or "make this more concise" while viewing a PRD in the panel.
+
+**Backend handling in `chat.ts`:**
+```typescript
+// Near top of send_message_streaming handler:
+if (payload.metadata?.activeDeliverableId) {
+  await handleDeliverableIteration({
+    deliverableId: payload.metadata.activeDeliverableId,
+    instruction: payload.message.content,
+    agent, project, storage, broadcastToConversation, generateText
   });
+  return; // skip normal chat response path
+}
+```
 
-  res.status(201).json(newDoc);
+The `handleDeliverableIteration` helper:
+1. Loads `deliverables` row content
+2. Sends focused prompt to LLM: "Here is the current [PRD]. User instruction: [instruction]. Return the complete updated document."
+3. Creates version row in `deliverable_versions`
+4. Updates `deliverables.content` + `version`
+5. Broadcasts `deliverable_updated` WS event (CenterPanel re-dispatches as CustomEvent → ArtifactPanel re-fetches)
+
+**Trade-offs:** Skipping the normal chat response path means iteration messages don't get a normal agent reply. A brief acknowledgment message ("Got it, updating the PRD...") should be sent before the iteration begins to avoid a silent UI. This can be a simple `streaming_started` + `streaming_completed` with the acknowledgment text.
+
+### Pattern 4: Deliverable Chain as Extended Handoff
+
+The existing handoff orchestrator finds next tasks via `metadata.dependsOn`. Deliverable chains use the same task-dependency mechanism — `deliverableChainOrchestrator.ts` seeds the task graph, then the existing `handoffOrchestrator.ts` executes it.
+
+**`deliverableChainOrchestrator.ts` is a thin seeder:**
+1. Accept a "root deliverable type" (e.g., "prd") and projectId
+2. Look up `chainInputs` in `deliverableTypeRegistry` to find dependent types (tech-spec, design-brief, gtm-plan)
+3. Find the right agents for each dependent type via conductor
+4. Create tasks with `metadata.dependsOn` relationships
+5. Queue the first task via `queueTaskExecution()`
+6. Existing handoff orchestrator handles the rest
+
+**Key addition to `handoffOrchestrator.ts`:**
+```typescript
+// When queueing next task, check if upstream task produced a deliverable:
+const upstreamDeliverable = await input.storage.getDeliverableByTaskId(input.completedTask.id);
+if (upstreamDeliverable) {
+  structuredHandoff.deliverableContext = {
+    id: upstreamDeliverable.id,
+    title: upstreamDeliverable.title,
+    content: upstreamDeliverable.content.slice(0, 3000), // context window budget
+  };
+}
+```
+
+No new execution pipeline, no duplicate cycle detection, no separate budget system. The deliverable chain inherits `MAX_HANDOFF_HOPS` from `policies.ts`.
+
+---
+
+## Data Flow: LLM Response → Deliverable Storage → UI → Iteration
+
+```
+1. USER SENDS MESSAGE
+   CenterPanel → WebSocket send_message_streaming
+   (includes activeDeliverableId in metadata if panel open)
+        │
+        ├── activeDeliverableId present? → ITERATION PATH (see below)
+        │
+        ▼ (normal chat flow)
+2. AGENT RESPONDS (LLM streaming)
+   chat.ts → streaming_chunk WS events → CenterPanel renders
+        │
+        ▼
+3. STREAM COMPLETE
+   chat.ts: parseDeliverableBlock(completedContent)
+        │
+        ├── [[DELIVERABLE: prd: My App PRD]] found? → CREATION PATH
+        │        │
+        │        ▼
+        │   deliverableGenerator.createFromResponse()
+        │   - strips [[DELIVERABLE:...]] from persisted message content
+        │   - calls generateChatWithRuntimeFallback with role-specific prompt
+        │   - returns structured Markdown document
+        │        │
+        │        ▼
+        │   storage.createDeliverable(...)   → writes deliverables row
+        │   storage.createDeliverableVersion(...)  → writes version 1
+        │        │
+        │        ▼
+        │   broadcastToConversation('deliverable_created', { deliverableId, title, ... })
+        │        │
+        │        ▼
+        │   CenterPanel WS handler → 'deliverable_created' case
+        │   → Appends DeliverableCard to message list
+        │   → Dispatches open_artifact_panel CustomEvent
+        │        │
+        │        ▼
+        │   RightSidebar listener → sets activeDeliverableId
+        │   ArtifactPanel mounts → useDeliverable fetches GET /api/deliverables/:id
+        │   → Panel opens with new deliverable
+        │
+        └── no deliverable block? → normal message save, no artifact side effects
+        │
+
+ITERATION PATH:
+        │
+        ▼
+4. ITERATION HANDLER (handleDeliverableIteration in chat.ts)
+   - GET storage.getDeliverable(activeDeliverableId) → current content
+   - LLM call: focused iteration prompt with current doc + user instruction
+   - storage.createDeliverableVersion(N+1, newContent)
+   - storage.updateDeliverable({ content: newContent, version: N+1 })
+   - broadcastToConversation('deliverable_updated', { deliverableId, version: N+1 })
+   - send brief acknowledgment message to chat ("PRD updated.")
+        │
+        ▼
+5. ARTIFACT PANEL UPDATE
+   CenterPanel receives 'deliverable_updated' WS event
+   → Dispatches CustomEvent → ArtifactPanel re-fetches via useDeliverable
+   → Panel content updates in place, version counter increments
+```
+
+---
+
+## WebSocket Events (New — Add to `shared/dto/wsSchemas.ts`)
+
+```typescript
+// Server → Client
+{ type: 'deliverable_created';
+  deliverableId: string;
+  title: string;
+  deliverableType: string;
+  agentId: string;
+  agentName: string;
+  packageId: string | null;
+  projectId: string; }
+
+{ type: 'deliverable_updated';
+  deliverableId: string;
+  version: number;
+  changeDescription: string | null; }
+
+{ type: 'package_progress';
+  packageId: string;
+  name: string;
+  completedCount: number;
+  deliverableCount: number;
+  status: 'planning' | 'in_progress' | 'complete'; }
+
+{ type: 'deliverable_chain_started';
+  packageId: string;
+  agentSequence: Array<{ agentId: string; agentName: string; deliverableType: string }>; }
+```
+
+---
+
+## API Routes (New — Add to `server/routes/`)
+
+```
+# Deliverables
+GET    /api/projects/:projectId/deliverables         → Deliverable[]
+GET    /api/deliverables/:id                         → Deliverable
+GET    /api/deliverables/:id/versions                → DeliverableVersion[]
+POST   /api/deliverables                             → create (manual trigger, body: { projectId, agentId, title, deliverableType, content })
+PATCH  /api/deliverables/:id                         → { status?, title? }
+DELETE /api/deliverables/:id                         → 204
+
+# Packages
+GET    /api/projects/:projectId/packages             → Package[]
+GET    /api/packages/:id                             → Package with deliverables[]
+POST   /api/packages                                 → create (body: { projectId, name, description })
+PATCH  /api/packages/:id                             → { status?, name?, description? }
+DELETE /api/packages/:id                             → 204
+
+# Export
+POST   /api/deliverables/:id/export                 → { url: string } (PDF)
+POST   /api/packages/:id/export                     → { url: string } (PDF package / zip)
+```
+
+All routes require `req.session.userId`. Ownership check: load project via `storage.getProject(projectId)`, verify `project.userId === req.session.userId`.
+
+---
+
+## IStorage Extensions (Add to `server/storage.ts`)
+
+```typescript
+// Add to IStorage interface — both MemStorage and DatabaseStorage must implement:
+getDeliverablesByProject(projectId: string): Promise<Deliverable[]>;
+getDeliverable(id: string): Promise<Deliverable | undefined>;
+getDeliverableByTaskId(taskId: string): Promise<Deliverable | undefined>;  // for handoff lookup
+createDeliverable(data: InsertDeliverable): Promise<Deliverable>;
+updateDeliverable(id: string, updates: Partial<Deliverable>): Promise<Deliverable | undefined>;
+deleteDeliverable(id: string): Promise<boolean>;
+getDeliverableVersions(deliverableId: string): Promise<DeliverableVersion[]>;
+createDeliverableVersion(data: InsertDeliverableVersion): Promise<DeliverableVersion>;
+
+getPackagesByProject(projectId: string): Promise<Package[]>;
+getPackage(id: string): Promise<Package | undefined>;
+createPackage(data: InsertPackage): Promise<Package>;
+updatePackage(id: string, updates: Partial<Package>): Promise<Package | undefined>;
+deletePackage(id: string): Promise<boolean>;
+```
+
+`getDeliverableByTaskId` queries `deliverables WHERE metadata->>'taskId' = $1` — one JSONB field lookup, not a full scan.
+
+---
+
+## deliverableTypeRegistry (New Shared File)
+
+Centralizes the deliverable type definitions and chain dependency graph. Referenced by:
+- `deliverableGenerator.ts` — which LLM prompt to use
+- `deliverableChainOrchestrator.ts` — which types to produce next
+- Frontend `ArtifactPanel.tsx` — type badge display
+- Frontend "New deliverable" button — which types are available for which agents
+
+```typescript
+// shared/deliverableTypeRegistry.ts
+export interface DeliverableTypeDefinition {
+  id: string;           // "prd", "tech-spec", "design-brief", etc.
+  label: string;        // "Product Requirements Document"
+  shortLabel: string;   // "PRD"
+  ownerRole: string;    // primary role that produces this type
+  canAlsoProduceRoles?: string[];  // secondary roles
+  chainInputs?: string[];          // types this one requires as upstream context
+  description: string;
+}
+
+export const DELIVERABLE_TYPES: DeliverableTypeDefinition[] = [
+  { id: "prd",              label: "Product Requirements Document",  shortLabel: "PRD",       ownerRole: "Product Manager",      chainInputs: [] },
+  { id: "tech-spec",        label: "Technical Specification",        shortLabel: "Tech Spec", ownerRole: "Software Engineer",    chainInputs: ["prd"] },
+  { id: "design-brief",     label: "Design Brief",                   shortLabel: "Brief",     ownerRole: "Product Designer",     chainInputs: ["prd"] },
+  { id: "gtm-plan",         label: "Go-to-Market Plan",              shortLabel: "GTM",       ownerRole: "Growth Marketer",      chainInputs: ["prd"] },
+  { id: "test-plan",        label: "Test Plan",                      shortLabel: "Test Plan", ownerRole: "QA Lead",              chainInputs: ["tech-spec"] },
+  { id: "blog-post",        label: "Blog Post",                      shortLabel: "Blog",      ownerRole: "Content Writer",       chainInputs: [] },
+  { id: "content-calendar", label: "Content Calendar",               shortLabel: "Calendar",  ownerRole: "Social Media Manager", chainInputs: ["gtm-plan"] },
+  { id: "email-sequence",   label: "Email Drip Sequence",            shortLabel: "Emails",    ownerRole: "Email Specialist",     chainInputs: ["gtm-plan"] },
+  { id: "comp-analysis",    label: "Competitive Analysis",           shortLabel: "Comp",      ownerRole: "Business Analyst",     chainInputs: [] },
+  { id: "project-plan",     label: "Project Plan",                   shortLabel: "Plan",      ownerRole: "Operations Manager",   chainInputs: ["prd"] },
+];
+
+// Chain structure (what a root type unlocks):
+// prd → tech-spec, design-brief, gtm-plan, project-plan
+// tech-spec → test-plan
+// gtm-plan → content-calendar, email-sequence
+```
+
+---
+
+## Build Order (Phase Dependencies)
+
+Each phase has a hard compile dependency on the previous phase. Phases within a phase can be parallelized.
+
+### Phase 1: Data Layer
+**Why first:** Schema, types, and IStorage interface changes are the foundation everything imports.
+
+1. Add 3 tables to `shared/schema.ts` (deliverables, packages, deliverable_versions)
+2. Add insert schemas and type exports
+3. Add `IStorage` interface methods
+4. Implement in `MemStorage` (enables fast dev loop without DB)
+5. Implement in `DatabaseStorage`
+6. Run `npm run db:push`
+7. Create `shared/deliverableTypeRegistry.ts`
+
+**Gate:** `npm run typecheck` passes. No UI or routes yet.
+
+### Phase 2: Server Routes
+**Why second:** Routes can be verified via direct API calls before any UI. Early exposure of auth/validation bugs.
+
+1. Create `server/routes/deliverables.ts` (CRUD + versioning)
+2. Create `server/routes/packages.ts`
+3. Register both in `server/routes.ts`
+4. Add 4 WS event types to `shared/dto/wsSchemas.ts`
+
+**Gate:** `npm run typecheck` passes. Manual `curl` tests confirm CRUD works.
+
+### Phase 3: AI Deliverable Generator
+**Why third:** Self-contained module. Can integration-test without UI.
+
+1. Create `server/ai/deliverableGenerator.ts` (uses `generateChatWithRuntimeFallback`)
+2. Add `deliverablePrompt?: string` to `RoleIntelligence` interface
+3. Add `deliverableTypes?: string[]` to `RoleDefinition` interface
+4. Fill `deliverablePrompt` for 8 primary roles (PM, Engineer, Designer, Marketer, QA, Copywriter, Social, BA)
+5. Add `parseDeliverableBlock()` to `server/ai/actionParser.ts`
+6. Add `handleDeliverableEmission()` helper to `server/routes/chat.ts`; call it post-stream
+
+**Gate:** Chat with PM: "write a PRD for my app" → DB row created in `deliverables` → WS event fired (check server logs).
+
+### Phase 4: Artifact Panel UI
+**Why fourth:** UI built against working API. Enables rapid visual iteration.
+
+1. Create `client/src/hooks/useDeliverable.ts`
+2. Create `client/src/hooks/useArtifactPanel.ts`
+3. Create `client/src/components/DeliverableCard.tsx`
+4. Create `client/src/components/ArtifactPanel.tsx` (view + version history sidebar)
+5. Modify `client/src/components/MessageBubble.tsx` — handle `messageType: 'deliverable'`
+6. Modify `client/src/hooks/useRealTimeUpdates.ts` — add `deliverable_created`, `deliverable_updated` cases
+7. Modify `client/src/components/CenterPanel.tsx` — dispatch `open_artifact_panel` CustomEvent
+8. Modify `client/src/components/RightSidebar.tsx` — overlay ArtifactPanel
+
+**Gate:** Create deliverable via API → DeliverableCard appears in chat → click opens ArtifactPanel.
+
+### Phase 5: Iteration Protocol
+**Why fifth:** Depends on Phase 4 (panel open state) and Phase 3 (generator working).
+
+1. `useArtifactPanel.ts` exposes `activeDeliverableId` (already built in Phase 4)
+2. CenterPanel includes `activeDeliverableId` in WS message metadata when non-null
+3. `chat.ts` handler: detect `metadata.activeDeliverableId` → delegate to iteration handler
+4. Implement `handleDeliverableIteration()` in `deliverableGenerator.ts`
+5. ArtifactPanel subscribes to `deliverable_updated` CustomEvent → re-fetches
+
+**Gate:** Open panel → type "add a risks section" → panel updates with new content, version counter bumps.
+
+### Phase 6: Deliverable Chain Orchestration
+**Why sixth:** Requires Phase 3 (generator) and Phase 1 (data layer). Chain is additive — standalone deliverables work without it.
+
+1. Create `server/autonomy/deliverableChainOrchestrator.ts`
+2. Extend `handoffOrchestrator.ts` to add `deliverableContext` to `structuredHandoff`
+3. Add `getDeliverableByTaskId` to `IStorage` and implementations
+4. Wire chain trigger: when user requests a package (e.g., "build the launch package"), call `deliverableChainOrchestrator`
+5. Create `client/src/components/PackageView.tsx`
+6. Wire package routes
+
+**Gate:** PM produces PRD → system queues tech-spec task for Engineer → Engineer produces tech-spec referencing PRD → both appear in same package in UI.
+
+### Phase 7: Export
+**Why last:** Pure enhancement. Everything else works without it. PDF generation is isolated.
+
+1. Choose PDF library: `@react-pdf/renderer` (client-side) or server-side `puppeteer`/`playwright` HTML→PDF
+2. Implement `POST /api/deliverables/:id/export`
+3. Implement `POST /api/packages/:id/export`
+4. Add export button in ArtifactPanel
+
+**Recommended:** Server-side HTML→PDF using headless browser (Puppeteer/Playwright). Client-side PDF rendering via `@react-pdf/renderer` requires writing a separate PDF layout component and produces lower-quality output for complex documents. At MVP scale, synchronous generation on the same Node.js process is acceptable; at >100 concurrent exports, move to pg-boss background job.
+
+**Gate:** Click "Export PDF" → file downloads with correct content.
+
+---
+
+## Integration Points: Each Existing Module
+
+### `server/routes/chat.ts`
+
+**Current state:** ~2,878 lines. Already runs post-stream hooks for task detection (`classifyTaskIntent`), brain updates (`brain_updated_from_chat`), and autonomy triggers.
+
+**Change:** Add `handleDeliverableEmission()` as a new post-stream hook in the same location as `classifyTaskIntent`. It must NOT be inlined — extract as a named function to avoid further inflating the file.
+
+```typescript
+// Called after streaming_completed is broadcast:
+await handleDeliverableEmission({
+  agentResponse: finalContent,
+  agent, project, conversationId,
+  storage, broadcastToConversation, generateText
 });
 ```
 
----
+**Iteration path:** At the START of the streaming handler, before calling the LLM, check for `payload.metadata?.activeDeliverableId`. If present, delegate to `handleDeliverableIteration()` and return early — do not enter the normal chat flow.
 
-## Data Flow
+### `server/ai/actionParser.ts`
 
-### Real-Time Activity Feed Flow
+**Current state:** Parses `[[ACTION: ...]]` and `[[UPDATE: ...]]` blocks. Simple regex + string operations.
 
-```
-Background agent execution (server)
-    ↓ logAutonomyEvent() → autonomy_events table
-    ↓ broadcastToConversation() → WS event (handoff_announced / task_completed / etc.)
-    ↓
-CenterPanel.handleIncomingMessage()
-    ↓ dispatchAutonomyEvent('autonomy_handoff_announced', { projectId, ... })
-    ↓
-useAutonomyFeed (mounted in ActivityTab)
-    ↓ CustomEvent listener → appendFeedEvent(normalizedEvent)
-    ↓ setLiveEvents([newEvent, ...prev])
-    ↓
-ActivityTab re-renders
-    ↓ ActivityFeedItem[] (most-recent first)
-    ↓ AutonomyStatsCard.tsx recomputes aggregates from allEvents
-```
+**Change:** Add `parseDeliverableBlock()` function following the exact same pattern as the existing parsers. Zero new dependencies.
 
-### Pending Approvals Flow
+### `server/autonomy/handoff/handoffOrchestrator.ts`
 
-```
-High-risk autonomous task (server: risk >= 0.60)
-    ↓ broadcasts WS: approval_required { taskId, agentName, riskReasons }
-    ↓
-CenterPanel → renders AutonomousApprovalCard inline in chat (existing behavior, unchanged)
-    ↓ also dispatches CustomEvent('autonomy_approval_required', detail)
-    ↓
-ApprovalsTab — TanStack Query /api/autonomy/pending-approvals
-    ↓ renders ApprovalItem with Approve / Reject buttons
-    ↓
-User clicks Approve → POST /api/action-proposals/:id/approve
-    ↓ server updates status, logs event
-    ↓ broadcasts approval_resolved WS event
-    ↓ CenterPanel dispatches CustomEvent → useAutonomyFeed marks item resolved
-    ↓ ApprovalsTab badge count decrements
+**Current state:** Finds dependent tasks, evaluates conductor decision, attaches `structuredHandoff` to task metadata, queues execution.
+
+**Change:** After computing `structuredHandoff`, optionally look up whether the completed task produced a deliverable. If so, attach `deliverableContext`. One async DB call added. No structural changes.
+
+### `server/ai/openaiService.ts` / `server/llm/providerResolver.ts`
+
+**No changes needed.** `deliverableGenerator.ts` imports `generateChatWithRuntimeFallback` directly from `providerResolver.ts` — same pattern as all other LLM-calling modules. Billing tracking and provider fallback apply automatically.
+
+### `shared/roleRegistry.ts` and `shared/roleIntelligence.ts`
+
+**Change:** Add one optional field to each interface. Existing 30 role entries need no immediate updates — `deliverableTypes?: string[]` defaults to `undefined` (treated as empty array). Only the 8-10 primary roles need prompts in the first release. The registry is additive by design (from v1.1).
+
+### `client/src/components/CenterPanel.tsx`
+
+**Current state:** Owns the single WebSocket connection. Dispatches CustomEvents for all autonomy WS events via `window.dispatchEvent`. Already handles `task_suggestions`, `task_created`, `upgrade_required`.
+
+**Change:** Add two cases to the WS message handler switch:
+```typescript
+case 'deliverable_created':
+  window.dispatchEvent(new CustomEvent('deliverable_created', { detail: msg }));
+  break;
+case 'deliverable_updated':
+  window.dispatchEvent(new CustomEvent('deliverable_updated', { detail: msg }));
+  break;
 ```
 
-### File Upload Flow
-
-```
-User selects file in DocumentUpload
-    ↓ FormData POST /api/projects/:id/documents
-    ↓
-multer (memoryStorage) → req.file.buffer
-    ↓ pdf-parse(buffer) → extractedText (capped 10K chars)
-    ↓ storage.updateProject() — appends to brain.documents JSONB
-    ↓ 201 { id, name, extractedText, charCount }
-    ↓
-TanStack Query invalidate(['/api/projects', projectId])
-    ↓ BrainDocsTab re-renders DocumentViewer list
-    ↓ Next agent prompt: promptTemplate.ts reads brain.documents → injects extractedText
+Additionally, when sending a message, include `activeDeliverableId` from `useArtifactPanel`:
+```typescript
+metadata: {
+  ...existingMetadata,
+  activeDeliverableId: activeDeliverableId ?? undefined,
+}
 ```
 
-### Agent Working State Flow
+### `client/src/components/RightSidebar.tsx`
 
-```
-Task begins executing (server: task_execution_started WS event)
-    ↓
-CenterPanel dispatches CustomEvent('agent_working_state', { agentId, working: true, projectId })
-    ↓
-useAgentWorkingState hook (consumed in LeftSidebar / ProjectTree)
-    ↓ adds agentId to workingAgentIds Set
-    ↓
-AgentAvatar receives isWorking={workingAgentIds.has(agent.id)}
-    ↓ renders pulsing ring animation (new AvatarState.working)
+**Current state:** After v1.3, is a tabbed shell (Activity / Brain & Docs / Approvals). Listens to CustomEvents for AI streaming state.
 
-Task completes → CenterPanel dispatches agent_working_state { working: false }
-    ↓ agentId removed from workingAgentIds Set
-    ↓ avatar returns to idle state
-```
-
-### Tab State Persistence Flow
-
-```
-User selects tab (e.g., "Activity")
-    ↓
-SidebarTabBar.onTabChange('activity')
-    ↓
-RightSidebar sets activeTab in useRightSidebarState
-    ↓ localStorage.setItem('hatchin_sidebar_tab_${projectId}', 'activity')
-    ↓
-ActivityTab mounts → useAutonomyFeed fetches initial events
-    ↓ TanStack Query ['/api/autonomy/events', projectId] fires
-
-User changes project
-    ↓ localStorage key changes (projectId-scoped)
-    ↓ activeTab resets to project's last-known tab or default 'activity'
-    ↓ ActivityTab unmounts → re-mounts for new project → fresh fetch
-```
-
-### State Management Summary
-
-```
-Server (authoritative)
-    ↓ autonomy_events (all historical)
-    ↓ projects.brain JSONB (documents, sharedMemory, coreDirection)
-    ↓ tasks table (pipeline status)
-    ↓ action_proposals (pending approvals)
-    ↓
-TanStack Query cache (on-demand REST)
-    ├── ['/api/autonomy/events', projectId]         — initial feed (staleTime: 30s)
-    ├── ['/api/autonomy/pending-approvals', projectId] — approvals tab
-    ├── ['/api/projects', id]                        — brain + docs
-    └── ['/api/tasks', { projectId }]                — pipeline view
-    ↓
-Local React state
-    ├── liveEvents[] (useAutonomyFeed — WS-appended, max 200)
-    ├── activeFilters (useAutonomyFeed — event type / agent / time)
-    └── workingAgentIds Set (useAgentWorkingState)
-    ↓
-localStorage (persistent client preferences)
-    ├── hatchin_sidebar_tab_${projectId}             — active tab per project
-    └── hatchin_right_sidebar_preferences            — existing expanded sections
-```
-
----
-
-## Suggested Build Order (Phase Dependencies)
-
-Dependencies flow strictly downward — building out of order creates broken states during development.
-
-```
-Phase 11 — Sidebar Restructure & Activity Feed
-──────────────────────────────────────────────
-  1. lib/autonomyEventLabels.ts          (no deps — pure data)
-  2. lib/autonomyEvents.ts               (no deps — type-safe dispatch/subscribe helpers)
-  3. hooks/useAgentWorkingState.ts       (depends on autonomyEvents.ts)
-  4. hooks/useAutonomyFeed.ts            (depends on autonomyEvents.ts + TanStack Query)
-  5. sidebar/ActivityFeedItem.tsx        (pure display, no deps)
-  6. sidebar/EmptyFeedState.tsx          (pure display, no deps)
-  7. sidebar/AutonomyStatsCard.tsx       (depends on FeedEvent shape from useAutonomyFeed)
-  8. sidebar/FeedFilters.tsx             (pure controlled UI, no deps)
-  9. sidebar/ActivityTab.tsx             (composes 5–8, depends on useAutonomyFeed)
- 10. sidebar/SidebarTabBar.tsx           (pure UI, no deps)
- 11. RightSidebar.tsx refactor           (wrap-then-decompose, mount ActivityTab, keep brain content)
- 12. CenterPanel.tsx new dispatches      (add 7 new CustomEvent dispatches for autonomy events)
- 13. BaseAvatar.tsx + AgentAvatar.tsx    (add working state prop + pulsing animation)
-
-Phase 12 — Handoff Visualization
-─────────────────────────────────
-  1. chat/HandoffCard.tsx                (pure display, no deps)
-  2. sidebar/HandoffChainTimeline.tsx    (depends on HandoffCard shape + autonomy_events grouping)
-  3. sidebar/DeliberationCard.tsx        (pure display, no deps)
-  4. MessageBubble.tsx modification      (depends on HandoffCard being finalized)
-  5. chat/HandoffButton.tsx              (pure UI, depends on WS send shape)
-  6. CenterPanel.tsx handoff dispatches  (depends on HandoffCard shape — validates payload shape first)
-
-Phase 13 — Approvals Hub & Task Pipeline
-─────────────────────────────────────────
-  1. sidebar/ApprovalItem.tsx            (depends on /api/action-proposals API shape)
-  2. sidebar/ApprovalsTab.tsx            (composes ApprovalItem, depends on TanStack Query)
-  3. sidebar/TaskPipelineCard.tsx        (pure display, no deps)
-  4. sidebar/TaskPipelineView.tsx        (depends on TaskPipelineCard + /api/tasks shape)
-  5. RightSidebar.tsx — mount ApprovalsTab (final tab addition, depends on ApprovalsTab)
-  NOTE: Backend /api/autonomy/pending-approvals endpoint must exist before ApprovalsTab builds
-
-Phase 14 — Brain Redesign & Autonomy Settings
-──────────────────────────────────────────────
-  1. server/routes/projects.ts — document endpoints (multer + pdf-parse — backend first)
-  2. sidebar/DocumentUpload.tsx          (depends on upload endpoint existing)
-  3. sidebar/DocumentViewer.tsx          (pure display, no deps)
-  4. sidebar/BrainDocsTab.tsx            (composes Upload + Viewer + existing brain fields)
-  5. sidebar/AutonomySettings.tsx        (depends on PATCH /api/projects/:id)
-  6. sidebar/WorkOutputViewer.tsx        (depends on autonomy_events having output in payload)
-  7. RightSidebar.tsx — replace brain content with BrainDocsTab (final content migration)
-```
-
-**Critical build constraint:** Backend endpoint additions (Phase 11: `projectId` filter on events; Phase 13: `pending-approvals`; Phase 14: document endpoints) must be built at the start of their respective phases, before any frontend component that depends on them.
-
----
-
-## Integration with Existing CenterPanel WS Pattern
-
-### What Must Not Change
-
-CenterPanel owns the single WebSocket connection — this is non-negotiable. Do not create a second `useWebSocket` call in any sidebar component. Do not lift WS state into React Context. The CustomEvent bridge pattern is already proven in the codebase (8 existing CustomEvent dispatches in CenterPanel.tsx — lines 612, 658, 837, 1104, 1128, 1145, 1199, 1227).
-
-### Existing CustomEvent Inventory (Must Remain Compatible)
-
-| Event Name | Dispatched When | Subscribed In |
-|-----------|----------------|--------------|
-| `ai_streaming_active` | streaming starts/ends | RightSidebar (brain save lock) |
-| `project_brain_updated` | `brain_updated_from_chat` WS | useRightSidebarState |
-| `tasks_updated` | task list changes | RightSidebar badge |
-| `task_created_from_chat` | task created via chat | RightSidebar badge |
-| `task_requires_approval` | approval WS event | CenterPanel inline card |
-| `brain_updated_from_chat` | brain WS event | RightSidebar auto-sync |
-| `teams_auto_hatched` | teams WS event | (project refresh) |
-
-All new CustomEvent names must use the `autonomy_` prefix to avoid naming collisions with existing events.
-
-### Backend WS Events Not Yet Dispatched
-
-The following WS event types are logged to `autonomy_events` on the server but are not yet broadcast to the client via `broadcastToConversation`. These need to be wired in `server/autonomy/execution/taskExecutionPipeline.ts` and `server/autonomy/handoff/handoffOrchestrator.ts` before the frontend can receive them:
-
-| WS Event | Server Module | Frontend Need |
-|---------|--------------|--------------|
-| `task_execution_started` | taskExecutionPipeline | agent working state, feed |
-| `task_execution_completed` | taskExecutionPipeline | agent working state, feed, output |
-| `peer_review_started` | peerReviewRunner | feed event |
-| `peer_review_completed` | peerReviewRunner | feed event |
-| `handoff_announced` | handoffOrchestrator | HandoffCard in chat, feed event |
-
----
-
-## Backend Gaps to Address Before Frontend Can Build
-
-| Gap | What's Needed | Blocks |
-|-----|--------------|--------|
-| `GET /api/autonomy/events` missing `projectId` query filter | Add `?projectId=` param; currently returns all events scoped only by ownership | Phase 11 useAutonomyFeed initial load |
-| No `/api/autonomy/pending-approvals` endpoint | ApprovalsTab needs a query for `action_proposals` where `status = 'pending'` scoped to projectId | Phase 13 ApprovalsTab |
-| No document CRUD on projects | Brain docs tab needs `GET /api/projects/:id/documents`, `POST` (upload), `DELETE /:docId` | Phase 14 BrainDocsTab |
-| `task_execution_started` / `task_execution_completed` WS events not broadcast | These exist in `logAutonomyEvent` calls but are not sent via `broadcastToConversation` | Phase 11 agent working state + feed |
-| `handoff_announced` not yet broadcast via WS | HandoffOrchestrator logs to autonomy_events but does not call `broadcastToConversation` for the handoff_announced event type | Phase 12 HandoffCard |
-
----
-
-## Anti-Patterns
-
-### Anti-Pattern 1: Second WebSocket in Sidebar
-
-**What people do:** Call `useWebSocket(conversationId)` inside ActivityTab or useAutonomyFeed to receive real-time events directly.
-
-**Why it's wrong:** Creates a second WS connection. The server's `broadcastToConversation` sends events only to the existing conversation connection. A second connection using a different conversation ID receives nothing. Also doubles connection overhead and duplicates the auth/reconnect logic already handled in CenterPanel.
-
-**Do this instead:** Subscribe to CustomEvents dispatched by CenterPanel. CenterPanel handles WS auth, reconnect, and conversation scoping correctly for the entire app.
-
-### Anti-Pattern 2: Polling for Live Feed Updates
-
-**What people do:** Add `refetchInterval: 5000` to the TanStack Query for `/api/autonomy/events` to keep the feed current.
-
-**Why it's wrong:** 5-second polling creates unnecessary database load — the server is already pushing events via WebSocket. Polling introduces 0–5 second lag on event display and creates redundant network traffic.
-
-**Do this instead:** Use the TanStack Query fetch only for initial load (`staleTime: 30_000, refetchOnWindowFocus: false`). Live updates come exclusively from WS-derived CustomEvents appended in useAutonomyFeed.
-
-### Anti-Pattern 3: Storing Raw PDF Bytes in brain.documents JSONB
-
-**What people do:** Base64-encode the uploaded file buffer and store `rawBytes` in the document entry.
-
-**Why it's wrong:** A 1MB PDF becomes ~1.4MB of base64. The `brain` JSONB column is read into the LLM prompt on every single message. Storing raw bytes burns tokens on every chat turn and adds 100–300ms to prompt construction. At 20 documents, this becomes catastrophic.
-
-**Do this instead:** Run pdf-parse server-side, store only `extractedText` (capped at 10K characters per document). The LLM needs the text, not the binary. The original file is not preserved — this is acceptable since the use case is context injection, not file archival.
-
-### Anti-Pattern 4: Monolithic ActivityTab With All Logic Inlined
-
-**What people do:** Put event fetching, WS subscription, filter state, stats computation, and all rendering inside ActivityTab.tsx.
-
-**Why it's wrong:** ActivityTab becomes a 600-line monolith, reproducing the exact problem being solved by the RightSidebar decomposition. Feed state is needed in multiple places (stats card, approvals badge count) — without a shared hook, this requires prop drilling or data duplication.
-
-**Do this instead:** Extract all feed logic into `useAutonomyFeed`. ActivityTab becomes a compositor that calls the hook and passes data down. Stats and badge counts come from the same hook instance, avoiding any duplication.
-
-### Anti-Pattern 5: Full Kanban Library for Pipeline View
-
-**What people do:** Install `@dnd-kit/core` or `react-kanban` to build the task pipeline view.
-
-**Why it's wrong:** Drag-and-drop is not required in v1.3 — the pipeline is read-only. These libraries add 40–80KB bundle weight and assume column widths of 200–300px each. In a 280px sidebar with 5 columns, only one column fits without horizontal scroll, making the column-based kanban metaphor physically break.
-
-**Do this instead:** Horizontal scroll flex container with compact columns (Pattern 4 above). Add drag-and-drop in a future milestone only when the pipeline view moves out of the sidebar into a full-screen layout where column widths work.
-
-### Anti-Pattern 6: Resetting the Entire RightSidebar to Build Tabs
-
-**What people do:** Delete the existing RightSidebar.tsx and rebuild it from scratch with tabs.
-
-**Why it's wrong:** The existing component has carefully built CustomEvent listeners for `ai_streaming_active` (brain save lock), auto-sync from `project_brain_updated`, task notification badges, and coachmark logic. A rewrite from scratch risks losing these behaviors or reintroducing bugs.
-
-**Do this instead:** Wrap-then-decompose (Pattern 1). Add the tab shell first so existing content lives inside the brain tab. Extract content panels only after the tab structure is verified working. Existing event listeners stay active throughout.
+**Change:** Add a listener for `open_artifact_panel`. When fired, set `activeDeliverableId` state and render `<ArtifactPanel>` as an `absolute inset-0 z-50` overlay over the sidebar content. On close, clear state and dispatch `close_artifact_panel`. This keeps tab state intact behind the panel.
 
 ---
 
@@ -644,31 +687,77 @@ The following WS event types are logged to `autonomy_events` on the server but a
 
 | Scale | Architecture Adjustments |
 |-------|--------------------------|
-| 0–1k users (current MVP) | Current pattern is correct. In-memory feed capped at 200 events. No virtualization needed — feeds are short. REST initial load of 50 events is fast. |
-| 1k–10k users | Add a DB index on `autonomy_events.project_id` column. Feed queries without this index will full-scan. Also: consider capping the REST query to 20 events to keep load times snappy. |
-| 10k+ users | If many agents fire many events per minute per project, 10+ sidebar components subscribing to the same window CustomEvents causes unnecessary re-renders. Move the CustomEvent bridge to a React Context with a single subscriber per event type, then fan out via context updates. |
+| 0–1k users | Single-node fine. `deliverable_versions` grows fast — monitor row count. Keep all content in DB. |
+| 1k–100k users | Add composite index on `deliverable_versions(deliverable_id, version DESC)`. Prune versions > 30 days old or keep only last 10 per deliverable. Move PDF generation to pg-boss background jobs. |
+| 100k+ users | Move `deliverable_versions.content` to blob storage (S3/R2). Store only URL + content hash in DB. Add full-text search index (`tsvector`) on `deliverables.content` for project-wide search. |
 
-### Scaling Priorities
+### First bottleneck: deliverable_versions table growth
 
-1. **First bottleneck:** `GET /api/autonomy/events` without a `project_id` index scans the full table as event volume grows. Add the index in the next migration after Phase 11 lands.
-2. **Second bottleneck:** `brain.documents` JSONB growing large (20+ documents x 10K chars each = 200K chars) slows prompt construction. Add a `charCount` cap at the project level: if total document chars > 50K, truncate older documents during prompt injection rather than at upload time.
+A 5,000-word PRD edited 20 times = 100,000 words stored as 20 row copies. For MVP this is fine. First mitigation: keep only last 10 versions per deliverable (add a cleanup function called on `createDeliverableVersion`). Second mitigation: move content to blob storage.
+
+### Second bottleneck: PDF generation latency
+
+Synchronous Puppeteer/Playwright on the main Node.js process blocks the event loop for 1–3 seconds during PDF rendering. For MVP (<100 exports/day) this is acceptable. At scale: move to pg-boss background job, return `{ jobId }` immediately, emit `export_complete` WS event when done.
+
+---
+
+## Anti-Patterns
+
+### Anti-Pattern 1: Own LLM Call Path in deliverableGenerator
+
+**What people do:** `deliverableGenerator.ts` initializes its own Gemini/OpenAI client via `new GoogleGenerativeAI(process.env.GEMINI_API_KEY)` directly.
+
+**Why it's wrong:** Bypasses `recordUsage()` billing tracking, provider fallback chain, test mocking (`LLM_MODE=test`), and the reasoning cache. Deliverable generation won't appear in usage summaries and tests can't inject mock responses.
+
+**Do this instead:** Accept `generateText: (prompt, system, maxTokens?) => Promise<string>` as a dependency parameter — the same pattern used in `ExecuteTaskInput` in `taskExecutionPipeline.ts`. The caller passes `generateChatWithRuntimeFallback` from `providerResolver.ts`.
+
+### Anti-Pattern 2: Store Document Content in messages.content
+
+**What people do:** When an agent "produces" a PRD, save the full 3,000-word document as the agent's chat message content in the `messages` table.
+
+**Why it's wrong:** Messages are designed for short conversational turns. Long content breaks context window injection (the whole message history is injected into LLM prompts). It also makes versioning impossible — messages are treated as immutable by the integrity system.
+
+**Do this instead:** Store document content in `deliverables.content`. The `messages` row stores only the announcement (short text + deliverable ID reference). `DeliverableCard` renders the link to open the panel.
+
+### Anti-Pattern 3: Parallel Execution Engine in deliverableChainOrchestrator
+
+**What people do:** Build `deliverableChainOrchestrator.ts` with its own task queue, agent routing, cycle detection, and safety gates.
+
+**Why it's wrong:** Duplicates the entire autonomy pipeline (`handoffOrchestrator`, `queueTaskExecution`, `handoffTracker.detectCycle`, `MAX_HANDOFF_HOPS`). Creates two surfaces for bugs and two pipelines to maintain.
+
+**Do this instead:** `deliverableChainOrchestrator.ts` is a thin seeder — it creates tasks with `metadata.dependsOn` and calls `queueTaskExecution()` for the first task. The existing handoff orchestrator handles everything from there. The orchestrator should be < 100 lines.
+
+### Anti-Pattern 4: ArtifactPanel as a Separate React Route
+
+**What people do:** Create `/deliverables/:id` as a new page in `App.tsx` using Wouter.
+
+**Why it's wrong:** Users need to reference the conversation while editing. Full-page navigation removes the chat context. The back button breaks the expected "return to conversation" flow.
+
+**Do this instead:** ArtifactPanel is an overlay component within `home.tsx`. Use URL query params (`?deliverable=:id`) for shareable deep links — `home.tsx` reads the param on mount and dispatches `open_artifact_panel` if set. This gives deep-linking without a route change.
+
+### Anti-Pattern 5: Eager Panel Open for Every deliverable_created
+
+**What people do:** Automatically open ArtifactPanel whenever any `deliverable_created` WS event fires, regardless of whether the user is actively engaged.
+
+**Why it's wrong:** If a background agent produces a deliverable while the user is reading old messages, the panel forces itself open and disrupts the reading flow.
+
+**Do this instead:** On `deliverable_created`, append a `DeliverableCard` to the message list (passive notification). Only auto-open the panel if the deliverable was created in response to the user's most recent message (check `conversationId` + recency). Otherwise, let the user click the DeliverableCard to open when ready.
 
 ---
 
 ## Sources
 
-- Direct codebase inspection: `client/src/components/CenterPanel.tsx` — CustomEvent dispatch pattern (lines 612, 658, 837, 1104, 1128, 1145, 1199, 1227) — HIGH confidence
-- Direct codebase inspection: `client/src/hooks/useRightSidebarState.ts` — useReducer + localStorage pattern — HIGH confidence
-- Direct codebase inspection: `client/src/components/RightSidebar.tsx` — existing structure, 850-line monolith, tab-like view switching already present — HIGH confidence
-- Direct codebase inspection: `server/routes/autonomy.ts` — existing endpoints, event shapes, project ownership pattern — HIGH confidence
-- Direct codebase inspection: `server/autonomy/execution/taskExecutionPipeline.ts` — execution pipeline, broadcastToConversation usage pattern — HIGH confidence
-- [React Component Decomposition best practices — developerway.com](https://www.developerway.com/posts/components-composition-how-to-get-it-right) — MEDIUM confidence (general pattern)
-- [Event-Driven Architecture for React Component Communication — DEV Community](https://dev.to/nicolalc/event-driven-architecture-for-clean-react-component-communication-fph) — MEDIUM confidence (validates CustomEvent approach)
-- [React Virtuoso — virtuoso.dev](https://virtuoso.dev/) — HIGH confidence (for future virtualization if feed grows past 200 items)
-- [multer — expressjs/multer GitHub](https://github.com/expressjs/multer) — HIGH confidence (standard, well-maintained)
-- [Common Sense Refactoring of a Messy React Component — Alex Kondov](https://alexkondov.com/refactoring-a-messy-react-component/) — MEDIUM confidence (validates wrap-then-decompose approach)
+- Direct analysis of `/Users/shashankrai/Documents/hatching-mvp-5th-march/` codebase (2026-03-25)
+- `server/autonomy/handoff/handoffOrchestrator.ts` — handoff chain and context propagation pattern
+- `server/autonomy/execution/taskExecutionPipeline.ts` — dependency injection pattern for generateText
+- `server/ai/actionParser.ts` — [[ACTION]] block parsing pattern to extend
+- `shared/schema.ts` — JSONB patterns, self-reference patterns, index conventions
+- `server/routes/tasks.ts` — RegisterTaskDeps pattern for route module dependencies
+- `client/src/components/RightSidebar.tsx` — CustomEvent bridge pattern (existing, v1.3)
+- `shared/roleIntelligence.ts` — how to extend role interface fields additively
+- `CLAUDE.md` — architectural decisions, storage interface requirements, WS event conventions
 
 ---
-
-*Architecture research for: Hatchin v1.3 Autonomy Visibility UI — Right Sidebar Revamp*
-*Researched: 2026-03-24*
+*Architecture research for: Hatchin v2.0 Deliverable/Artifact System*
+*Researched: 2026-03-25*
+*Confidence: HIGH — based on direct codebase analysis*
