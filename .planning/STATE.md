@@ -1,16 +1,17 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.0
-milestone_name: Hatches That Deliver
-status: roadmap_created
-last_updated: "2026-03-25T00:00:00Z"
-last_activity: 2026-03-25 — v2.0 roadmap created (Phases 16-21), 24/24 requirements mapped, ready for phase planning
+milestone: v1.3
+milestone_name: Autonomy Visibility & Right Sidebar Revamp
+status: completed
+stopped_at: Completed 11-01-PLAN.md
+last_updated: "2026-03-25T07:02:45.980Z"
+last_activity: 2026-03-25 — Completed 11-01 (hooks + backend endpoints)
 progress:
-  total_phases: 6
+  total_phases: 11
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  total_plans: 3
+  completed_plans: 1
+  percent: 33
 ---
 
 # State: Hatchin
@@ -26,12 +27,12 @@ See: .planning/PROJECT.md (updated 2026-03-25)
 
 ## Current Position
 
-Phase: Not started (roadmap defined, v1.3 must ship first)
-Plan: —
-Status: Roadmap created — 6 phases (16-21), 24/24 requirements mapped
-Last activity: 2026-03-25 — v2.0 roadmap created
+Phase: 11 — Sidebar Shell + Activity Feed
+Plan: 11-02 (next)
+Status: Plan 11-01 complete (data foundation). 1/3 plans done in Phase 11.
+Last activity: 2026-03-25 — Completed 11-01 (hooks + backend endpoints)
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [███░░░░░░░] 33%
 
 ---
 
@@ -71,6 +72,7 @@ Progress: [░░░░░░░░░░] 0%
 *Updated after each plan completion*
 
 ---
+| Phase 11 P01 | 3min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -109,9 +111,15 @@ Four new npm packages required (all others already installed):
 - `rehype-slug@6.0.0` — section anchor links for TOC navigation
 - `rehype-autolink-headings@7.1.0` — anchor link generation for TOC
 
+### v1.3 Decisions
+
+- **DB-level project filtering** in readAutonomyEventsByProject for efficiency (SQL WHERE), with in-memory fallback
+- **Cast eventType to string** for stats aggregation to handle event types not yet in AutonomyEventType union
+- **workingAgents passthrough** via useAutonomyFeed composition per CONTEXT.md locked interface
+
 ### v1.3 Context (preserved)
 
-- v1.3 (Sidebar Shell + Activity Feed) is defined but 0% executed — ships before v2.0
+- v1.3 Phase 11 Plan 01 complete — data foundation hooks and backend endpoints shipped
 - v1.3 provides the architectural foundation (tabbed sidebar, activity feed, CSS tab hiding pattern) that v2.0 fills with deliverable content
 - v2.0 ArtifactPanel renders as absolute-positioned overlay on the v1.3 RightSidebar shell — not a new route or tab
 
@@ -130,7 +138,7 @@ Four new npm packages required (all others already installed):
 
 ## Session Continuity
 
-Last session: 2026-03-25
-Stopped at: v2.0 roadmap created (Phases 16-21, 24/24 requirements mapped)
-Resume file: .planning/ROADMAP.md
-Next action: Complete v1.3 (Phases 11-15), then run `/gsd:plan-phase 16`
+Last session: 2026-03-25T07:02:45.978Z
+Stopped at: Completed 11-01-PLAN.md
+Resume file: None
+Next action: Execute 11-02-PLAN.md (Sidebar Shell + Tab Components)
