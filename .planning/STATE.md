@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Autonomy Visibility & Right Sidebar Revamp
 status: completed
-stopped_at: Completed 11-03-PLAN.md
-last_updated: "2026-03-25T07:18:51.627Z"
+stopped_at: Completed 12-01-PLAN.md
+last_updated: "2026-03-25T10:11:07.306Z"
 last_activity: 2026-03-25 — Completed 11-02 (3-tab sidebar shell with CSS-hidden panels)
 progress:
   total_phases: 11
   completed_phases: 1
-  total_plans: 3
-  completed_plans: 3
+  total_plans: 5
+  completed_plans: 4
   percent: 67
 ---
 
@@ -99,6 +99,8 @@ Key decisions for v2.0:
 - [Phase 11]: CSS-hide pattern (display:none) for tab panels to preserve scroll/draft state
 - [Phase 11]: Separate layoutId namespaces: sidebar-tab vs brain-tab-indicator to avoid Framer Motion conflicts
 - [Phase 11]: Called useAgentWorkingState in ProjectTree directly since LeftSidebar delegates all avatar rendering to ProjectTree
+- [Phase 12]: HandoffCard renders in the message loop when metadata.isHandoffAnnouncement===true, replacing MessageBubble for that message
+- [Phase 12]: DeliberationCard auto-resolves after 30s timeout — clears even if no synthesis_completed arrives
 
 ### Research Flags (for /gsd:research-phase during planning)
 
@@ -142,7 +144,7 @@ Four new npm packages required (all others already installed):
 
 ## Session Continuity
 
-Last session: 2026-03-25T07:18:51.624Z
-Stopped at: Completed 11-03-PLAN.md
+Last session: 2026-03-25T10:11:02.916Z
+Stopped at: Completed 12-01-PLAN.md
 Resume file: None
 Next action: Execute 11-02-PLAN.md (Sidebar Shell + Tab Components)
