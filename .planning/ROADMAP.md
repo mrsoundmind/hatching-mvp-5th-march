@@ -120,7 +120,10 @@ Plans:
   2. User can see tasks organized by pipeline stage (Queued, Assigned, In Progress, Review, Done) in a view readable at the sidebar's narrow width
   3. When an approval expires, user sees a clear "expired" state on that item instead of a broken approve button or silent failure
   4. When no approvals are pending, the Approvals tab shows an engaging empty state explaining what the tab is for and how approvals are created
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 13-01-PLAN.md — Approval leaf components: expiry utility, ApprovalItem card, ApprovalsEmptyState, unit tests
+- [ ] 13-02-PLAN.md — TaskPipelineView, ApprovalsTab container, RightSidebar wiring with live badge + WS invalidation
 
 ### Phase 14: Brain Redesign + Autonomy Settings
 **Goal**: Users can build a real knowledge base by uploading documents to the project brain, and can configure how autonomously their Hatches operate
@@ -224,8 +227,8 @@ Plans:
 | 9. Progressive Trust and Inactivity Trigger | v1.1 | — | Complete | 2026-03-23 |
 | 10. Billing + LLM Intelligence | v1.2 | — | Complete | 2026-03-23 |
 | 11. Sidebar Shell + Activity Feed | v1.3 | 3/3 | Complete | 2026-03-25 |
-| 12. Handoff Visualization | 2/2 | Complete    | 2026-03-25 | - |
-| 13. Approvals Hub + Task Pipeline | v1.3 | 0/? | Not started | - |
+| 12. Handoff Visualization | v1.3 | 2/2 | Complete | 2026-03-25 |
+| 13. Approvals Hub + Task Pipeline | v1.3 | 0/2 | Not started | - |
 | 14. Brain Redesign + Autonomy Settings | v1.3 | 0/? | Not started | - |
 | 15. Polish | v1.3 | 0/? | Not started | - |
 | 16. Database Foundation + Artifact Panel Shell | v2.0 | 0/? | Not started | - |
