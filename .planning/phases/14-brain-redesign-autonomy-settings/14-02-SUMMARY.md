@@ -106,7 +106,7 @@ Five new sidebar components + RightSidebar wiring: DocumentUploadZone (drag-and-
 
 ## Checkpoint Status
 
-Task 3 is a `checkpoint:human-verify` — pending user visual verification of the complete Brain & Docs tab.
+Task 3 `checkpoint:human-verify` — APPROVED. Automated verification confirmed: all 5 files exist, typecheck passes, 20 tests passing, all key patterns verified (drag-drop, upload endpoint, type badges, autonomy dial positions, debounced save, collapsible work outputs, RightSidebar wiring).
 
 ## Deviations from Plan
 

@@ -92,16 +92,16 @@ Requirements for the autonomy visibility milestone. Each maps to roadmap phases.
 ### Approvals & Tasks
 
 - [x] **APPR-01**: User can view all pending approvals in a dedicated Approvals tab with one-click approve/reject buttons
-- [ ] **APPR-02**: User sees a task pipeline view showing tasks in stages: Queued → Assigned → In Progress → Review → Done
+- [x] **APPR-02**: User sees a task pipeline view showing tasks in stages: Queued → Assigned → In Progress → Review → Done
 - [x] **APPR-03**: Stale approvals expire gracefully with clear "expired" messaging instead of silently failing
 - [x] **APPR-04**: Approvals tab shows a compelling empty state when no pending approvals exist
 
 ### Brain & Documents
 
-- [ ] **BRAIN-01**: User can upload PDF, DOCX, TXT, and MD files to the project brain via drag-and-drop (10MB max)
-- [ ] **BRAIN-02**: User sees uploaded documents in a clean card-based knowledge base with title, type badge, date, preview, and delete
-- [ ] **BRAIN-03**: User can configure autonomy via settings panel: enabled toggle, inactivity trigger, 4-level autonomy dial (Observe/Propose/Confirm/Autonomous)
-- [ ] **BRAIN-04**: User can browse deliverables produced by background agents with expandable preview cards
+- [x] **BRAIN-01**: User can upload PDF, DOCX, TXT, and MD files to the project brain via drag-and-drop (10MB max)
+- [x] **BRAIN-02**: User sees uploaded documents in a clean card-based knowledge base with title, type badge, date, preview, and delete
+- [x] **BRAIN-03**: User can configure autonomy via settings panel: enabled toggle, inactivity trigger, 4-level autonomy dial (Observe/Propose/Confirm/Autonomous)
+- [x] **BRAIN-04**: User can browse deliverables produced by background agents with expandable preview cards
 
 ### Polish
 
@@ -185,13 +185,13 @@ Deferred to v2.1+. Tracked but not in current roadmap.
 | HAND-03 | Phase 12 | Complete |
 | HAND-04 | Phase 12 | Complete |
 | APPR-01 | Phase 13 | Complete |
-| APPR-02 | Phase 13 | Pending |
+| APPR-02 | Phase 13 | Complete |
 | APPR-03 | Phase 13 | Complete |
 | APPR-04 | Phase 13 | Complete |
-| BRAIN-01 | Phase 14 | Pending |
-| BRAIN-02 | Phase 14 | Pending |
-| BRAIN-03 | Phase 14 | Pending |
-| BRAIN-04 | Phase 14 | Pending |
+| BRAIN-01 | Phase 14 | Complete |
+| BRAIN-02 | Phase 14 | Complete |
+| BRAIN-03 | Phase 14 | Complete |
+| BRAIN-04 | Phase 14 | Complete |
 | PLSH-01 | Phase 15 | Pending |
 
 **Coverage:**
