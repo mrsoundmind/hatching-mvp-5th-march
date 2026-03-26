@@ -134,7 +134,10 @@ Plans:
   2. Uploaded documents appear in a card-based list showing filename, type badge, upload date, and a delete button
   3. User can configure autonomy behavior via a settings panel: toggle autonomous execution on/off, set the inactivity trigger, and choose an autonomy level from a four-position dial (Observe / Propose / Confirm / Autonomous)
   4. User can browse completed work outputs from background agents in an expandable card view without scrolling through full chat history
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 14-01-PLAN.md — Backend: schema extension, multer upload endpoint, text extraction, delete endpoint, tests
+- [ ] 14-02-PLAN.md — Frontend: BrainDocsTab with upload zone, document cards, autonomy settings, work outputs, RightSidebar wiring
 
 ### Phase 15: Polish
 **Goal**: All new sidebar components feel premium and visually consistent with Hatchin's established design system
@@ -229,7 +232,7 @@ Plans:
 | 11. Sidebar Shell + Activity Feed | v1.3 | 3/3 | Complete | 2026-03-25 |
 | 12. Handoff Visualization | v1.3 | 2/2 | Complete | 2026-03-25 |
 | 13. Approvals Hub + Task Pipeline | 2/2 | Complete    | 2026-03-26 | - |
-| 14. Brain Redesign + Autonomy Settings | v1.3 | 0/? | Not started | - |
+| 14. Brain Redesign + Autonomy Settings | v1.3 | 0/2 | Not started | - |
 | 15. Polish | v1.3 | 0/? | Not started | - |
 | 16. Database Foundation + Artifact Panel Shell | v2.0 | 0/? | Not started | - |
 | 17. Deliverable Generation + Schema Enforcement | v2.0 | 0/? | Not started | - |
