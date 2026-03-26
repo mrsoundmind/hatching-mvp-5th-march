@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Autonomy Visibility & Right Sidebar Revamp
-status: completed
-stopped_at: Completed 13-02-PLAN.md
-last_updated: "2026-03-26T05:35:14.670Z"
-last_activity: 2026-03-25 — Completed 11-02 (3-tab sidebar shell with CSS-hidden panels)
+status: in_progress
+stopped_at: Completed 14-01-PLAN.md
+last_updated: "2026-03-26T08:57:37Z"
+last_activity: 2026-03-26 — Completed 14-01 (brain upload backend + autonomy settings schema)
 progress:
   total_phases: 11
   completed_phases: 3
-  total_plans: 7
-  completed_plans: 7
-  percent: 67
+  total_plans: 8
+  completed_plans: 8
+  percent: 70
 ---
 
 # State: Hatchin
@@ -27,12 +27,12 @@ See: .planning/PROJECT.md (updated 2026-03-25)
 
 ## Current Position
 
-Phase: 11 — Sidebar Shell + Activity Feed
-Plan: 11-03 (next)
-Status: Plan 11-02 complete (sidebar tab shell). 2/3 plans done in Phase 11.
-Last activity: 2026-03-25 — Completed 11-02 (3-tab sidebar shell with CSS-hidden panels)
+Phase: 14 — Brain Redesign + Autonomy Settings
+Plan: 14-02 (next)
+Status: Plan 14-01 complete (brain upload backend + autonomy schema). 1/2 plans done in Phase 14.
+Last activity: 2026-03-26 — Completed 14-01 (brain upload backend + autonomy settings schema)
 
-Progress: [██████░░░░] 67%
+Progress: [███████░░░] 70%
 
 ---
 
@@ -77,6 +77,7 @@ Progress: [██████░░░░] 67%
 | Phase 12 P02 | 257 | 2 tasks | 5 files |
 | Phase 13 P01 | 161 | 2 tasks | 5 files |
 | Phase 13 P02 | 173 | 2 tasks | 6 files |
+| Phase 14 P01 | 227s | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -130,6 +131,10 @@ Four new npm packages required (all others already installed):
 - **DB-level project filtering** in readAutonomyEventsByProject for efficiency (SQL WHERE), with in-memory fallback
 - **Cast eventType to string** for stats aggregation to handle event types not yet in AutonomyEventType union
 - **workingAgents passthrough** via useAutonomyFeed composition per CONTEXT.md locked interface
+- [Phase 14]: pdf-parse v2.x uses named PDFParse class (not default function) — import { PDFParse } and instantiate with new PDFParse({ data: Uint8Array })
+- [Phase 14]: multer.memoryStorage() for uploads — avoids temp file cleanup, fits 10MB constraint
+- [Phase 14]: fileFilter in multer rejects non-allowed types with INVALID_TYPE error caught in middleware wrapper
+- [Phase 14]: autonomyLevel enum (observe/propose/confirm/autonomous) added to both schema.ts and Zod schema; inactivityTriggerMinutes validated as int 30–480
 
 ### v1.3 Context (preserved)
 
@@ -152,7 +157,7 @@ Four new npm packages required (all others already installed):
 
 ## Session Continuity
 
-Last session: 2026-03-26T05:28:55.442Z
-Stopped at: Completed 13-02-PLAN.md
+Last session: 2026-03-26T08:57:37Z
+Stopped at: Completed 14-01-PLAN.md
 Resume file: None
-Next action: Execute 11-02-PLAN.md (Sidebar Shell + Tab Components)
+Next action: Execute 14-02-PLAN.md (Brain Redesign UI + Autonomy Settings Frontend)
