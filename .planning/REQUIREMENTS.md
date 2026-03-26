@@ -91,10 +91,10 @@ Requirements for the autonomy visibility milestone. Each maps to roadmap phases.
 
 ### Approvals & Tasks
 
-- [ ] **APPR-01**: User can view all pending approvals in a dedicated Approvals tab with one-click approve/reject buttons
+- [x] **APPR-01**: User can view all pending approvals in a dedicated Approvals tab with one-click approve/reject buttons
 - [ ] **APPR-02**: User sees a task pipeline view showing tasks in stages: Queued → Assigned → In Progress → Review → Done
-- [ ] **APPR-03**: Stale approvals expire gracefully with clear "expired" messaging instead of silently failing
-- [ ] **APPR-04**: Approvals tab shows a compelling empty state when no pending approvals exist
+- [x] **APPR-03**: Stale approvals expire gracefully with clear "expired" messaging instead of silently failing
+- [x] **APPR-04**: Approvals tab shows a compelling empty state when no pending approvals exist
 
 ### Brain & Documents
 
@@ -184,10 +184,10 @@ Deferred to v2.1+. Tracked but not in current roadmap.
 | HAND-02 | Phase 12 | Complete |
 | HAND-03 | Phase 12 | Complete |
 | HAND-04 | Phase 12 | Complete |
-| APPR-01 | Phase 13 | Pending |
+| APPR-01 | Phase 13 | Complete |
 | APPR-02 | Phase 13 | Pending |
-| APPR-03 | Phase 13 | Pending |
-| APPR-04 | Phase 13 | Pending |
+| APPR-03 | Phase 13 | Complete |
+| APPR-04 | Phase 13 | Complete |
 | BRAIN-01 | Phase 14 | Pending |
 | BRAIN-02 | Phase 14 | Pending |
 | BRAIN-03 | Phase 14 | Pending |
