@@ -36,7 +36,7 @@ export class GroqProvider implements LLMProvider {
       model,
       messages: request.messages,
       temperature: request.temperature ?? 0.7,
-      max_tokens: request.maxTokens ?? 500,
+      max_tokens: request.maxTokens ?? 1200,
     });
 
     const content = completion.choices[0]?.message?.content || '';
@@ -48,7 +48,13 @@ export class GroqProvider implements LLMProvider {
         model,
         latencyMs: Date.now() - started,
         temperature: request.temperature ?? 0.7,
-        maxTokens: request.maxTokens ?? 500,
+        maxTokens: request.maxTokens ?? 1200,
+        modelTier: request.modelTier,
+        tokenUsage: completion.usage ? {
+          promptTokens: completion.usage.prompt_tokens,
+          completionTokens: completion.usage.completion_tokens,
+          totalTokens: completion.usage.total_tokens,
+        } : undefined,
       },
     };
   }
@@ -62,9 +68,20 @@ export class GroqProvider implements LLMProvider {
       model,
       messages: request.messages,
       stream: true,
+      stream_options: { include_usage: true },
       temperature: request.temperature ?? 0.7,
-      max_tokens: request.maxTokens ?? 500,
+      max_tokens: request.maxTokens ?? 1200,
     });
+
+    const metadata: LLMStreamResult['metadata'] = {
+      provider: this.id,
+      mode,
+      model,
+      latencyMs: Date.now() - started,
+      temperature: request.temperature ?? 0.7,
+      maxTokens: request.maxTokens ?? 1200,
+      modelTier: request.modelTier,
+    };
 
     const stream = (async function* () {
       for await (const chunk of completion) {
@@ -72,20 +89,17 @@ export class GroqProvider implements LLMProvider {
         if (token) {
           yield token;
         }
+        if (chunk.usage) {
+          metadata.tokenUsage = {
+            promptTokens: chunk.usage.prompt_tokens,
+            completionTokens: chunk.usage.completion_tokens,
+            totalTokens: chunk.usage.total_tokens,
+          };
+        }
       }
     })();
 
-    return {
-      stream,
-      metadata: {
-        provider: this.id,
-        mode,
-        model,
-        latencyMs: Date.now() - started,
-        temperature: request.temperature ?? 0.7,
-        maxTokens: request.maxTokens ?? 500,
-      },
-    };
+    return { stream, metadata };
   }
 
   async healthCheck(model?: string): Promise<ProviderHealth> {

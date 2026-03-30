@@ -144,7 +144,7 @@ async function ensureAuthSchemaCompatibility(): Promise<void> {
 }
 
 const sessionOptions: session.SessionOptions = {
-  secret: process.env.SESSION_SECRET || 'hatchin-dev-secret-change-in-production',
+  secret: process.env.SESSION_SECRET || (process.env.NODE_ENV === 'production' ? '' : 'hatchin-dev-secret-' + Math.random().toString(36).slice(2)),
   resave: false,
   saveUninitialized: false,
   cookie: {
@@ -171,6 +171,7 @@ declare module 'express-session' {
   interface SessionData {
     userId?: string;
     userName?: string;
+    userTier?: string;
     oauthState?: string;
     oauthNonce?: string;
     pkceVerifier?: string;
@@ -178,8 +179,10 @@ declare module 'express-session' {
   }
 }
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
+// Stripe webhook needs raw body for signature verification — must be before express.json()
+app.post('/api/billing/webhook', express.raw({ type: 'application/json' }));
+app.use(express.json({ limit: '2mb' }));
+app.use(express.urlencoded({ extended: false, limit: '2mb' }));
 
 app.use((req, res, next) => {
   const start = Date.now();
@@ -283,6 +286,33 @@ app.use((req, res, next) => {
         },
       });
       console.log('[Hatchin][BackgroundRunner] Autonomy background jobs started');
+
+      // Wire task execution worker (pg-boss .work() handler)
+      const { startTaskWorker } = await import('./autonomy/execution/taskExecutionPipeline.js');
+      const { resolveModelForTier } = await import('./llm/providerResolver.js');
+      await startTaskWorker({
+        storage: storageInstance,
+        broadcastToConversation: (convId: string, payload: unknown) => {
+          const broadcast = getGlobalBroadcast();
+          if (broadcast) broadcast(convId, payload);
+        },
+        generateText: async (prompt: string, systemPrompt: string, maxTokens?: number) => {
+          // 6.2: Autonomy uses premium model (Gemini Pro) if configured
+          const tierModel = resolveModelForTier('premium');
+          const result = await generateChatWithRuntimeFallback({
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: prompt },
+            ],
+            model: tierModel.model,
+            modelTier: 'premium',
+            maxTokens: maxTokens ?? 120,
+            temperature: 0.7,
+          });
+          return result.content ?? '';
+        },
+      });
+      console.log('[Hatchin][TaskWorker] Autonomous task execution worker registered');
     } catch (err: any) {
       console.error('[Hatchin][BackgroundRunner] Failed to start:', err.message);
     }
@@ -303,6 +333,9 @@ app.use((req, res, next) => {
         try {
           const { backgroundRunner } = await import('./autonomy/background/backgroundRunner.js');
           backgroundRunner.stop();
+          const { stopJobQueue } = await import('./autonomy/execution/jobQueue.js');
+          await stopJobQueue();
+          console.log('[Hatchin] Job queue stopped cleanly.');
         } catch { /* non-critical */ }
       }
 

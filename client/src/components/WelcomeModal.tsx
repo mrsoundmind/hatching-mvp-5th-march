@@ -10,7 +10,7 @@ interface WelcomeModalProps {
 export function WelcomeModal({ isOpen, onClose, onGetStarted }: WelcomeModalProps) {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md bg-[#1A1D23] border-[#31343A] p-0 overflow-hidden">
+      <DialogContent className="max-w-md bg-hatchin-panel border-hatchin-border-subtle p-0 overflow-hidden">
         <DialogTitle className="sr-only">Welcome to Hatchin</DialogTitle>
         <DialogDescription className="sr-only">
           Intro screen for setting up your AI teammate workspace.
@@ -57,7 +57,7 @@ export function WelcomeModal({ isOpen, onClose, onGetStarted }: WelcomeModalProp
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
-              className="text-3xl font-bold tracking-tight text-[#F1F1F3]"
+              className="text-3xl font-bold tracking-tight text-hatchin-text-bright"
             >
               Your AI team just woke up.
             </motion.h1>
@@ -65,7 +65,7 @@ export function WelcomeModal({ isOpen, onClose, onGetStarted }: WelcomeModalProp
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
-              className="text-[#A6A7AB] text-base leading-relaxed max-w-xs mx-auto"
+              className="text-muted-foreground text-base leading-relaxed max-w-xs mx-auto"
             >
               Describe an idea to Maya and watch it become a plan, team, and roadmap in seconds.
             </motion.p>

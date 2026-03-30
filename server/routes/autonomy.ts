@@ -18,7 +18,8 @@ import { filterAvailableAgents, type ScopeContext } from '../orchestration/agent
 import { createTaskGraph } from '../autonomy/taskGraph/taskGraphEngine.js';
 import { runAutonomousKnowledgeLoop } from '../knowledge/akl/runner.js';
 import { getCurrentRuntimeConfig } from '../llm/providerResolver.js';
-import { logAutonomyEvent, readAutonomyEvents, summarizeLatency } from '../autonomy/events/eventLogger.js';
+import { logAutonomyEvent, readAutonomyEvents, readAutonomyEventsByProject, summarizeLatency } from '../autonomy/events/eventLogger.js';
+import { z } from 'zod';
 import {
   createDeliberationTrace,
   getDeliberationTrace,
@@ -26,6 +27,30 @@ import {
 } from '../autonomy/traces/traceStore.js';
 import { readConfigSnapshot, writeConfigSnapshot } from '../utils/configSnapshot.js';
 import { detectDrift, loadRecentScores } from '../eval/drift/driftMonitor.js';
+
+function mapEventTypeToCategory(eventType: string): 'task' | 'handoff' | 'review' | 'approval' | 'system' {
+  switch (eventType) {
+    case 'task_started':
+    case 'task_completed':
+    case 'task_executing':
+    case 'background_execution_started':
+    case 'background_execution_completed':
+      return 'task';
+    case 'handoff_announced':
+    case 'handoff_chain_completed':
+      return 'handoff';
+    case 'peer_review_completed':
+    case 'peer_review_started':
+    case 'peer_review_feedback':
+      return 'review';
+    case 'approval_required':
+    case 'approval_granted':
+    case 'approval_rejected':
+      return 'approval';
+    default:
+      return 'system';
+  }
+}
 
 export function registerAutonomyRoutes(app: Express): void {
   const getSessionUserId = (req: Request): string | undefined => (req.session as any)?.userId as string | undefined;
@@ -111,6 +136,11 @@ export function registerAutonomyRoutes(app: Express): void {
 
   app.post('/api/safety/evaluate-turn', async (req, res) => {
     try {
+      const userId = getSessionUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+
       const { userMessage, draftResponse, mode = 'project', projectName } = req.body || {};
       if (!userMessage) {
         return res.status(400).json({ error: 'userMessage is required' });
@@ -209,6 +239,11 @@ export function registerAutonomyRoutes(app: Express): void {
 
   app.post('/api/forecasts/decision', async (req, res) => {
     try {
+      const userId = getSessionUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+
       const { userMessage, projectName, safetyScore } = req.body || {};
       if (!userMessage) {
         return res.status(400).json({ error: 'userMessage is required' });
@@ -581,24 +616,152 @@ export function registerAutonomyRoutes(app: Express): void {
     }
   });
 
+  // GET /api/autonomy/events — project-scoped events with traceId aggregation
+  const eventsQuerySchema = z.object({
+    projectId: z.string().uuid().optional(),
+    limit: z.coerce.number().min(1).max(200).default(50),
+    eventType: z.string().optional(),
+  });
+
   app.get('/api/autonomy/events', async (req, res) => {
     try {
-      const events = await readAutonomyEvents(1000);
       const userId = getSessionUserId(req);
       if (!userId) {
         return res.status(401).json({ error: 'Unauthorized' });
       }
-      const ownedProjectIds = await getOwnedProjectIds(userId);
-      const filteredEvents = events.filter((event) => {
-        if (!event.projectId) {
-          return true;
+
+      const parsed = eventsQuerySchema.safeParse(req.query);
+      if (!parsed.success) {
+        return res.status(400).json({ error: 'Invalid query parameters', details: parsed.error.flatten() });
+      }
+      const { projectId, limit, eventType } = parsed.data;
+
+      let rawEvents;
+      if (projectId) {
+        const project = await requireOwnedProject(projectId, userId);
+        if (!project) {
+          return res.status(404).json({ error: 'Project not found' });
         }
-        return ownedProjectIds.has(event.projectId);
-      });
-      res.json({ events: filteredEvents });
+        rawEvents = await readAutonomyEventsByProject(projectId, limit);
+      } else {
+        const events = await readAutonomyEvents(limit);
+        const ownedProjectIds = await getOwnedProjectIds(userId);
+        rawEvents = events.filter((event) => {
+          if (!event.projectId) return true;
+          return ownedProjectIds.has(event.projectId);
+        });
+      }
+
+      // Apply eventType filter if provided
+      if (eventType) {
+        rawEvents = rawEvents.filter(e => e.eventType === eventType);
+      }
+
+      // Map to feed-compatible shape with traceId grouping
+      const traceGroups = new Map<string, typeof rawEvents>();
+      for (const event of rawEvents) {
+        const existing = traceGroups.get(event.traceId) || [];
+        existing.push(event);
+        traceGroups.set(event.traceId, existing);
+      }
+
+      const feedEvents = [];
+      for (const [traceId, group] of traceGroups) {
+        const latest = group.reduce((a, b) =>
+          new Date(a.timestamp) > new Date(b.timestamp) ? a : b
+        );
+        const agentName = (latest.payload?.agentName as string) || null;
+        const taskTitle = (latest.payload?.taskTitle as string) || latest.eventType.replace(/_/g, ' ');
+        const category = mapEventTypeToCategory(latest.eventType);
+
+        feedEvents.push({
+          id: latest.requestId || `${traceId}-${latest.eventType}`,
+          traceId,
+          eventType: latest.eventType,
+          agentId: latest.hatchId || null,
+          agentName,
+          label: `${agentName || 'Agent'} ${latest.eventType.replace(/_/g, ' ')}: ${taskTitle}`,
+          category,
+          timestamp: latest.timestamp,
+          count: group.length,
+          expandableData: {
+            ...latest.payload,
+            riskScore: latest.riskScore,
+            confidence: latest.confidence,
+            latencyMs: latest.latencyMs,
+          },
+        });
+      }
+
+      // Sort by timestamp descending (newest first for feed)
+      feedEvents.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+      res.json({ events: feedEvents.slice(0, limit) });
     } catch (error) {
       console.error('Autonomy events read error:', error);
       res.status(500).json({ error: 'Failed to read autonomy events' });
+    }
+  });
+
+  // GET /api/autonomy/stats — aggregated stats for a project
+  const statsQuerySchema = z.object({
+    projectId: z.string().uuid(),
+    period: z.enum(['today', '7days', 'all']).default('today'),
+  });
+
+  app.get('/api/autonomy/stats', async (req, res) => {
+    try {
+      const userId = getSessionUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+
+      const parsed = statsQuerySchema.safeParse(req.query);
+      if (!parsed.success) {
+        return res.status(400).json({ error: 'Invalid query parameters', details: parsed.error.flatten() });
+      }
+      const { projectId, period } = parsed.data;
+
+      const project = await requireOwnedProject(projectId, userId);
+      if (!project) {
+        return res.status(404).json({ error: 'Project not found' });
+      }
+
+      const events = await readAutonomyEventsByProject(projectId, 500);
+
+      // Filter by period
+      const now = new Date();
+      const filtered = events.filter(e => {
+        if (period === 'all') return true;
+        const eventDate = new Date(e.timestamp);
+        if (period === 'today') {
+          return eventDate.toDateString() === now.toDateString();
+        }
+        // 7days
+        const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        return eventDate >= sevenDaysAgo;
+      });
+
+      // Aggregate
+      let tasksCompleted = 0;
+      let handoffs = 0;
+      let totalCost = 0;
+
+      for (const event of filtered) {
+        const et = event.eventType as string;
+        if (et === 'task_completed') tasksCompleted++;
+        if (et === 'handoff_announced') handoffs++;
+        if (typeof event.payload?.cost === 'number') totalCost += event.payload.cost;
+      }
+
+      res.json({
+        tasksCompleted,
+        handoffs,
+        costToday: `$${totalCost.toFixed(2)}`,
+      });
+    } catch (error) {
+      console.error('Autonomy stats read error:', error);
+      res.status(500).json({ error: 'Failed to read autonomy stats' });
     }
   });
 

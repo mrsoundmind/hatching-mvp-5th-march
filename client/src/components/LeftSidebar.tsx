@@ -1,7 +1,7 @@
 import { devLog } from '@/lib/devLog';
 import { useState, useEffect, useRef } from "react";
 import { ProjectTree } from "@/components/ProjectTree";
-import { ChevronDown, Search, Settings, LogOut, User, X, Brain } from "lucide-react";
+import { ChevronDown, Search, LogOut, X, CreditCard } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import type { Project, Team, Agent } from "@shared/schema";
 
@@ -14,6 +14,7 @@ interface DeletedEntityData {
     agents?: Agent[];
   };
 }
+import { ThemeToggle } from "./ThemeToggle";
 import QuickStartModal from "@/components/QuickStartModal";
 import StarterPacksModal from "@/components/StarterPacksModal";
 import ProjectNameModal from "@/components/ProjectNameModal";
@@ -446,7 +447,7 @@ export function LeftSidebar({
         if (deletedEntityData.relatedData?.agents && onCreateAgent) {
           for (const agent of deletedEntityData.relatedData.agents) {
             try {
-              const teamIdToUse = newTeam?.id || agent.teamId || null;
+              const teamIdToUse = newTeam?.id || null; // Don't use old teamId — it was deleted
               const { id, ...agentData } = agent;
               await onCreateAgent({
                 ...agentData,
@@ -486,7 +487,7 @@ export function LeftSidebar({
 
   return (
     <aside
-      className="w-[260px] min-h-0 premium-column-bg overflow-hidden p-3 pl-6 rounded-r-2xl rounded-l-none ml-[-10px] relative flex flex-col"
+      className="w-[260px] h-[calc(100vh-20px)] min-h-0 premium-column-bg overflow-hidden p-3 pl-6 rounded-r-2xl rounded-l-none ml-[-10px] my-2.5 relative flex flex-col"
       onWheel={handleSidebarWheel}
     >
       <div className="ambient-glow-top" />
@@ -509,14 +510,14 @@ export function LeftSidebar({
         {isUserMenuOpen && (
           <div className="absolute top-full left-0 right-0 mt-2 hatchin-bg-card border hatchin-border rounded-lg shadow-lg z-50 overflow-hidden">
             <div className="py-1">
-              <button className="w-full flex items-center gap-3 px-3 py-2 text-sm hatchin-text hover:bg-hatchin-border transition-colors">
-                <User className="w-4 h-4" />
-                Profile Settings
-              </button>
-              <button className="w-full flex items-center gap-3 px-3 py-2 text-sm hatchin-text hover:bg-hatchin-border transition-colors">
-                <Settings className="w-4 h-4" />
-                Preferences
-              </button>
+              <a
+                href="/account"
+                className="w-full flex items-center gap-3 px-3 py-2 text-sm hatchin-text hover:bg-hatchin-border transition-colors"
+              >
+                <CreditCard className="w-4 h-4" />
+                Account & Billing
+              </a>
+              <ThemeToggle />
 
               <div className="border-t hatchin-border my-1"></div>
               <button
@@ -539,7 +540,7 @@ export function LeftSidebar({
           placeholder="Search projects or hatches (⌘K)"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full hatchin-bg-card hatchin-border border rounded-lg py-2.5 text-sm hatchin-text placeholder-hatchin-text-muted focus:outline-none focus:ring-2 focus:ring-hatchin-blue focus:border-transparent pl-[32px] pr-[32px]"
+          className="w-full premium-input rounded-lg py-2.5 text-sm hatchin-text placeholder-hatchin-text-muted focus:outline-none pl-[32px] pr-[32px]"
         />
         {searchQuery && (
           <button
@@ -558,7 +559,7 @@ export function LeftSidebar({
           </h2>
           <button
             onClick={handleAddProjectClick}
-            className="px-2.5 py-1 bg-hatchin-blue/20 text-hatchin-blue rounded-full text-xs font-semibold hover:bg-hatchin-blue/30 transition-all border border-hatchin-blue/30"
+            className="px-3 py-1.5 btn-primary-glow rounded-full text-xs font-semibold btn-press"
           >
             + New
           </button>
@@ -655,7 +656,7 @@ export function LeftSidebar({
 
       {/* Enhanced Undo Popup — Dark themed */}
       {showUndoPopup && deletedEntityData && (
-        <div className="fixed bottom-4 left-4 z-50 bg-[#2A2D33] border border-[#43444B] rounded-xl shadow-2xl p-4 max-w-sm">
+        <div className="fixed bottom-4 left-4 z-50 bg-card border border-hatchin-border rounded-xl shadow-2xl p-4 max-w-sm">
           <div className="flex items-center gap-3">
             <div className="flex-shrink-0">
               <div className="w-8 h-8 bg-red-500/15 rounded-full flex items-center justify-center">
@@ -663,12 +664,12 @@ export function LeftSidebar({
               </div>
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-[#F1F1F3]">
+              <p className="text-sm font-medium text-foreground">
                 {deletedEntityData.type === 'project' && `"${(deletedEntityData.entity as Project).name}" deleted`}
                 {deletedEntityData.type === 'team' && `"${(deletedEntityData.entity as Team).name}" deleted`}
                 {deletedEntityData.type === 'agent' && `"${(deletedEntityData.entity as Agent).name}" deleted`}
               </p>
-              <p className="text-xs text-[#A6A7AB]">
+              <p className="text-xs text-muted-foreground">
                 {deletedEntityData.type === 'project' && deletedEntityData.relatedData && (
                   `${deletedEntityData.relatedData.teams?.length || 0} teams, ${deletedEntityData.relatedData.agents?.length || 0} agents included`
                 )}
@@ -690,7 +691,7 @@ export function LeftSidebar({
                   setShowUndoPopup(false);
                   setDeletedEntityData(null);
                 }}
-                className="px-3 py-1 bg-[#43444B] text-[#A6A7AB] text-xs rounded-lg hover:bg-[#37383B] transition-colors"
+                className="px-3 py-1 bg-muted text-muted-foreground text-xs rounded-lg hover:bg-hatchin-surface transition-colors"
               >
                 ✕
               </button>

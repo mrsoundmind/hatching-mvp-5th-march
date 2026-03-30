@@ -289,7 +289,8 @@ export function registerMessageRoutes(app: Express): void {
             personalityEngine.seedProfileFromDB(
               reactionData.agentId, userId,
               persisted.adaptedTraits[userId],
-              persisted.adaptationMeta[userId]
+              persisted.adaptationMeta[userId],
+              agentForSeed?.role
             );
           }
         } catch { /* non-critical */ }
@@ -304,8 +305,8 @@ export function registerMessageRoutes(app: Express): void {
 
         // PRES-05: Persist adapted personality traits to database
         try {
-          const updatedProfile = personalityEngine.getPersonalityProfile(reactionData.agentId, userId);
           const reactingAgent = await storage.getAgent(reactionData.agentId);
+          const updatedProfile = personalityEngine.getPersonalityProfile(reactionData.agentId, userId, reactingAgent?.role);
           if (reactingAgent) {
             const existingPersonality = (reactingAgent.personality as any) || {};
             await storage.updateAgent(reactionData.agentId, {
@@ -365,9 +366,22 @@ export function registerMessageRoutes(app: Express): void {
   });
 
   // Simple feedback endpoint (for user thumbs up/down)
+  const feedbackSchema = z.object({
+    messageId: z.string().min(1).max(200),
+    conversationId: z.string().min(1).max(200),
+    userMessage: z.string().max(10000),
+    agentResponse: z.string().max(10000),
+    agentRole: z.string().max(100),
+    rating: z.enum(['good', 'bad', 'excellent']),
+  });
+
   app.post("/api/training/feedback", async (req, res) => {
     try {
-      const { messageId, conversationId, userMessage, agentResponse, agentRole, rating } = req.body;
+      const parsed = feedbackSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: 'Invalid request body', details: parsed.error });
+      }
+      const { messageId, conversationId, userMessage, agentResponse, agentRole, rating } = parsed.data;
 
       // Verify conversation belongs to user
       if (!conversationId || !(await conversationOwnedByUser(conversationId, getSessionUserId(req)))) {

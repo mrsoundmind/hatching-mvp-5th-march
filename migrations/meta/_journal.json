@@ -15,6 +15,20 @@
       "when": 1772852787360,
       "tag": "0001_opposite_killmonger",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1774247552095,
+      "tag": "0002_public_fabian_cortez",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1774851521834,
+      "tag": "0003_marvelous_sway",
+      "breakpoints": true
     }
   ]
 }

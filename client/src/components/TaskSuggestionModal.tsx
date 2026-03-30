@@ -93,7 +93,7 @@ export function TaskSuggestionModal({
       <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <CheckCircle className="w-5 h-5 text-blue-600" />
+            <CheckCircle className="w-5 h-5 text-hatchin-blue" />
             AI Task Suggestions
             <Badge variant="secondary" className="ml-2">
               {suggestions.length} suggestions
@@ -106,18 +106,18 @@ export function TaskSuggestionModal({
 
         <div className="space-y-4">
           {/* Header Actions */}
-          <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+          <div className="flex items-center justify-between p-4 bg-hatchin-surface rounded-lg">
             <div className="flex items-center gap-2">
               <Checkbox
                 checked={allSelected}
                 onCheckedChange={handleSelectAll}
-                className="data-[state=checked]:bg-blue-600"
+                className="data-[state=checked]:bg-hatchin-blue"
               />
               <span className="text-sm font-medium">
                 {allSelected ? 'Deselect All' : 'Select All'}
               </span>
             </div>
-            <div className="text-sm text-gray-600">
+            <div className="text-sm text-muted-foreground">
               {selectedTasks.size} of {suggestions.length} selected
             </div>
           </div>
@@ -129,7 +129,7 @@ export function TaskSuggestionModal({
                 key={suggestion.id} 
                 className={`transition-all duration-200 ${
                   selectedTasks.has(suggestion.id) 
-                    ? 'ring-2 ring-blue-500 bg-blue-50' 
+                    ? 'ring-2 ring-hatchin-blue bg-hatchin-blue/10' 
                     : 'hover:shadow-md'
                 }`}
               >
@@ -139,13 +139,13 @@ export function TaskSuggestionModal({
                       <Checkbox
                         checked={selectedTasks.has(suggestion.id)}
                         onCheckedChange={() => handleTaskToggle(suggestion.id)}
-                        className="data-[state=checked]:bg-blue-600"
+                        className="data-[state=checked]:bg-hatchin-blue"
                       />
                       <div className="flex-1">
-                        <CardTitle className="text-lg font-semibold text-gray-900">
+                        <CardTitle className="text-lg font-semibold text-foreground">
                           {suggestion.title}
                         </CardTitle>
-                        <p className="text-sm text-gray-600 mt-1">
+                        <p className="text-sm text-muted-foreground mt-1">
                           {suggestion.description}
                         </p>
                       </div>
@@ -163,12 +163,12 @@ export function TaskSuggestionModal({
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* Assignee Info */}
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                        <User className="w-4 h-4 text-blue-600" />
+                      <div className="w-8 h-8 bg-hatchin-blue/20 rounded-full flex items-center justify-center">
+                        <User className="w-4 h-4 text-hatchin-blue" />
                       </div>
                       <div>
                         <div className="font-medium text-sm">{suggestion.suggestedAssignee.name}</div>
-                        <div className="text-xs text-gray-500">{suggestion.suggestedAssignee.role}</div>
+                        <div className="text-xs text-muted-foreground">{suggestion.suggestedAssignee.role}</div>
                       </div>
                     </div>
 
@@ -178,7 +178,7 @@ export function TaskSuggestionModal({
                         <Badge variant="outline" className="text-xs">
                           {suggestion.category}
                         </Badge>
-                        <span className="text-xs text-gray-500">
+                        <span className="text-xs text-muted-foreground">
                           {suggestion.estimatedEffort}
                         </span>
                       </div>
@@ -186,14 +186,14 @@ export function TaskSuggestionModal({
                   </div>
 
                   {/* AI Reasoning */}
-                  <div className="mt-3 p-3 bg-gray-50 rounded-lg">
+                  <div className="mt-3 p-3 bg-hatchin-surface rounded-lg">
                     <div className="flex items-start gap-2">
-                      <div className="w-5 h-5 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                        <span className="text-xs font-bold text-purple-600">AI</span>
+                      <div className="w-5 h-5 bg-purple-500/20 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <span className="text-xs font-bold text-purple-400">AI</span>
                       </div>
                       <div>
-                        <div className="text-xs font-medium text-gray-700 mb-1">Why this task?</div>
-                        <p className="text-xs text-gray-600">{suggestion.reasoning}</p>
+                        <div className="text-xs font-medium text-foreground mb-1">Why this task?</div>
+                        <p className="text-xs text-muted-foreground">{suggestion.reasoning}</p>
                       </div>
                     </div>
                   </div>
@@ -207,20 +207,20 @@ export function TaskSuggestionModal({
             <Button
               variant="outline"
               onClick={handleRejectAll}
-              className="text-gray-600 hover:text-gray-800"
+              className="text-muted-foreground hover:text-foreground"
             >
               <XCircle className="w-4 h-4 mr-2" />
               Reject All
             </Button>
             
             <div className="flex items-center gap-3">
-              <span className="text-sm text-gray-500">
+              <span className="text-sm text-muted-foreground">
                 {selectedTasks.size} tasks selected
               </span>
               <Button
                 onClick={handleApprove}
                 disabled={selectedTasks.size === 0 || isProcessing}
-                className="bg-blue-600 hover:bg-blue-700"
+                className="bg-hatchin-blue hover:bg-hatchin-blue/90"
               >
                 {isProcessing ? (
                   <>

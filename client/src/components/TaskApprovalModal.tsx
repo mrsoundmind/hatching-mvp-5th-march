@@ -75,7 +75,7 @@ export function TaskApprovalModal({
       case 'high': return 'bg-orange-500/20 text-orange-400 border border-orange-500/30';
       case 'medium': return 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30';
       case 'low': return 'bg-green-500/20 text-green-400 border border-green-500/30';
-      default: return 'bg-[#43444B] text-[#A6A7AB]';
+      default: return 'bg-hatchin-border-subtle text-muted-foreground';
     }
   };
 
@@ -84,7 +84,7 @@ export function TaskApprovalModal({
       case 'high': return 'bg-red-500/20 text-red-400';
       case 'medium': return 'bg-yellow-500/20 text-yellow-400';
       case 'low': return 'bg-green-500/20 text-green-400';
-      default: return 'bg-[#43444B] text-[#A6A7AB]';
+      default: return 'bg-hatchin-border-subtle text-muted-foreground';
     }
   };
 
@@ -96,39 +96,39 @@ export function TaskApprovalModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto bg-[#23262B] border border-[#43444B] text-[#F1F1F3] shadow-2xl">
+      <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto bg-hatchin-card border border-hatchin-border-subtle text-hatchin-text-bright shadow-2xl">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-[#F1F1F3]">
+          <DialogTitle className="flex items-center gap-2 text-hatchin-text-bright">
             <div className="w-8 h-8 bg-hatchin-blue/20 rounded-full flex items-center justify-center">
               <Sparkles className="w-4 h-4 text-hatchin-blue" />
             </div>
             AI Suggested Tasks for <span className="text-hatchin-blue">{projectName}</span>
           </DialogTitle>
-          <DialogDescription className="text-[#A6A7AB]">
+          <DialogDescription className="text-muted-foreground">
             Approve the tasks you want to create in this project.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
           {/* Header with select all */}
-          <div className="flex items-center justify-between p-4 bg-[#1A1C1F] rounded-lg border border-[#43444B]">
+          <div className="flex items-center justify-between p-4 bg-hatchin-panel rounded-lg border border-hatchin-border-subtle">
             <div className="flex items-center gap-3">
               <button
                 onClick={handleSelectAll}
                 className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${selectedTasks.size === tasks.length
                     ? 'bg-hatchin-blue border-hatchin-blue'
-                    : 'border-[#43444B] hover:border-hatchin-blue'
+                    : 'border-hatchin-border-subtle hover:border-hatchin-blue'
                   }`}
               >
                 {selectedTasks.size === tasks.length && (
                   <CheckCircle className="w-3 h-3 text-white" />
                 )}
               </button>
-              <span className="text-sm font-medium text-[#F1F1F3]">
+              <span className="text-sm font-medium text-hatchin-text-bright">
                 {selectedTasks.size} of {tasks.length} tasks selected
               </span>
             </div>
-            <div className="text-sm text-[#A6A7AB]">
+            <div className="text-sm text-muted-foreground">
               Review and select tasks to create
             </div>
           </div>
@@ -145,7 +145,7 @@ export function TaskApprovalModal({
                   onClick={() => handleTaskToggle(index)}
                   className={`rounded-xl border p-4 cursor-pointer transition-all duration-200 ${selectedTasks.has(index)
                       ? 'border-hatchin-blue/60 bg-hatchin-blue/10'
-                      : 'border-[#43444B] bg-[#2A2D33] hover:border-hatchin-blue/30 hover:bg-hatchin-blue/5'
+                      : 'border-hatchin-border-subtle bg-hatchin-surface-elevated hover:border-hatchin-blue/30 hover:bg-hatchin-blue/5'
                     }`}
                   whileTap={{ scale: 0.995 }}
                 >
@@ -154,7 +154,7 @@ export function TaskApprovalModal({
                     <div
                       className={`mt-1 w-5 h-5 rounded border-2 flex-shrink-0 flex items-center justify-center transition-all ${selectedTasks.has(index)
                           ? 'bg-hatchin-blue border-hatchin-blue'
-                          : 'border-[#43444B]'
+                          : 'border-hatchin-border-subtle'
                         }`}
                     >
                       {selectedTasks.has(index) && (
@@ -169,10 +169,10 @@ export function TaskApprovalModal({
                     </div>
 
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-sm font-semibold text-[#F1F1F3] mb-1">
+                      <h3 className="text-sm font-semibold text-hatchin-text-bright mb-1">
                         {task.title}
                       </h3>
-                      <p className="text-xs text-[#A6A7AB] mb-3 leading-relaxed">
+                      <p className="text-xs text-muted-foreground mb-3 leading-relaxed">
                         {task.description}
                       </p>
 
@@ -181,11 +181,11 @@ export function TaskApprovalModal({
                         <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${getPriorityStyle(task.priority)}`}>
                           {task.priority.toUpperCase()}
                         </span>
-                        <span className="text-xs px-2 py-0.5 rounded-full bg-[#43444B] text-[#A6A7AB] flex items-center gap-1">
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-hatchin-border-subtle text-muted-foreground flex items-center gap-1">
                           <User className="w-2.5 h-2.5" />
                           {getAssigneeLabel(task.suggestedAssignee)}
                         </span>
-                        <span className="text-xs px-2 py-0.5 rounded-full bg-[#43444B] text-[#A6A7AB] flex items-center gap-1">
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-hatchin-border-subtle text-muted-foreground flex items-center gap-1">
                           <Tag className="w-2.5 h-2.5" />
                           {task.category}
                         </span>
@@ -195,7 +195,7 @@ export function TaskApprovalModal({
                       </div>
 
                       {/* AI Reasoning */}
-                      <div className="text-xs text-[#A6A7AB] bg-[#1A1C1F] border border-[#43444B] p-2.5 rounded-lg">
+                      <div className="text-xs text-muted-foreground bg-hatchin-panel border border-hatchin-border-subtle p-2.5 rounded-lg">
                         <span className="text-hatchin-blue font-medium">AI Reasoning: </span>
                         {task.reasoning}
                       </div>
@@ -207,10 +207,10 @@ export function TaskApprovalModal({
           </div>
 
           {/* Actions */}
-          <div className="flex items-center justify-between pt-4 border-t border-[#43444B]">
-            <div className="text-sm text-[#A6A7AB]">
+          <div className="flex items-center justify-between pt-4 border-t border-hatchin-border-subtle">
+            <div className="text-sm text-muted-foreground">
               {selectedTasks.size > 0 ? (
-                <span className="text-[#F1F1F3]">
+                <span className="text-hatchin-text-bright">
                   {selectedTasks.size} task{selectedTasks.size > 1 ? 's' : ''} will be created
                 </span>
               ) : (
@@ -220,7 +220,7 @@ export function TaskApprovalModal({
             <div className="flex gap-3">
               <button
                 onClick={onClose}
-                className="px-4 py-2 text-sm text-[#A6A7AB] hover:text-[#F1F1F3] rounded-lg hover:bg-[#37383B] transition-all"
+                className="px-4 py-2 text-sm text-muted-foreground hover:text-hatchin-text-bright rounded-lg hover:bg-hatchin-surface transition-all"
               >
                 Cancel
               </button>

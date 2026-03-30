@@ -19,7 +19,7 @@ export function PathSelectionModal({
 }: PathSelectionModalProps) {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl bg-[#1A1D23] border-[#31343A] p-0 overflow-hidden">
+      <DialogContent className="max-w-2xl bg-hatchin-panel border-hatchin-border-subtle p-0 overflow-hidden">
         <DialogTitle className="sr-only">Choose your starting point</DialogTitle>
         <DialogDescription className="sr-only">
           Choose how you want to begin building your team in Hatchin.
@@ -33,7 +33,7 @@ export function PathSelectionModal({
             <motion.h2
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="text-3xl font-bold tracking-tight text-[#F1F1F3]"
+              className="text-3xl font-bold tracking-tight text-hatchin-text-bright"
             >
               Choose your starting point
             </motion.h2>
@@ -41,7 +41,7 @@ export function PathSelectionModal({
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
-              className="text-[#A6A7AB] text-lg"
+              className="text-muted-foreground text-lg"
             >
               How would you like to begin building your team?
             </motion.p>
@@ -55,7 +55,7 @@ export function PathSelectionModal({
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.2 }}
               onClick={onStartWithIdea}
-              className="relative group p-6 bg-gradient-to-br from-[#23262B] to-[#1A1D23] border border-[#31343A] rounded-2xl text-left transition-all duration-300 hover:border-hatchin-blue/50 hover:shadow-[0_8px_30px_rgba(108,130,255,0.15)] flex flex-col h-full overflow-hidden"
+              className="relative group p-6 bg-gradient-to-br from-hatchin-card to-hatchin-panel border border-hatchin-border-subtle rounded-2xl text-left transition-all duration-300 hover:border-hatchin-blue/50 hover:shadow-[0_8px_30px_rgba(108,130,255,0.15)] flex flex-col h-full overflow-hidden"
             >
               <div className="absolute inset-0 bg-gradient-to-br from-white/[0.02] to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
 
@@ -64,10 +64,10 @@ export function PathSelectionModal({
                   <Lightbulb className="w-8 h-8 text-yellow-400" />
                 </div>
                 <div className="flex-1">
-                  <h3 className="text-xl font-bold text-[#F1F1F3] mb-2 group-hover:text-hatchin-blue transition-colors">
+                  <h3 className="text-xl font-bold text-hatchin-text-bright mb-2 group-hover:text-hatchin-blue transition-colors">
                     Start with an idea
                   </h3>
-                  <p className="text-[#A6A7AB] text-sm leading-relaxed mb-6">
+                  <p className="text-muted-foreground text-sm leading-relaxed mb-6">
                     Not sure what to build? Maya will join your chat and help you discover the perfect team structure.
                   </p>
                 </div>
@@ -84,7 +84,7 @@ export function PathSelectionModal({
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.3 }}
               onClick={onUseStarterPack}
-              className="relative group p-6 bg-gradient-to-br from-[#23262B] to-[#1A1D23] border border-[#31343A] rounded-2xl text-left transition-all duration-300 hover:border-[#9F7BFF]/50 hover:shadow-[0_8px_30px_rgba(159,123,255,0.15)] flex flex-col h-full overflow-hidden"
+              className="relative group p-6 bg-gradient-to-br from-hatchin-card to-hatchin-panel border border-hatchin-border-subtle rounded-2xl text-left transition-all duration-300 hover:border-[#9F7BFF]/50 hover:shadow-[0_8px_30px_rgba(159,123,255,0.15)] flex flex-col h-full overflow-hidden"
             >
               <div className="absolute inset-0 bg-gradient-to-br from-white/[0.02] to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
 
@@ -93,10 +93,10 @@ export function PathSelectionModal({
                   <Package className="w-8 h-8 text-purple-400" />
                 </div>
                 <div className="flex-1">
-                  <h3 className="text-xl font-bold text-[#F1F1F3] mb-2 group-hover:text-[#9F7BFF] transition-colors">
+                  <h3 className="text-xl font-bold text-hatchin-text-bright mb-2 group-hover:text-[#9F7BFF] transition-colors">
                     Use a starter pack
                   </h3>
-                  <p className="text-[#A6A7AB] text-sm leading-relaxed mb-6">
+                  <p className="text-muted-foreground text-sm leading-relaxed mb-6">
                     Explore high-performance team templates curated for SaaS, Creative, and Operations.
                   </p>
                 </div>
@@ -115,7 +115,7 @@ export function PathSelectionModal({
             transition={{ delay: 0.5 }}
             className="text-center relative z-10"
           >
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#111318] border border-[#31343A] text-[#A6A7AB] text-sm group cursor-pointer hover:border-[#43444B] transition-all"
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-hatchin-panel border border-hatchin-border-subtle text-muted-foreground text-sm group cursor-pointer hover:border-hatchin-border-subtle transition-all"
               onClick={onFigureItOut}>
               <MousePointer2 className="w-3.5 h-3.5" />
               <span>Not sure? <span className="text-hatchin-blue font-bold hover:underline ml-1">I'll figure it out as I go</span></span>

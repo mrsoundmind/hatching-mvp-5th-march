@@ -7,6 +7,8 @@ interface User {
   email: string;
   name: string;
   avatarUrl?: string | null;
+  tier?: 'free' | 'pro';
+  subscriptionStatus?: 'none' | 'active' | 'past_due' | 'cancelled';
 }
 
 const AUTH_CHANGED_EVENT = "hatchin_auth_changed";
@@ -29,14 +31,17 @@ function getOnboardingKey(userId?: string | null): string | null {
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [authError, setAuthError] = useState<string | null>(null);
   const [, setLocation] = useLocation();
 
   const refresh = useCallback(async () => {
     try {
+      setAuthError(null);
       const sessionUser = await fetchSessionUser();
       setUser(sessionUser);
     } catch (error) {
       console.error("Failed to validate session:", error);
+      setAuthError(error instanceof Error ? error.message : "Session check failed");
       setUser(null);
     } finally {
       setIsLoading(false);
@@ -48,6 +53,7 @@ export function useAuth() {
 
     const loadSession = async () => {
       try {
+        if (isMounted) setAuthError(null);
         const sessionUser = await fetchSessionUser();
         if (isMounted) {
           setUser(sessionUser);
@@ -55,6 +61,7 @@ export function useAuth() {
       } catch (error) {
         console.error("Failed to validate session:", error);
         if (isMounted) {
+          setAuthError(error instanceof Error ? error.message : "Session check failed");
           setUser(null);
         }
       } finally {
@@ -109,6 +116,7 @@ export function useAuth() {
   return {
     user,
     isLoading,
+    authError,
     signIn,
     signOut,
     refresh,

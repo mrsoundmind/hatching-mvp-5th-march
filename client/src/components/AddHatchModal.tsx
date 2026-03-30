@@ -46,8 +46,8 @@ const TEAM_TEMPLATES: TeamTemplate[] = [
     suggested: true,
     agents: [
       { name: 'Alex', role: 'Product Manager', color: 'blue', initials: 'PM' },
-      { name: 'Sarah', role: 'UI Designer', color: 'green', initials: 'UD' },
-      { name: 'Mike', role: 'Developer', color: 'purple', initials: 'DV' }
+      { name: 'Arlo', role: 'UI Designer', color: 'green', initials: 'UD' },
+      { name: 'Coda', role: 'Software Engineer', color: 'purple', initials: 'SE' }
     ]
   },
   {
@@ -56,9 +56,9 @@ const TEAM_TEMPLATES: TeamTemplate[] = [
     description: 'Grow your audience and revenue',
     icon: '📈',
     agents: [
-      { name: 'Emma', role: 'Growth Expert', color: 'orange', initials: 'GE' },
-      { name: 'Jake', role: 'Copywriter', color: 'pink', initials: 'CW' },
-      { name: 'Lisa', role: 'Content Creator', color: 'yellow', initials: 'CC' }
+      { name: 'Kai', role: 'Growth Marketer', color: 'orange', initials: 'GM' },
+      { name: 'Wren', role: 'Copywriter', color: 'pink', initials: 'CW' },
+      { name: 'Mira', role: 'Content Writer', color: 'yellow', initials: 'CW' }
     ]
   },
   {
@@ -67,9 +67,9 @@ const TEAM_TEMPLATES: TeamTemplate[] = [
     description: 'Create beautiful experiences',
     icon: '🎨',
     agents: [
-      { name: 'Sarah', role: 'UI Designer', color: 'green', initials: 'UD' },
-      { name: 'Tom', role: 'Brand Strategist', color: 'indigo', initials: 'BS' },
-      { name: 'Jake', role: 'Copywriter', color: 'pink', initials: 'CW' }
+      { name: 'Arlo', role: 'UI Designer', color: 'green', initials: 'UD' },
+      { name: 'Cass', role: 'Brand Strategist', color: 'indigo', initials: 'BS' },
+      { name: 'Wren', role: 'Copywriter', color: 'pink', initials: 'CW' }
     ]
   },
   {
@@ -78,9 +78,9 @@ const TEAM_TEMPLATES: TeamTemplate[] = [
     description: 'Build robust and scalable systems',
     icon: '⚙️',
     agents: [
-      { name: 'Mike', role: 'Developer', color: 'purple', initials: 'DV' },
+      { name: 'Coda', role: 'Software Engineer', color: 'purple', initials: 'SE' },
       { name: 'Alex', role: 'Product Manager', color: 'blue', initials: 'PM' },
-      { name: 'Emma', role: 'Growth Expert', color: 'orange', initials: 'GE' }
+      { name: 'Kai', role: 'Growth Marketer', color: 'orange', initials: 'GM' }
     ]
   },
   {
@@ -90,9 +90,9 @@ const TEAM_TEMPLATES: TeamTemplate[] = [
     icon: '🚀',
     agents: [
       { name: 'Alex', role: 'Product Manager', color: 'blue', initials: 'PM' },
-      { name: 'Emma', role: 'Growth Expert', color: 'orange', initials: 'GE' },
-      { name: 'Jake', role: 'Copywriter', color: 'pink', initials: 'CW' },
-      { name: 'Nina', role: 'PR Specialist', color: 'cyan', initials: 'PR' }
+      { name: 'Kai', role: 'Growth Marketer', color: 'orange', initials: 'GM' },
+      { name: 'Wren', role: 'Copywriter', color: 'pink', initials: 'CW' },
+      { name: 'Nova', role: 'Marketing Specialist', color: 'cyan', initials: 'MS' }
     ]
   },
   {
@@ -101,8 +101,8 @@ const TEAM_TEMPLATES: TeamTemplate[] = [
     description: 'Make data-driven decisions',
     icon: '📊',
     agents: [
-      { name: 'David', role: 'Data Analyst', color: 'teal', initials: 'DA' },
-      { name: 'Emma', role: 'Growth Expert', color: 'orange', initials: 'GE' },
+      { name: 'Rio', role: 'Data Analyst', color: 'teal', initials: 'DA' },
+      { name: 'Kai', role: 'Growth Marketer', color: 'orange', initials: 'GM' },
       { name: 'Alex', role: 'Product Manager', color: 'blue', initials: 'PM' }
     ]
   },
@@ -112,10 +112,10 @@ const TEAM_TEMPLATES: TeamTemplate[] = [
     description: 'Create engaging content and storytelling',
     icon: '✍️',
     agents: [
-      { name: 'Lisa', role: 'Content Creator', color: 'yellow', initials: 'CC' },
-      { name: 'Jake', role: 'Copywriter', color: 'pink', initials: 'CW' },
-      { name: 'Tom', role: 'Brand Strategist', color: 'indigo', initials: 'BS' },
-      { name: 'Nina', role: 'PR Specialist', color: 'cyan', initials: 'PR' }
+      { name: 'Mira', role: 'Content Writer', color: 'yellow', initials: 'CW' },
+      { name: 'Wren', role: 'Copywriter', color: 'pink', initials: 'CW' },
+      { name: 'Cass', role: 'Brand Strategist', color: 'indigo', initials: 'BS' },
+      { name: 'Nova', role: 'Marketing Specialist', color: 'cyan', initials: 'MS' }
     ]
   },
   {
@@ -124,16 +124,16 @@ const TEAM_TEMPLATES: TeamTemplate[] = [
     description: 'Ensure customer satisfaction and retention',
     icon: '🤝',
     agents: [
-      { name: 'Amy', role: 'Customer Success', color: 'emerald', initials: 'CS' },
-      { name: 'Jake', role: 'Copywriter', color: 'pink', initials: 'CW' },
-      { name: 'Emma', role: 'Growth Expert', color: 'orange', initials: 'GE' }
+      { name: 'Quinn', role: 'Operations Manager', color: 'emerald', initials: 'OM' },
+      { name: 'Wren', role: 'Copywriter', color: 'pink', initials: 'CW' },
+      { name: 'Kai', role: 'Growth Marketer', color: 'orange', initials: 'GM' }
     ]
   }
 ];
 
 const INDIVIDUAL_AGENTS: IndividualAgent[] = [
   {
-    name: 'Product Manager',
+    name: 'Alex',
     role: 'Product Manager',
     color: 'blue',
     initials: 'PM',
@@ -141,7 +141,7 @@ const INDIVIDUAL_AGENTS: IndividualAgent[] = [
     expertise: ['Product Strategy', 'User Research', 'Roadmap Planning']
   },
   {
-    name: 'Product Designer',
+    name: 'Cleo',
     role: 'Product Designer',
     color: 'green',
     initials: 'PD',
@@ -149,7 +149,7 @@ const INDIVIDUAL_AGENTS: IndividualAgent[] = [
     expertise: ['UI/UX Design', 'Prototyping', 'User Testing']
   },
   {
-    name: 'UI Engineer',
+    name: 'Finn',
     role: 'UI Engineer',
     color: 'purple',
     initials: 'UE',
@@ -157,7 +157,7 @@ const INDIVIDUAL_AGENTS: IndividualAgent[] = [
     expertise: ['React', 'TypeScript', 'Frontend Architecture']
   },
   {
-    name: 'Backend Developer',
+    name: 'Dev',
     role: 'Backend Developer',
     color: 'red',
     initials: 'BD',
@@ -165,15 +165,15 @@ const INDIVIDUAL_AGENTS: IndividualAgent[] = [
     expertise: ['Node.js', 'Databases', 'API Design']
   },
   {
-    name: 'Growth Expert',
-    role: 'Growth Expert',
+    name: 'Kai',
+    role: 'Growth Marketer',
     color: 'orange',
     initials: 'GE',
     description: 'Drives user acquisition, retention, and revenue growth through data-driven strategies.',
     expertise: ['Growth Hacking', 'Analytics', 'User Acquisition']
   },
   {
-    name: 'Copywriter',
+    name: 'Wren',
     role: 'Copywriter',
     color: 'pink',
     initials: 'CW',
@@ -181,15 +181,15 @@ const INDIVIDUAL_AGENTS: IndividualAgent[] = [
     expertise: ['Copywriting', 'Brand Voice', 'Conversion Optimization']
   },
   {
-    name: 'Content Creator',
-    role: 'Content Creator',
+    name: 'Mira',
+    role: 'Content Writer',
     color: 'yellow',
     initials: 'CC',
     description: 'Develops engaging content strategies and creates multimedia content that resonates with audiences.',
     expertise: ['Content Strategy', 'Video Production', 'Social Media']
   },
   {
-    name: 'Brand Strategist',
+    name: 'Cass',
     role: 'Brand Strategist',
     color: 'indigo',
     initials: 'BS',
@@ -197,23 +197,23 @@ const INDIVIDUAL_AGENTS: IndividualAgent[] = [
     expertise: ['Brand Strategy', 'Market Positioning', 'Brand Identity']
   },
   {
-    name: 'Customer Success',
-    role: 'Customer Success',
+    name: 'Quinn',
+    role: 'Operations Manager',
     color: 'emerald',
     initials: 'CS',
-    description: 'Ensures customer satisfaction, drives adoption, and builds long-term relationships.',
-    expertise: ['Customer Onboarding', 'Retention', 'Support Strategy']
+    description: 'Ensures operational excellence, process optimization, and builds efficient team workflows.',
+    expertise: ['Operations', 'Process Design', 'Team Coordination']
   },
   {
-    name: 'PR Specialist',
-    role: 'PR Specialist',
+    name: 'Nova',
+    role: 'Marketing Specialist',
     color: 'cyan',
     initials: 'PR',
-    description: 'Manages public relations, media outreach, and builds brand awareness through strategic communications.',
-    expertise: ['Media Relations', 'Press Releases', 'Crisis Communication']
+    description: 'Manages marketing campaigns, outreach, and builds brand awareness through strategic communications.',
+    expertise: ['Marketing Strategy', 'Campaigns', 'Brand Awareness']
   },
   {
-    name: 'Data Analyst',
+    name: 'Rio',
     role: 'Data Analyst',
     color: 'teal',
     initials: 'DA',
@@ -221,15 +221,15 @@ const INDIVIDUAL_AGENTS: IndividualAgent[] = [
     expertise: ['Data Analysis', 'Business Intelligence', 'Reporting']
   },
   {
-    name: 'Sales Expert',
-    role: 'Sales Expert',
+    name: 'Blake',
+    role: 'Business Strategist',
     color: 'rose',
     initials: 'SE',
-    description: 'Drives revenue growth through strategic sales processes, lead qualification, and relationship building.',
-    expertise: ['Sales Strategy', 'Lead Generation', 'Conversion Optimization']
+    description: 'Drives business growth through strategic planning, market analysis, and relationship building.',
+    expertise: ['Business Strategy', 'Market Analysis', 'Growth Planning']
   },
   {
-    name: 'DevOps Engineer',
+    name: 'Remy',
     role: 'DevOps Engineer',
     color: 'slate',
     initials: 'DO',
@@ -237,12 +237,132 @@ const INDIVIDUAL_AGENTS: IndividualAgent[] = [
     expertise: ['CI/CD', 'Cloud Infrastructure', 'Monitoring']
   },
   {
-    name: 'QA Lead',
+    name: 'Sam',
     role: 'QA Lead',
     color: 'amber',
     initials: 'QA',
     description: 'Ensures product quality through comprehensive testing strategies and quality assurance processes.',
     expertise: ['Test Automation', 'Quality Processes', 'Bug Tracking']
+  },
+  {
+    name: 'Morgan',
+    role: 'Business Analyst',
+    color: 'sky',
+    initials: 'BA',
+    description: 'Bridges business needs and technical solutions through requirements analysis and process modeling.',
+    expertise: ['Requirements Analysis', 'Process Modeling', 'Stakeholder Management']
+  },
+  {
+    name: 'Coda',
+    role: 'Software Engineer',
+    color: 'violet',
+    initials: 'SE',
+    description: 'Builds reliable, maintainable software systems with a focus on clean architecture and code quality.',
+    expertise: ['Software Architecture', 'Code Quality', 'System Design']
+  },
+  {
+    name: 'Jordan',
+    role: 'Technical Lead',
+    color: 'zinc',
+    initials: 'TL',
+    description: 'Guides technical direction, mentors engineers, and ensures architectural consistency across the stack.',
+    expertise: ['Tech Strategy', 'Code Review', 'Architecture']
+  },
+  {
+    name: 'Nyx',
+    role: 'AI Developer',
+    color: 'fuchsia',
+    initials: 'AI',
+    description: 'Designs and implements machine learning models, AI pipelines, and intelligent automation systems.',
+    expertise: ['Machine Learning', 'NLP', 'AI Systems']
+  },
+  {
+    name: 'Lumi',
+    role: 'UX Designer',
+    color: 'lime',
+    initials: 'UX',
+    description: 'Champions user-centered design through research, testing, and intuitive interaction patterns.',
+    expertise: ['UX Research', 'Interaction Design', 'Usability Testing']
+  },
+  {
+    name: 'Arlo',
+    role: 'UI Designer',
+    color: 'green',
+    initials: 'UD',
+    description: 'Creates visually stunning interfaces with meticulous attention to typography, color, and layout.',
+    expertise: ['Visual Design', 'Design Systems', 'Typography']
+  },
+  {
+    name: 'Roux',
+    role: 'Designer',
+    color: 'orange',
+    initials: 'DS',
+    description: 'Versatile designer covering visual, product, and graphic design with a creative eye.',
+    expertise: ['Graphic Design', 'Visual Identity', 'Creative Direction']
+  },
+  {
+    name: 'Zara',
+    role: 'Creative Director',
+    color: 'rose',
+    initials: 'CD',
+    description: 'Sets creative vision and ensures brand consistency across all touchpoints and campaigns.',
+    expertise: ['Creative Strategy', 'Art Direction', 'Brand Storytelling']
+  },
+  {
+    name: 'Robin',
+    role: 'SEO Specialist',
+    color: 'emerald',
+    initials: 'SS',
+    description: 'Optimizes search visibility through technical SEO, content strategy, and performance analytics.',
+    expertise: ['Technical SEO', 'Keyword Research', 'Search Analytics']
+  },
+  {
+    name: 'Pixel',
+    role: 'Social Media Manager',
+    color: 'cyan',
+    initials: 'SM',
+    description: 'Builds engaged communities and manages social presence across platforms with creative content.',
+    expertise: ['Social Strategy', 'Community Management', 'Content Calendar']
+  },
+  {
+    name: 'Drew',
+    role: 'Email Specialist',
+    color: 'amber',
+    initials: 'ES',
+    description: 'Designs high-converting email campaigns, automation flows, and subscriber growth strategies.',
+    expertise: ['Email Marketing', 'Automation', 'A/B Testing']
+  },
+  {
+    name: 'Sage',
+    role: 'Data Scientist',
+    color: 'teal',
+    initials: 'DS',
+    description: 'Extracts insights from complex datasets using statistical modeling and machine learning techniques.',
+    expertise: ['Statistical Modeling', 'Data Visualization', 'Predictive Analytics']
+  },
+  {
+    name: 'Taylor',
+    role: 'HR Specialist',
+    color: 'pink',
+    initials: 'HR',
+    description: 'Manages talent acquisition, team culture, and organizational development for growing teams.',
+    expertise: ['Talent Management', 'Culture Building', 'Organizational Design']
+  },
+  {
+    name: 'Lee',
+    role: 'Instructional Designer',
+    color: 'indigo',
+    initials: 'ID',
+    description: 'Creates effective learning experiences, training materials, and educational content.',
+    expertise: ['Learning Design', 'Curriculum Development', 'E-Learning']
+  },
+  {
+    name: 'Vince',
+    role: 'Audio Editor',
+    color: 'slate',
+    initials: 'AE',
+    description: 'Produces professional audio content including podcasts, music, and sound design.',
+    expertise: ['Audio Production', 'Sound Design', 'Podcast Editing']
   }
 ];
 
@@ -334,7 +454,7 @@ export function AddHatchModal({ isOpen, onClose, onAddAgent, activeProject, exis
         if (existingAgent) continue; // Skip if already exists
 
         const agentData: Omit<Agent, 'id'> = {
-          name: templateAgent.role, // Use role as default name
+          name: templateAgent.name, // Use character name from template
           role: templateAgent.role,
           color: templateAgent.color,
           userId: 'current-user',
@@ -344,7 +464,7 @@ export function AddHatchModal({ isOpen, onClose, onAddAgent, activeProject, exis
             traits: [],
             communicationStyle: 'professional',
             expertise: [],
-            welcomeMessage: `Hi! I'm your ${templateAgent.role}. Ready to help ${template.name}!`
+            welcomeMessage: `Hi! I'm ${templateAgent.name}, your ${templateAgent.role}. Ready to help ${template.name}!`
           },
           isSpecialAgent: false
         };
@@ -403,7 +523,7 @@ export function AddHatchModal({ isOpen, onClose, onAddAgent, activeProject, exis
       }
 
       const agentData: Omit<Agent, 'id'> = {
-        name: agent.role, // Use role as default name
+        name: agent.name, // Use character name (e.g., "Alex" not "Product Manager")
         role: agent.role,
         color: agent.color,
         userId: 'current-user',
@@ -441,22 +561,22 @@ export function AddHatchModal({ isOpen, onClose, onAddAgent, activeProject, exis
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 20 }}
               transition={{ duration: 0.15 }}
-              className="bg-[#23262B] rounded-2xl border border-[#43444B] shadow-2xl flex flex-col" role="dialog" aria-modal="true" aria-labelledby="modal-title"
+              className="bg-hatchin-card rounded-2xl border border-hatchin-border-subtle shadow-2xl flex flex-col" role="dialog" aria-modal="true" aria-labelledby="modal-title"
               style={{ width: '1200px', height: '700px' }}
             >
               {/* Header */}
-              <div className="p-6 border-b border-[#43444B] flex items-center justify-between">
+              <div className="p-6 border-b border-hatchin-border-subtle flex items-center justify-between">
                 <div>
-                  <h2 className="text-xl font-semibold text-[#F1F1F3] mb-1" id="modal-title">
+                  <h2 className="text-xl font-semibold text-hatchin-text-bright mb-1" id="modal-title">
                     Add Hatch
                   </h2>
-                  <p className="text-[#A6A7AB] text-sm">
+                  <p className="text-muted-foreground text-sm">
                     Add AI teammates to {activeProject?.name || 'your project'}
                   </p>
                 </div>
                 <button
                   onClick={onClose}
-                  className="text-[#A6A7AB] hover:text-[#F1F1F3] transition-colors"
+                  className="text-muted-foreground hover:text-hatchin-text-bright transition-colors"
                 >
                   <X size={20} />
                 </button>
@@ -465,14 +585,14 @@ export function AddHatchModal({ isOpen, onClose, onAddAgent, activeProject, exis
               {/* Content Area with Sidebar Layout */}
               <div className="flex flex-1 overflow-hidden">
                 {/* Category Sidebar */}
-                <div className="w-64 border-r border-[#43444B] bg-[#1A1C1F]">
+                <div className="w-64 border-r border-hatchin-border-subtle bg-hatchin-panel">
                   <div className="p-4">
                     <div className="space-y-1">
                       <button
                         onClick={() => setActiveTab('teams')}
                         className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all duration-200 ${activeTab === 'teams'
                           ? 'bg-hatchin-blue text-white'
-                          : 'text-[#A6A7AB] hover:text-[#F1F1F3] hover:bg-[#2A2D33]'
+                          : 'text-muted-foreground hover:text-hatchin-text-bright hover:bg-hatchin-surface-elevated'
                           }`}
                       >
                         <Users size={20} />
@@ -489,7 +609,7 @@ export function AddHatchModal({ isOpen, onClose, onAddAgent, activeProject, exis
                         onClick={() => setActiveTab('individual')}
                         className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all duration-200 mt-[13px] mb-[13px] ${activeTab === 'individual'
                           ? 'bg-hatchin-blue text-white'
-                          : 'text-[#A6A7AB] hover:text-[#F1F1F3] hover:bg-[#2A2D33]'
+                          : 'text-muted-foreground hover:text-hatchin-text-bright hover:bg-hatchin-surface-elevated'
                           }`}
                       >
                         <User size={20} />
@@ -508,15 +628,15 @@ export function AddHatchModal({ isOpen, onClose, onAddAgent, activeProject, exis
                 {/* Main Content */}
                 <div className="flex-1 flex flex-col">
                   {/* Search Bar */}
-                  <div className="p-6 border-b border-[#43444B]">
+                  <div className="p-6 border-b border-hatchin-border-subtle">
                     <div className="relative">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#A6A7AB]" size={18} />
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" size={18} />
                       <input
                         type="text"
-                        placeholder={activeTab === 'teams' ? 'Search team templates...' : 'Search individual agents...'}
+                        placeholder={activeTab === 'teams' ? 'Search team templates...' : 'Search teammates...'}
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full pl-10 pr-4 py-3 bg-[#37383B] border border-[#43444B] rounded-xl text-[#F1F1F3] placeholder-[#A6A7AB] focus:border-hatchin-blue focus:outline-none focus:ring-1 focus:ring-hatchin-blue transition-colors"
+                        className="w-full pl-10 pr-4 py-3 bg-hatchin-surface border border-hatchin-border-subtle rounded-xl text-hatchin-text-bright placeholder-muted-foreground focus:border-hatchin-blue focus:outline-none focus:ring-1 focus:ring-hatchin-blue transition-colors"
                       />
                     </div>
                   </div>
@@ -533,7 +653,7 @@ export function AddHatchModal({ isOpen, onClose, onAddAgent, activeProject, exis
                         {filteredTeamTemplates.map((template) => (
                           <motion.div
                             key={template.id}
-                            className="relative bg-gradient-to-br from-[#2A2D33] to-[#1D1F23] rounded-xl p-4 border border-[#43444B] transition-all duration-300 cursor-pointer flex flex-col hover:border-hatchin-blue/50 hover:shadow-[0_8px_30px_rgba(108,130,255,0.15)] group overflow-hidden"
+                            className="relative bg-gradient-to-br from-hatchin-surface-elevated to-hatchin-panel rounded-xl p-4 border border-hatchin-border-subtle transition-all duration-300 cursor-pointer flex flex-col hover:border-hatchin-blue/50 hover:shadow-[0_8px_30px_rgba(108,130,255,0.15)] group overflow-hidden"
                             onClick={() => handleUseTemplate(template)}
                             whileHover={{
                               y: -4,
@@ -554,7 +674,7 @@ export function AddHatchModal({ isOpen, onClose, onAddAgent, activeProject, exis
                                   {template.icon}
                                 </div>
                                 <div className="flex-1">
-                                  <h3 className="text-[#F1F1F3] text-sm mb-1 flex items-center gap-2">
+                                  <h3 className="text-hatchin-text-bright text-sm mb-1 flex items-center gap-2">
                                     {template.name}
                                     {template.suggested && (
                                       <motion.div
@@ -566,12 +686,12 @@ export function AddHatchModal({ isOpen, onClose, onAddAgent, activeProject, exis
                                       </motion.div>
                                     )}
                                   </h3>
-                                  <p className="text-[#A6A7AB] text-xs leading-tight">
+                                  <p className="text-muted-foreground text-xs leading-tight">
                                     {template.description}
                                   </p>
                                 </div>
                               </div>
-                              <div className="ml-1 text-[#A6A7AB] flex items-center gap-1">
+                              <div className="ml-1 text-muted-foreground flex items-center gap-1">
                                 <Users size={10} />
                                 <span className="text-xs">{template.agents.length}</span>
                               </div>
@@ -581,9 +701,9 @@ export function AddHatchModal({ isOpen, onClose, onAddAgent, activeProject, exis
                             <div className="mt-2 mb-2">
                               <div className="flex flex-wrap gap-1">
                                 {template.agents.map((agent, agentIndex) => (
-                                  <div key={agentIndex} className="flex items-center gap-1 bg-[#23262B] rounded px-2 py-1">
+                                  <div key={agentIndex} className="flex items-center gap-1 bg-hatchin-card rounded px-2 py-1">
                                     <User className="w-3 h-3 text-hatchin-blue" />
-                                    <span className="text-xs text-[#F1F1F3]">{agent.role}</span>
+                                    <span className="text-xs text-hatchin-text-bright">{agent.role}</span>
                                   </div>
                                 ))}
                               </div>
@@ -591,7 +711,7 @@ export function AddHatchModal({ isOpen, onClose, onAddAgent, activeProject, exis
 
                             {/* CTA Button - Fixed at bottom */}
                             <div className="mt-auto pt-2">
-                              <button className="w-full px-3 py-2 rounded-lg transition-all duration-200 text-xs font-medium bg-[#43444B] hover:bg-hatchin-blue text-[#F1F1F3] hover:text-white">
+                              <button className="w-full px-3 py-2 rounded-lg transition-all duration-200 text-xs font-medium bg-hatchin-border-subtle hover:bg-hatchin-blue text-hatchin-text-bright hover:text-white">
                                 Use Pack
                               </button>
                             </div>
@@ -608,7 +728,7 @@ export function AddHatchModal({ isOpen, onClose, onAddAgent, activeProject, exis
                         {filteredIndividualAgents.map((agent, index) => (
                           <motion.div
                             key={index}
-                            className="relative bg-gradient-to-br from-[#2A2D33] to-[#1D1F23] rounded-xl p-4 border border-[#43444B] transition-all duration-300 cursor-pointer flex flex-col hover:border-hatchin-blue/50 hover:shadow-[0_8px_30px_rgba(108,130,255,0.15)] group overflow-hidden"
+                            className="relative bg-gradient-to-br from-hatchin-surface-elevated to-hatchin-panel rounded-xl p-4 border border-hatchin-border-subtle transition-all duration-300 cursor-pointer flex flex-col hover:border-hatchin-blue/50 hover:shadow-[0_8px_30px_rgba(108,130,255,0.15)] group overflow-hidden"
                             onClick={() => handleAddIndividualAgent(agent)}
                             whileHover={{
                               y: -4,
@@ -629,15 +749,15 @@ export function AddHatchModal({ isOpen, onClose, onAddAgent, activeProject, exis
                                   {agent.initials}
                                 </div>
                                 <div className="flex-1">
-                                  <h3 className="text-[#F1F1F3] text-sm mb-1">{agent.name}</h3>
-                                  <p className="text-[#A6A7AB] text-xs leading-tight">{agent.role}</p>
+                                  <h3 className="text-hatchin-text-bright text-sm mb-1">{agent.name}</h3>
+                                  <p className="text-muted-foreground text-xs leading-tight">{agent.role}</p>
                                 </div>
                               </div>
                             </div>
 
                             {/* Description */}
                             <div className="mt-2 mb-2">
-                              <p className="text-[#A6A7AB] text-xs leading-tight">
+                              <p className="text-muted-foreground text-xs leading-tight">
                                 {agent.description}
                               </p>
                             </div>
@@ -645,14 +765,14 @@ export function AddHatchModal({ isOpen, onClose, onAddAgent, activeProject, exis
                             {/* CTA Button - Fixed at bottom */}
                             <div className="mt-auto pt-2">
                               <button
-                                className="w-full px-3 py-2 rounded-lg transition-all duration-200 text-xs font-medium bg-[#43444B] hover:bg-hatchin-blue text-[#F1F1F3] hover:text-white"
+                                className="w-full px-3 py-2 rounded-lg transition-all duration-200 text-xs font-medium bg-hatchin-border-subtle hover:bg-hatchin-blue text-hatchin-text-bright hover:text-white"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   handleAddIndividualAgent(agent);
                                 }}
                                 data-testid={`button-add-individual-agent-${agent.role.toLowerCase().replace(/\s+/g, '-')}`}
                               >
-                                Add Agent
+                                Add Teammate
                               </button>
                             </div>
                           </motion.div>
@@ -664,8 +784,8 @@ export function AddHatchModal({ isOpen, onClose, onAddAgent, activeProject, exis
                     {((activeTab === 'teams' && filteredTeamTemplates.length === 0) ||
                       (activeTab === 'individual' && filteredIndividualAgents.length === 0)) && (
                         <div className="text-center py-12">
-                          <div className="text-[#F1F1F3] text-lg mb-2">No results found</div>
-                          <p className="text-[#A6A7AB] text-sm">
+                          <div className="text-hatchin-text-bright text-lg mb-2">No results found</div>
+                          <p className="text-muted-foreground text-sm">
                             Try adjusting your search terms or browse all {activeTab === 'teams' ? 'templates' : 'agents'}
                           </p>
                         </div>

@@ -43,11 +43,11 @@ const starterPacksByCategory: Record<string, TemplateCategory> = {
       {
         id: "saas-startup",
         title: "SaaS Startup",
-        description: "Perfect for launching software products and digital platforms",
+        description: "Perfect for launching products and digital experiences",
         emoji: "🚀",
         color: "blue",
         members: ["Product Manager", "Technical Lead", "Copywriter"],
-        welcomeMessage: "Ready to build your SaaS product! Let's turn your idea into a successful software business."
+        welcomeMessage: "You've got the product idea. This crew has shipped SaaS before. They'll argue about your pricing page, obsess over your onboarding, and build something people actually pay for."
       },
       {
         id: "ai-tool-startup",
@@ -56,7 +56,7 @@ const starterPacksByCategory: Record<string, TemplateCategory> = {
         emoji: "🤖",
         color: "purple",
         members: ["AI Developer", "Product Manager", "Growth Marketer"],
-        welcomeMessage: "Let's create innovative AI tools that solve real problems and delight users."
+        welcomeMessage: "AI is moving fast. Your team knows how to build something useful, not just impressive. They'll keep you honest about what's real and what's hype."
       },
       {
         id: "marketplace-app",
@@ -65,7 +65,7 @@ const starterPacksByCategory: Record<string, TemplateCategory> = {
         emoji: "🏪",
         color: "green",
         members: ["UX Designer", "Technical Lead", "Operations Manager"],
-        welcomeMessage: "Building marketplaces that bring people together and create value for everyone."
+        welcomeMessage: "Marketplaces are hard. Two sides, two sets of problems. This team knows how to get the chicken-and-egg thing right."
       },
       {
         id: "solo-founder-support",
@@ -74,16 +74,16 @@ const starterPacksByCategory: Record<string, TemplateCategory> = {
         emoji: "👤",
         color: "amber",
         members: ["Product Manager", "Copywriter", "Operations Manager"],
-        welcomeMessage: "You're not alone! This team will help you navigate every aspect of building your business."
+        welcomeMessage: "You've been wearing every hat. Not anymore. This is your core team. They'll take the work off your plate and push back when your plan needs it."
       },
       {
         id: "investor-deck-sprint",
         title: "Investor Deck Sprint",
-        description: "Create compelling pitch decks that secure funding",
+        description: "Create pitch decks that land funding",
         emoji: "📊",
         color: "blue",
         members: ["Product Manager", "Brand Strategist", "UI Designer"],
-        welcomeMessage: "Let's craft a pitch deck that tells your story and wins over investors."
+        welcomeMessage: "Investors see hundreds of decks. This team builds the one they remember. Story first, slides second."
       }
     ]
   },
@@ -99,7 +99,7 @@ const starterPacksByCategory: Record<string, TemplateCategory> = {
         emoji: "🛍️",
         color: "green",
         members: ["Brand Strategist", "Copywriter", "UI Designer"],
-        welcomeMessage: "Ready to launch your e-commerce store and create an amazing shopping experience!"
+        welcomeMessage: "Your store needs more than products on a page. This team builds the brand, writes the copy, and designs the experience that makes people buy."
       },
       {
         id: "dtc-brand-strategy",
@@ -108,16 +108,16 @@ const starterPacksByCategory: Record<string, TemplateCategory> = {
         emoji: "📦",
         color: "purple",
         members: ["Product Manager", "Growth Marketer", "Social Media Manager"],
-        welcomeMessage: "Building direct relationships with customers and growing your brand authentically."
+        welcomeMessage: "Selling direct means owning the relationship. This team builds the brand voice, the growth engine, and the community that keeps people coming back."
       },
       {
         id: "amazon-store-optimization",
         title: "Amazon Store Optimization",
-        description: "Optimize your Amazon presence for maximum sales",
+        description: "Grow your Amazon presence for maximum sales",
         emoji: "📈",
         color: "amber",
         members: ["SEO Specialist", "Copywriter", "Data Analyst"],
-        welcomeMessage: "Let's optimize your Amazon store to rank higher and convert better."
+        welcomeMessage: "Amazon rewards the sellers who get the details right. This team handles SEO, copy, and data so you rank higher and convert better."
       },
       {
         id: "product-packaging-revamp",
@@ -126,7 +126,7 @@ const starterPacksByCategory: Record<string, TemplateCategory> = {
         emoji: "📦",
         color: "blue",
         members: ["Brand Strategist", "UI Designer", "Creative Director"],
-        welcomeMessage: "Creating packaging that tells your brand story and captivates customers."
+        welcomeMessage: "Packaging is the first thing people touch. This team makes sure it tells your story before anyone reads a word."
       }
     ]
   },
@@ -142,7 +142,7 @@ const starterPacksByCategory: Record<string, TemplateCategory> = {
         emoji: "🎨",
         color: "purple",
         members: ["Creative Director", "Brand Strategist", "Copywriter"],
-        welcomeMessage: "Ready to bring creative visions to life with stunning design and compelling storytelling."
+        welcomeMessage: "Good creative isn't decoration. It's the difference between someone scrolling past and someone stopping to care. This team makes the second thing happen."
       },
       {
         id: "portfolio-builder",
@@ -151,7 +151,7 @@ const starterPacksByCategory: Record<string, TemplateCategory> = {
         emoji: "💼",
         color: "blue",
         members: ["UI Designer", "Copywriter", "UX Designer"],
-        welcomeMessage: "Let's create a portfolio that showcases your best work and attracts dream clients."
+        welcomeMessage: "Your work speaks for itself. This team makes sure the presentation does too. Clean, sharp, impossible to ignore."
       },
       {
         id: "content-calendar-builder",
@@ -160,7 +160,7 @@ const starterPacksByCategory: Record<string, TemplateCategory> = {
         emoji: "📅",
         color: "green",
         members: ["Social Media Manager", "Growth Marketer", "Copywriter"],
-        welcomeMessage: "Planning content that engages your audience and grows your following consistently."
+        welcomeMessage: "Posting without a plan is just noise. This team maps out content that actually builds an audience over time."
       },
       {
         id: "youtube-channel-strategy",
@@ -169,7 +169,7 @@ const starterPacksByCategory: Record<string, TemplateCategory> = {
         emoji: "📺",
         color: "amber",
         members: ["Social Media Manager", "Creative Director", "SEO Specialist"],
-        welcomeMessage: "Building a YouTube channel that attracts subscribers and keeps them coming back."
+        welcomeMessage: "YouTube rewards consistency and strategy. This team plans the content, writes the hooks, and makes sure people subscribe, not just watch."
       },
       {
         id: "podcast-launch",
@@ -178,7 +178,7 @@ const starterPacksByCategory: Record<string, TemplateCategory> = {
         emoji: "🎙️",
         color: "purple",
         members: ["Audio Editor", "Copywriter", "Brand Strategist"],
-        welcomeMessage: "Ready to share your voice with the world through compelling podcast content."
+        welcomeMessage: "A great podcast starts with a point of view. This team helps you find yours, produce it clean, and grow it from episode one."
       }
     ]
   },
@@ -194,16 +194,16 @@ const starterPacksByCategory: Record<string, TemplateCategory> = {
         emoji: "⭐",
         color: "amber",
         members: ["Copywriter", "UI Designer", "Brand Strategist"],
-        welcomeMessage: "Building a personal brand that attracts ideal clients and premium projects."
+        welcomeMessage: "Clients pick you before they talk to you. This team builds the brand that makes that decision easy."
       },
       {
         id: "client-pitch-kit",
         title: "Client Pitch Kit",
-        description: "Win more clients with compelling proposals",
+        description: "Win more clients with sharp proposals",
         emoji: "🎯",
         color: "blue",
         members: ["Copywriter", "Product Manager", "Brand Strategist"],
-        welcomeMessage: "Crafting proposals that showcase your value and win the clients you want."
+        welcomeMessage: "The best pitch doesn't beg. It shows exactly what you bring and makes saying yes feel obvious. That's what this team builds."
       },
       {
         id: "notion-template-business",
@@ -212,7 +212,7 @@ const starterPacksByCategory: Record<string, TemplateCategory> = {
         emoji: "📝",
         color: "green",
         members: ["UX Designer", "Copywriter", "Growth Marketer"],
-        welcomeMessage: "Building a business around helping others stay organized and productive."
+        welcomeMessage: "Templates sell when they're beautiful and useful. This team designs, writes, and markets the ones people actually pay for."
       },
       {
         id: "newsletter-strategy",
@@ -221,7 +221,7 @@ const starterPacksByCategory: Record<string, TemplateCategory> = {
         emoji: "📧",
         color: "purple",
         members: ["Email Specialist", "Copywriter", "Growth Marketer"],
-        welcomeMessage: "Growing a newsletter that provides value and generates sustainable income."
+        welcomeMessage: "A newsletter is a relationship. This team helps you write the ones people open, and build the list that pays for itself."
       }
     ]
   },
@@ -237,7 +237,7 @@ const starterPacksByCategory: Record<string, TemplateCategory> = {
         emoji: "🚀",
         color: "blue",
         members: ["Growth Marketer", "Copywriter", "UI Designer"],
-        welcomeMessage: "Creating buzz and driving conversions for your product launch."
+        welcomeMessage: "Most launches fizzle. This team builds the one that gets people talking before you even ship."
       },
       {
         id: "ad-funnel-builder",
@@ -246,7 +246,7 @@ const starterPacksByCategory: Record<string, TemplateCategory> = {
         emoji: "🎯",
         color: "green",
         members: ["Copywriter", "UI Designer", "Data Analyst"],
-        welcomeMessage: "Building funnels that turn ad clicks into loyal customers."
+        welcomeMessage: "Every click costs money. This team builds funnels where those clicks actually turn into customers."
       },
       {
         id: "seo-sprint",
@@ -255,16 +255,16 @@ const starterPacksByCategory: Record<string, TemplateCategory> = {
         emoji: "📈",
         color: "amber",
         members: ["SEO Specialist", "Copywriter", "Data Analyst"],
-        welcomeMessage: "Optimizing your content to rank higher and attract more organic traffic."
+        welcomeMessage: "SEO is a long game but you can win fast if you know where to start. This team finds the gaps and fills them."
       },
       {
         id: "email-sequence-builder",
         title: "Email Sequence Builder",
-        description: "Automated email sequences that nurture and convert",
+        description: "Email sequences that nurture and convert",
         emoji: "📨",
         color: "purple",
         members: ["Email Specialist", "Copywriter", "Brand Strategist"],
-        welcomeMessage: "Creating email sequences that build relationships and drive sales."
+        welcomeMessage: "The best email sequence doesn't feel like marketing. It feels like a friend who keeps showing up with exactly what you need."
       }
     ]
   },
@@ -280,7 +280,7 @@ const starterPacksByCategory: Record<string, TemplateCategory> = {
         emoji: "👥",
         color: "blue",
         members: ["Product Manager", "HR Specialist", "Operations Manager"],
-        welcomeMessage: "Creating smooth onboarding experiences that set new hires up for success."
+        welcomeMessage: "First week at a new job sets the tone for everything. This team builds the onboarding that makes new hires productive and excited."
       },
       {
         id: "weekly-sync-system",
@@ -289,7 +289,7 @@ const starterPacksByCategory: Record<string, TemplateCategory> = {
         emoji: "🔄",
         color: "green",
         members: ["Operations Manager", "Product Manager", "UI Designer"],
-        welcomeMessage: "Building systems that keep teams aligned and productive."
+        welcomeMessage: "Meetings are expensive. This team builds the system that keeps everyone aligned without wasting anyone's time."
       },
       {
         id: "internal-wiki-setup",
@@ -298,7 +298,7 @@ const starterPacksByCategory: Record<string, TemplateCategory> = {
         emoji: "📚",
         color: "purple",
         members: ["UX Designer", "Copywriter", "Technical Lead"],
-        welcomeMessage: "Organizing company knowledge so everyone can find what they need quickly."
+        welcomeMessage: "Every company has knowledge trapped in people's heads. This team gets it out, organizes it, and makes it findable."
       }
     ]
   },
@@ -314,7 +314,7 @@ const starterPacksByCategory: Record<string, TemplateCategory> = {
         emoji: "🎓",
         color: "blue",
         members: ["Instructional Designer", "Copywriter", "Brand Strategist"],
-        welcomeMessage: "Building courses that educate, engage, and transform students' lives."
+        welcomeMessage: "Most online courses get abandoned by week two. This team builds the ones people actually finish and recommend."
       },
       {
         id: "academic-research",
@@ -323,7 +323,7 @@ const starterPacksByCategory: Record<string, TemplateCategory> = {
         emoji: "🔬",
         color: "purple",
         members: ["Data Analyst", "Copywriter", "Brand Strategist"],
-        welcomeMessage: "Supporting rigorous research that advances knowledge and impacts the field."
+        welcomeMessage: "Good research deserves good presentation. This team supports the rigor and makes sure the writing matches the thinking."
       },
       {
         id: "slide-deck-assistant",
@@ -332,7 +332,7 @@ const starterPacksByCategory: Record<string, TemplateCategory> = {
         emoji: "📊",
         color: "amber",
         members: ["Product Manager", "Copywriter", "UI Designer"],
-        welcomeMessage: "Creating presentations that tell compelling stories and drive action."
+        welcomeMessage: "Death by PowerPoint is real. This team builds the deck that holds a room and gets people to act."
       }
     ]
   },
@@ -348,7 +348,7 @@ const starterPacksByCategory: Record<string, TemplateCategory> = {
         emoji: "💡",
         color: "amber",
         members: ["AI Developer", "Growth Marketer", "Copywriter"],
-        welcomeMessage: "Exploring side hustle ideas that could become your next big opportunity."
+        welcomeMessage: "You've got ideas. This team helps you figure out which ones are worth building and which ones to let go."
       },
       {
         id: "life-dashboard-builder",
@@ -357,7 +357,7 @@ const starterPacksByCategory: Record<string, TemplateCategory> = {
         emoji: "📊",
         color: "blue",
         members: ["UX Designer", "Copywriter", "UI Designer"],
-        welcomeMessage: "Building systems to track and optimize all areas of your life."
+        welcomeMessage: "Track what matters, ignore what doesn't. This team builds the personal system that actually sticks."
       },
       {
         id: "ai-character-creator",
@@ -366,7 +366,7 @@ const starterPacksByCategory: Record<string, TemplateCategory> = {
         emoji: "🎭",
         color: "purple",
         members: ["Creative Director", "AI Developer", "Copywriter"],
-        welcomeMessage: "Creating AI characters with personality, depth, and unique voices."
+        welcomeMessage: "Every character needs a voice, a history, and a reason to exist. This team crafts the ones people remember."
       },
       {
         id: "personal-knowledge-base",
@@ -375,7 +375,7 @@ const starterPacksByCategory: Record<string, TemplateCategory> = {
         emoji: "🧠",
         color: "green",
         members: ["Operations Manager", "UX Designer", "Copywriter"],
-        welcomeMessage: "Building a second brain to capture, organize, and connect your knowledge."
+        welcomeMessage: "Your best ideas are scattered across apps, notes, and your memory. This team builds the one place that connects them all."
       },
       {
         id: "moodboard-generator",
@@ -384,7 +384,7 @@ const starterPacksByCategory: Record<string, TemplateCategory> = {
         emoji: "🎨",
         color: "amber",
         members: ["Creative Director", "UI Designer", "Copywriter"],
-        welcomeMessage: "Curating visual inspiration that sparks creativity and guides design decisions."
+        welcomeMessage: "Great design starts with great references. This team curates the visual direction that makes the next step obvious."
       }
     ]
   }
@@ -459,30 +459,30 @@ export default function StarterPacksModal({
   return (
     <FocusTrap active={isOpen}>
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-        <div className="bg-[#23262B] rounded-2xl border border-[#43444B] shadow-2xl flex flex-col" role="dialog" aria-modal="true" aria-labelledby="modal-title" style={{ width: '1200px', height: '700px' }}>
+        <div className="bg-hatchin-card rounded-2xl border border-hatchin-border-subtle shadow-2xl flex flex-col" role="dialog" aria-modal="true" aria-labelledby="modal-title" style={{ width: '1200px', height: '700px' }}>
           {/* Header */}
-          <div className="p-6 border-b border-[#43444B] flex items-center justify-between">
+          <div className="p-6 border-b border-hatchin-border-subtle flex items-center justify-between">
             <div className="flex items-center gap-4">
               {onBack && (
                 <button
                   onClick={onBack}
-                  className="text-[#A6A7AB] hover:text-[#F1F1F3] transition-colors"
+                  className="text-muted-foreground hover:text-hatchin-text-bright transition-colors"
                 >
                   <ArrowLeft size={20} />
                 </button>
               )}
               <div>
-                <h2 className="text-xl font-semibold text-[#F1F1F3] mb-1" id="modal-title">
+                <h2 className="text-xl font-semibold text-hatchin-text-bright mb-1" id="modal-title">
                   Choose Your Starter Template
                 </h2>
-                <p className="text-[#A6A7AB] text-sm">
+                <p className="text-muted-foreground text-sm">
                   Select a pre-built team to get started quickly, or explore ideas if you're not sure what to build.
                 </p>
               </div>
             </div>
             <button
               onClick={onClose}
-              className="text-[#A6A7AB] hover:text-[#F1F1F3] transition-colors"
+              className="text-muted-foreground hover:text-hatchin-text-bright transition-colors"
             >
               <X size={20} />
             </button>
@@ -491,7 +491,7 @@ export default function StarterPacksModal({
           {/* Content Area with Sidebar Layout */}
           <div className="flex flex-1 overflow-hidden">
             {/* Category Sidebar */}
-            <div className="w-64 border-r border-[#43444B] bg-[#1A1C1F]">
+            <div className="w-64 border-r border-hatchin-border-subtle bg-hatchin-panel">
               <div className="p-4">
                 <div className="space-y-1">
                   {Object.entries(starterPacksByCategory).map(([categoryId, category]: [string, TemplateCategory]) => {
@@ -505,7 +505,7 @@ export default function StarterPacksModal({
                         onClick={() => setActiveCategory(categoryId)}
                         className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all duration-200 ${activeCategory === categoryId
                           ? 'text-white'
-                          : 'text-[#A6A7AB] hover:bg-[#37383B] hover:text-[#F1F1F3]'
+                          : 'text-muted-foreground hover:bg-hatchin-surface hover:text-hatchin-text-bright'
                           }`}
                         style={activeCategory === categoryId ? {
                           backgroundColor: accent.bg,
@@ -517,7 +517,7 @@ export default function StarterPacksModal({
                         <span className="text-sm font-medium flex-1">{category.title}</span>
                         <span className={`text-xs px-1.5 py-0.5 rounded ${activeCategory === categoryId
                           ? 'bg-white/20 text-white'
-                          : 'bg-[#43444B] text-[#A6A7AB]'
+                          : 'bg-hatchin-border-subtle text-muted-foreground'
                           }`}>
                           {packCount}
                         </span>
@@ -568,7 +568,7 @@ interface TemplateCardProps {
 function TemplateCard({ pack, index, isSelected, isLoading, onSelect }: TemplateCardProps) {
   return (
     <motion.div
-      className={`relative bg-gradient-to-br from-[#2A2D33] to-[#1D1F23] rounded-xl p-4 border transition-all duration-300 cursor-pointer flex flex-col group overflow-hidden ${isSelected ? 'border-hatchin-blue shadow-[0_0_20px_rgba(108,130,255,0.2)]' : 'border-[#43444B] hover:border-hatchin-blue/50 hover:shadow-[0_8px_30px_rgba(108,130,255,0.15)]'}`}
+      className={`relative bg-gradient-to-br from-hatchin-surface-elevated to-hatchin-panel rounded-xl p-4 border transition-all duration-300 cursor-pointer flex flex-col group overflow-hidden ${isSelected ? 'border-hatchin-blue shadow-[0_0_20px_rgba(108,130,255,0.2)]' : 'border-hatchin-border-subtle hover:border-hatchin-blue/50 hover:shadow-[0_8px_30px_rgba(108,130,255,0.15)]'}`}
       style={{
         minHeight: '200px',
         transformStyle: 'preserve-3d'
@@ -596,7 +596,7 @@ function TemplateCard({ pack, index, isSelected, isLoading, onSelect }: Template
             {pack.emoji}
           </div>
           <div className="flex-1">
-            <h3 className="text-[#F1F1F3] text-sm mb-1 flex items-center gap-2" id="modal-title">
+            <h3 className="text-hatchin-text-bright text-sm mb-1 flex items-center gap-2" id="modal-title">
               {pack.title}
               {isSelected && (
                 <motion.div
@@ -608,12 +608,12 @@ function TemplateCard({ pack, index, isSelected, isLoading, onSelect }: Template
                 </motion.div>
               )}
             </h3>
-            <p className="text-[#A6A7AB] text-xs leading-tight">
+            <p className="text-muted-foreground text-xs leading-tight">
               {pack.description}
             </p>
           </div>
         </div>
-        <div className="ml-1 text-[#A6A7AB] flex items-center gap-1">
+        <div className="ml-1 text-muted-foreground flex items-center gap-1">
           <Users size={10} />
           <span className="text-xs">{pack.members.length}</span>
         </div>
@@ -624,21 +624,21 @@ function TemplateCard({ pack, index, isSelected, isLoading, onSelect }: Template
           {pack.members.slice(0, 4).map((memberName: string) => {
             const hatch = getHatchTemplate(memberName);
             return (
-              <div key={memberName} className="flex items-center gap-1 bg-[#23262B] rounded px-2 py-1">
+              <div key={memberName} className="flex items-center gap-1 bg-hatchin-card rounded px-2 py-1">
                 <User className={`w-3 h-3 ${pack.color === 'blue' ? 'text-hatchin-blue' :
                   pack.color === 'green' ? 'text-[#47DB9A]' :
                     pack.color === 'purple' ? 'text-[#9F7BFF]' :
                       pack.color === 'amber' ? 'text-[#FFB547]' :
                         'text-hatchin-blue'
                   }`} />
-                <span className="text-xs text-[#F1F1F3]">{memberName}</span>
+                <span className="text-xs text-hatchin-text-bright">{memberName}</span>
               </div>
             );
           })}
 
           {pack.members.length > 4 && (
-            <div className="flex items-center justify-center bg-[#23262B] rounded px-2 py-1">
-              <span className="text-xs text-[#A6A7AB]">+{pack.members.length - 4}</span>
+            <div className="flex items-center justify-center bg-hatchin-card rounded px-2 py-1">
+              <span className="text-xs text-muted-foreground">+{pack.members.length - 4}</span>
             </div>
           )}
         </div>
@@ -648,7 +648,7 @@ function TemplateCard({ pack, index, isSelected, isLoading, onSelect }: Template
         <button
           className={`w-full px-3 py-2 rounded-lg transition-all duration-200 text-xs font-medium ${isSelected
             ? 'bg-hatchin-blue text-white'
-            : 'bg-[#43444B] hover:bg-hatchin-blue text-[#F1F1F3] hover:text-white'
+            : 'bg-hatchin-border-subtle hover:bg-hatchin-blue text-hatchin-text-bright hover:text-white'
             }`}
           disabled={isLoading}
         >

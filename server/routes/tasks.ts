@@ -105,23 +105,36 @@ export function registerTaskRoutes(app: Express, deps: RegisterTaskDeps): void {
   });
 
   // Auto task extraction endpoint
+  const extractSchema = z.object({
+    userMessage: z.string().min(1).max(10000),
+    agentResponse: z.string().min(1).max(10000),
+    projectContext: z.object({
+      projectName: z.string().optional(),
+      availableAgents: z.array(z.string()).optional(),
+    }).passthrough().optional(),
+  });
+
   app.post("/api/tasks/extract", async (req, res) => {
     try {
-      const { userMessage, agentResponse, projectContext } = req.body;
+      const userId = getSessionUserId(req);
+      if (!userId) return res.status(401).json({ error: 'Not authenticated' });
 
-      if (!userMessage || !agentResponse) {
-        return res.status(400).json({ error: "User message and agent response are required" });
+      const parsed = extractSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: 'Invalid request body', details: parsed.error });
       }
+      const { userMessage, agentResponse, projectContext } = parsed.data;
+      const ctx = projectContext ?? {};
 
       // Import task extractor
       const { extractTasksFromMessage, extractTasksFallback } = await import('../ai/taskExtractor.js');
 
       // Try AI extraction first
-      let result = await extractTasksFromMessage(userMessage, agentResponse, projectContext);
+      let result = await extractTasksFromMessage(userMessage, agentResponse, ctx as any);
 
       // Fallback to keyword matching if AI extraction fails
       if (!result.hasTasks && result.confidence < 0.5) {
-        result = extractTasksFallback(userMessage, agentResponse, projectContext.availableAgents);
+        result = extractTasksFallback(userMessage, agentResponse, ctx.availableAgents ?? []);
       }
 
       res.json(result);
@@ -320,6 +333,127 @@ export function registerTaskRoutes(app: Express, deps: RegisterTaskDeps): void {
     } catch (error) {
       console.error('Error creating approved tasks:', error);
       res.status(500).json({ error: "Failed to create approved tasks" });
+    }
+  });
+
+  // ─── Approve / Reject autonomous task actions ──────────────────────────────
+
+  const approveRejectBodySchema = z.object({
+    reason: z.string().max(500).optional(),
+  }).strict();
+
+  app.post("/api/tasks/:id/approve", async (req, res) => {
+    try {
+      const userId = getSessionUserId(req);
+      if (!userId) return res.status(401).json({ error: 'Not authenticated' });
+
+      const task = await storage.getTask(req.params.id);
+      if (!task) return res.status(404).json({ error: 'Task not found' });
+
+      const project = await getOwnedProject(task.projectId, userId);
+      if (!project) return res.status(404).json({ error: 'Task not found' });
+
+      const meta = (task.metadata ?? {}) as Record<string, unknown>;
+      if (!meta.awaitingApproval || !meta.draftOutput) {
+        return res.status(400).json({ error: 'Task is not awaiting approval' });
+      }
+
+      // Clear awaitingApproval immediately to prevent concurrent double-approve
+      await storage.updateTask(req.params.id, {
+        metadata: { ...meta, awaitingApproval: false } as any,
+      });
+
+      // Resolve the assigned agent
+      const allAgents = await storage.getAgentsByProject(task.projectId);
+      const agent = allAgents.find(
+        (a) => a.name === task.assignee || a.role === task.assignee,
+      ) ?? null;
+
+      // Publish draft output as an agent message in chat
+      const convId = agent
+        ? `agent:${task.projectId}:${agent.id}`
+        : `project:${task.projectId}`;
+
+      const draftContent = meta.draftOutput as string;
+      const createdMsg = await storage.createMessage({
+        conversationId: convId,
+        content: draftContent,
+        messageType: 'agent',
+        agentId: agent?.id ?? null,
+        userId: null,
+        metadata: { approvedByUser: true },
+      } as any);
+
+      deps.broadcastToConversation(convId, {
+        type: 'new_message',
+        conversationId: convId,
+        message: createdMsg,
+      });
+
+      // Mark task completed and clear approval state
+      await storage.updateTask(req.params.id, {
+        status: 'completed',
+        metadata: {
+          ...meta,
+          awaitingApproval: false,
+          draftOutput: draftContent,
+          approvedAt: new Date().toISOString(),
+        } as any,
+      });
+
+      deps.broadcastToConversation(convId, {
+        type: 'task_execution_completed',
+        taskId: task.id,
+        agentId: agent?.id ?? '',
+        agentName: agent?.name ?? task.assignee ?? 'Unknown',
+      });
+
+      devLog('[approve] Task approved:', task.id);
+      return res.json({ success: true });
+    } catch (error) {
+      console.error('Error approving task:', error);
+      return res.status(500).json({ error: 'Failed to approve task' });
+    }
+  });
+
+  app.post("/api/tasks/:id/reject", async (req, res) => {
+    try {
+      const userId = getSessionUserId(req);
+      if (!userId) return res.status(401).json({ error: 'Not authenticated' });
+
+      const task = await storage.getTask(req.params.id);
+      if (!task) return res.status(404).json({ error: 'Task not found' });
+
+      const project = await getOwnedProject(task.projectId, userId);
+      if (!project) return res.status(404).json({ error: 'Task not found' });
+
+      const parsed = approveRejectBodySchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: 'Invalid request body', details: parsed.error.errors });
+      }
+
+      const meta = (task.metadata ?? {}) as Record<string, unknown>;
+      await storage.updateTask(req.params.id, {
+        status: 'todo',
+        metadata: {
+          ...meta,
+          awaitingApproval: false,
+          draftOutput: null,
+          rejectedAt: new Date().toISOString(),
+          ...(parsed.data.reason ? { rejectionReason: parsed.data.reason } : {}),
+        } as any,
+      });
+
+      deps.broadcastToProject(task.projectId, {
+        type: 'task_approval_rejected',
+        taskId: task.id,
+      });
+
+      devLog('[reject] Task rejected:', task.id);
+      return res.json({ success: true });
+    } catch (error) {
+      console.error('Error rejecting task:', error);
+      return res.status(500).json({ error: 'Failed to reject task' });
     }
   });
 

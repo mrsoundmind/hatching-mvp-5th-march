@@ -38,11 +38,11 @@ export const starterPacksByCategory: Record<string, TemplateCategory> = {
       {
         id: "saas-startup",
         title: "SaaS Startup",
-        description: "Perfect for launching software products and digital platforms",
+        description: "Perfect for launching products and digital experiences",
         emoji: "🚀",
         color: "blue",
         members: ["Product Manager", "Technical Lead", "Copywriter"],
-        welcomeMessage: "Ready to build your SaaS product! Let's turn your idea into a successful software business."
+        welcomeMessage: "You've got the product idea. This crew has shipped SaaS before. They'll argue about your pricing page, obsess over your onboarding, and build something people actually pay for."
       },
       {
         id: "ai-tool-startup",
@@ -51,7 +51,7 @@ export const starterPacksByCategory: Record<string, TemplateCategory> = {
         emoji: "🤖",
         color: "purple",
         members: ["AI Developer", "Product Manager", "Growth Marketer"],
-        welcomeMessage: "Let's create innovative AI tools that solve real problems and delight users."
+        welcomeMessage: "AI is moving fast. Your team knows how to build something useful, not just impressive. They'll keep you honest about what's real and what's hype."
       },
       {
         id: "marketplace-app",
@@ -60,7 +60,7 @@ export const starterPacksByCategory: Record<string, TemplateCategory> = {
         emoji: "🏪",
         color: "green",
         members: ["UX Designer", "Technical Lead", "Operations Manager"],
-        welcomeMessage: "Building marketplaces that bring people together and create value for everyone."
+        welcomeMessage: "Marketplaces are hard. Two sides, two sets of problems. This team knows how to get the chicken-and-egg thing right."
       },
       {
         id: "solo-founder-support",
@@ -69,16 +69,16 @@ export const starterPacksByCategory: Record<string, TemplateCategory> = {
         emoji: "👤",
         color: "amber",
         members: ["Product Manager", "Copywriter", "Operations Manager"],
-        welcomeMessage: "You're not alone! This team will help you navigate every aspect of building your business."
+        welcomeMessage: "You've been wearing every hat. Not anymore. This is your core team. They'll take the work off your plate and push back when your plan needs it."
       },
       {
         id: "investor-deck-sprint",
         title: "Investor Deck Sprint",
-        description: "Create compelling pitch decks that secure funding",
+        description: "Create pitch decks that land funding",
         emoji: "📊",
         color: "blue",
         members: ["Product Manager", "Brand Strategist", "UI Designer"],
-        welcomeMessage: "Let's craft a pitch deck that tells your story and wins over investors."
+        welcomeMessage: "Investors see hundreds of decks. This team builds the one they remember. Story first, slides second."
       }
     ]
   },
@@ -94,7 +94,7 @@ export const starterPacksByCategory: Record<string, TemplateCategory> = {
         emoji: "🛍️",
         color: "green",
         members: ["Brand Strategist", "Copywriter", "UI Designer"],
-        welcomeMessage: "Ready to launch your e-commerce store and create an amazing shopping experience!"
+        welcomeMessage: "Your store needs more than products on a page. This team builds the brand, writes the copy, and designs the experience that makes people buy."
       },
       {
         id: "dtc-brand-strategy",
@@ -103,16 +103,16 @@ export const starterPacksByCategory: Record<string, TemplateCategory> = {
         emoji: "📦",
         color: "purple",
         members: ["Product Manager", "Growth Marketer", "Social Media Manager"],
-        welcomeMessage: "Building direct relationships with customers and growing your brand authentically."
+        welcomeMessage: "Selling direct means owning the relationship. This team builds the brand voice, the growth engine, and the community that keeps people coming back."
       },
       {
         id: "amazon-store-optimization",
         title: "Amazon Store Optimization",
-        description: "Optimize your Amazon presence for maximum sales",
+        description: "Grow your Amazon presence for maximum sales",
         emoji: "📈",
         color: "amber",
         members: ["SEO Specialist", "Copywriter", "Data Analyst"],
-        welcomeMessage: "Let's optimize your Amazon store to rank higher and convert better."
+        welcomeMessage: "Amazon rewards the sellers who get the details right. This team handles SEO, copy, and data so you rank higher and convert better."
       },
       {
         id: "product-packaging-revamp",
@@ -121,7 +121,7 @@ export const starterPacksByCategory: Record<string, TemplateCategory> = {
         emoji: "📦",
         color: "blue",
         members: ["Brand Strategist", "UI Designer", "Creative Director"],
-        welcomeMessage: "Creating packaging that tells your brand story and captivates customers."
+        welcomeMessage: "Packaging is the first thing people touch. This team makes sure it tells your story before anyone reads a word."
       }
     ]
   },
@@ -137,7 +137,7 @@ export const starterPacksByCategory: Record<string, TemplateCategory> = {
         emoji: "🎨",
         color: "purple",
         members: ["Creative Director", "Brand Strategist", "Copywriter"],
-        welcomeMessage: "Ready to bring creative visions to life with stunning design and compelling storytelling."
+        welcomeMessage: "Good creative isn't decoration. It's the difference between someone scrolling past and someone stopping to care. This team makes the second thing happen."
       },
       {
         id: "portfolio-builder",
@@ -146,7 +146,7 @@ export const starterPacksByCategory: Record<string, TemplateCategory> = {
         emoji: "💼",
         color: "blue",
         members: ["UI Designer", "Copywriter", "UX Designer"],
-        welcomeMessage: "Let's create a portfolio that showcases your best work and attracts dream clients."
+        welcomeMessage: "Your work speaks for itself. This team makes sure the presentation does too. Clean, sharp, impossible to ignore."
       },
       {
         id: "content-calendar-builder",
@@ -155,7 +155,7 @@ export const starterPacksByCategory: Record<string, TemplateCategory> = {
         emoji: "📅",
         color: "green",
         members: ["Social Media Manager", "Growth Marketer", "Copywriter"],
-        welcomeMessage: "Planning content that engages your audience and grows your following consistently."
+        welcomeMessage: "Posting without a plan is just noise. This team maps out content that actually builds an audience over time."
       },
       {
         id: "youtube-channel-strategy",
@@ -164,7 +164,7 @@ export const starterPacksByCategory: Record<string, TemplateCategory> = {
         emoji: "📺",
         color: "amber",
         members: ["Social Media Manager", "Creative Director", "SEO Specialist"],
-        welcomeMessage: "Building a YouTube channel that attracts subscribers and keeps them coming back."
+        welcomeMessage: "YouTube rewards consistency and strategy. This team plans the content, writes the hooks, and makes sure people subscribe, not just watch."
       },
       {
         id: "podcast-launch",
@@ -173,7 +173,7 @@ export const starterPacksByCategory: Record<string, TemplateCategory> = {
         emoji: "🎙️",
         color: "purple",
         members: ["Audio Editor", "Copywriter", "Brand Strategist"],
-        welcomeMessage: "Ready to share your voice with the world through compelling podcast content."
+        welcomeMessage: "A great podcast starts with a point of view. This team helps you find yours, produce it clean, and grow it from episode one."
       }
       ,
       {
@@ -183,7 +183,7 @@ export const starterPacksByCategory: Record<string, TemplateCategory> = {
         emoji: "🎬",
         color: "purple",
         members: ["Creative Director", "Copywriter", "Audio Editor"],
-        welcomeMessage: "Lights, camera, action. This production house team turns rough ideas into scripts, shoots, and polished edits that are ready to publish."
+        welcomeMessage: "From rough ideas to polished edits. This crew handles scripts, shoots, and post. You show up with the vision, they handle the rest."
       }
     ]
   },
@@ -199,16 +199,16 @@ export const starterPacksByCategory: Record<string, TemplateCategory> = {
         emoji: "⭐",
         color: "amber",
         members: ["Copywriter", "UI Designer", "Brand Strategist"],
-        welcomeMessage: "Building a personal brand that attracts ideal clients and premium projects."
+        welcomeMessage: "Clients pick you before they talk to you. This team builds the brand that makes that decision easy."
       },
       {
         id: "client-pitch-kit",
         title: "Client Pitch Kit",
-        description: "Win more clients with compelling proposals",
+        description: "Win more clients with sharp proposals",
         emoji: "🎯",
         color: "blue",
         members: ["Copywriter", "Product Manager", "Brand Strategist"],
-        welcomeMessage: "Crafting proposals that showcase your value and win the clients you want."
+        welcomeMessage: "The best pitch doesn't beg. It shows exactly what you bring and makes saying yes feel obvious. That's what this team builds."
       },
       {
         id: "notion-template-business",
@@ -217,7 +217,7 @@ export const starterPacksByCategory: Record<string, TemplateCategory> = {
         emoji: "📝",
         color: "green",
         members: ["UX Designer", "Copywriter", "Growth Marketer"],
-        welcomeMessage: "Building a business around helping others stay organized and productive."
+        welcomeMessage: "Templates sell when they're beautiful and useful. This team designs, writes, and markets the ones people actually pay for."
       },
       {
         id: "newsletter-strategy",
@@ -226,7 +226,7 @@ export const starterPacksByCategory: Record<string, TemplateCategory> = {
         emoji: "📧",
         color: "purple",
         members: ["Email Specialist", "Copywriter", "Growth Marketer"],
-        welcomeMessage: "Growing a newsletter that provides value and generates sustainable income."
+        welcomeMessage: "A newsletter is a relationship. This team helps you write the ones people open, and build the list that pays for itself."
       }
     ]
   },
@@ -242,7 +242,7 @@ export const starterPacksByCategory: Record<string, TemplateCategory> = {
         emoji: "🚀",
         color: "blue",
         members: ["Growth Marketer", "Copywriter", "UI Designer"],
-        welcomeMessage: "Creating buzz and driving conversions for your product launch."
+        welcomeMessage: "Most launches fizzle. This team builds the one that gets people talking before you even ship."
       },
       {
         id: "ad-funnel-builder",
@@ -251,7 +251,7 @@ export const starterPacksByCategory: Record<string, TemplateCategory> = {
         emoji: "🎯",
         color: "green",
         members: ["Copywriter", "UI Designer", "Data Analyst"],
-        welcomeMessage: "Building funnels that turn ad clicks into loyal customers."
+        welcomeMessage: "Every click costs money. This team builds funnels where those clicks actually turn into customers."
       },
       {
         id: "seo-sprint",
@@ -260,16 +260,16 @@ export const starterPacksByCategory: Record<string, TemplateCategory> = {
         emoji: "📈",
         color: "amber",
         members: ["SEO Specialist", "Copywriter", "Data Analyst"],
-        welcomeMessage: "Optimizing your content to rank higher and attract more organic traffic."
+        welcomeMessage: "SEO is a long game but you can win fast if you know where to start. This team finds the gaps and fills them."
       },
       {
         id: "email-sequence-builder",
         title: "Email Sequence Builder",
-        description: "Automated email sequences that nurture and convert",
+        description: "Email sequences that nurture and convert",
         emoji: "📨",
         color: "purple",
         members: ["Email Specialist", "Copywriter", "Brand Strategist"],
-        welcomeMessage: "Creating email sequences that build relationships and drive sales."
+        welcomeMessage: "The best email sequence doesn't feel like marketing. It feels like a friend who keeps showing up with exactly what you need."
       }
     ]
   },
@@ -285,7 +285,7 @@ export const starterPacksByCategory: Record<string, TemplateCategory> = {
         emoji: "👥",
         color: "blue",
         members: ["Product Manager", "HR Specialist", "Operations Manager"],
-        welcomeMessage: "Creating smooth onboarding experiences that set new hires up for success."
+        welcomeMessage: "First week at a new job sets the tone for everything. This team builds the onboarding that makes new hires productive and excited."
       },
       {
         id: "weekly-sync-system",
@@ -294,7 +294,7 @@ export const starterPacksByCategory: Record<string, TemplateCategory> = {
         emoji: "🔄",
         color: "green",
         members: ["Operations Manager", "Product Manager", "UI Designer"],
-        welcomeMessage: "Building systems that keep teams aligned and productive."
+        welcomeMessage: "Meetings are expensive. This team builds the system that keeps everyone aligned without wasting anyone's time."
       },
       {
         id: "internal-wiki-setup",
@@ -303,7 +303,7 @@ export const starterPacksByCategory: Record<string, TemplateCategory> = {
         emoji: "📚",
         color: "purple",
         members: ["UX Designer", "Copywriter", "Technical Lead"],
-        welcomeMessage: "Organizing company knowledge so everyone can find what they need quickly."
+        welcomeMessage: "Every company has knowledge trapped in people's heads. This team gets it out, organizes it, and makes it findable."
       }
     ]
   },
@@ -319,7 +319,7 @@ export const starterPacksByCategory: Record<string, TemplateCategory> = {
         emoji: "🎓",
         color: "blue",
         members: ["Instructional Designer", "Copywriter", "Brand Strategist"],
-        welcomeMessage: "Building courses that educate, engage, and transform students' lives."
+        welcomeMessage: "Most online courses get abandoned by week two. This team builds the ones people actually finish and recommend."
       },
       {
         id: "academic-research",
@@ -328,7 +328,7 @@ export const starterPacksByCategory: Record<string, TemplateCategory> = {
         emoji: "🔬",
         color: "purple",
         members: ["Data Analyst", "Copywriter", "Brand Strategist"],
-        welcomeMessage: "Supporting rigorous research that advances knowledge and impacts the field."
+        welcomeMessage: "Good research deserves good presentation. This team supports the rigor and makes sure the writing matches the thinking."
       },
       {
         id: "slide-deck-assistant",
@@ -337,7 +337,7 @@ export const starterPacksByCategory: Record<string, TemplateCategory> = {
         emoji: "📊",
         color: "amber",
         members: ["Product Manager", "Copywriter", "UI Designer"],
-        welcomeMessage: "Creating presentations that tell compelling stories and drive action."
+        welcomeMessage: "Death by PowerPoint is real. This team builds the deck that holds a room and gets people to act."
       }
     ]
   },
@@ -353,7 +353,7 @@ export const starterPacksByCategory: Record<string, TemplateCategory> = {
         emoji: "💡",
         color: "amber",
         members: ["AI Developer", "Growth Marketer", "Copywriter"],
-        welcomeMessage: "Exploring side hustle ideas that could become your next big opportunity."
+        welcomeMessage: "You've got ideas. This team helps you figure out which ones are worth building and which ones to let go."
       },
       {
         id: "life-dashboard-builder",
@@ -362,7 +362,7 @@ export const starterPacksByCategory: Record<string, TemplateCategory> = {
         emoji: "📊",
         color: "blue",
         members: ["UX Designer", "Copywriter", "UI Designer"],
-        welcomeMessage: "Building systems to track and optimize all areas of your life."
+        welcomeMessage: "Track what matters, ignore what doesn't. This team builds the personal system that actually sticks."
       },
       {
         id: "ai-character-creator",
@@ -371,7 +371,7 @@ export const starterPacksByCategory: Record<string, TemplateCategory> = {
         emoji: "🎭",
         color: "purple",
         members: ["Creative Director", "AI Developer", "Copywriter"],
-        welcomeMessage: "Creating AI characters with personality, depth, and unique voices."
+        welcomeMessage: "Every character needs a voice, a history, and a reason to exist. This team crafts the ones people remember."
       },
       {
         id: "personal-knowledge-base",
@@ -380,7 +380,7 @@ export const starterPacksByCategory: Record<string, TemplateCategory> = {
         emoji: "🧠",
         color: "green",
         members: ["Operations Manager", "UX Designer", "Copywriter"],
-        welcomeMessage: "Building a second brain to capture, organize, and connect your knowledge."
+        welcomeMessage: "Your best ideas are scattered across apps, notes, and your memory. This team builds the one place that connects them all."
       },
       {
         id: "moodboard-generator",
@@ -389,7 +389,7 @@ export const starterPacksByCategory: Record<string, TemplateCategory> = {
         emoji: "🎨",
         color: "amber",
         members: ["Creative Director", "UI Designer", "Copywriter"],
-        welcomeMessage: "Curating visual inspiration that sparks creativity and guides design decisions."
+        welcomeMessage: "Great design starts with great references. This team curates the visual direction that makes the next step obvious."
       }
     ]
   }
@@ -401,7 +401,7 @@ export const allHatchTemplates: HatchTemplate[] = [
   {
     name: "Product Manager",
     role: "Product Manager",
-    description: "Expert in product strategy, roadmapping, and turning ideas into actionable plans. Maya helps clarify concepts and build the right team.",
+    description: "Maya asks the question you've been avoiding. She'll tear apart your roadmap, rebuild it better, and make sure you're building what people actually need.",
     color: "blue",
     category: "strategy",
     skills: ["Product Strategy", "Roadmapping", "Team Building", "Idea Development"]
@@ -409,7 +409,7 @@ export const allHatchTemplates: HatchTemplate[] = [
   {
     name: "Business Strategist",
     role: "Business Strategist",
-    description: "Strategic thinking and business model expert. Morgan helps analyze markets, identify opportunities, and create winning strategies.",
+    description: "Morgan reads markets the way most people read headlines. She'll tell you where the money is, where the risk is, and what your competitors are missing.",
     color: "purple",
     category: "strategy",
     skills: ["Business Strategy", "Market Analysis", "Competitive Intelligence", "Strategic Planning"]
@@ -417,7 +417,7 @@ export const allHatchTemplates: HatchTemplate[] = [
   {
     name: "Data Analyst",
     role: "Data Analyst",
-    description: "Data-driven insights and analytics specialist. Quinn transforms raw data into actionable business intelligence and clear visualizations.",
+    description: "Quinn doesn't do dashboards for the sake of dashboards. She finds the number that changes your decision and puts it in front of you.",
     color: "amber",
     category: "analytics",
     skills: ["Data Analysis", "Business Intelligence", "Visualization", "Insights"]
@@ -427,7 +427,7 @@ export const allHatchTemplates: HatchTemplate[] = [
   {
     name: "Technical Lead",
     role: "Technical Lead",
-    description: "Versatile developer skilled in both frontend and backend technologies. Alex brings technical ideas to life with clean, scalable code.",
+    description: "Alex builds things that work on the first deploy and still work six months later. Clean code, smart architecture, zero shortcuts.",
     color: "blue",
     category: "development",
     skills: ["Web Development", "API Design", "Database Architecture", "System Integration"]
@@ -435,7 +435,7 @@ export const allHatchTemplates: HatchTemplate[] = [
   {
     name: "AI Developer",
     role: "AI Developer",
-    description: "Artificial intelligence and machine learning specialist. Jordan creates intelligent systems that solve complex problems.",
+    description: "Jordan builds the kind of AI that solves a real problem, not the kind that looks cool in a demo and breaks in production.",
     color: "green",
     category: "development",
     skills: ["Machine Learning", "AI Development", "Data Science", "Neural Networks"]
@@ -443,7 +443,7 @@ export const allHatchTemplates: HatchTemplate[] = [
   {
     name: "UX Designer",
     role: "UX Designer",
-    description: "User experience and interface design expert. Sam creates intuitive, beautiful interfaces that users love to interact with.",
+    description: "Sam designs for the person who has no patience and no time to read instructions. If it's not obvious in three seconds, she starts over.",
     color: "green",
     category: "design",
     skills: ["User Research", "Interface Design", "Prototyping", "Design Systems"]
@@ -453,7 +453,7 @@ export const allHatchTemplates: HatchTemplate[] = [
   {
     name: "UI Designer",
     role: "UI Designer",
-    description: "Visual design and user interface specialist. Taylor creates compelling visual experiences that engage and convert.",
+    description: "Taylor makes things look the way they should feel. Every pixel has a reason. Every color earns its place.",
     color: "amber",
     category: "design",
     skills: ["Visual Design", "Interface Design", "Brand Identity", "Design Systems"]
@@ -461,7 +461,7 @@ export const allHatchTemplates: HatchTemplate[] = [
   {
     name: "Brand Strategist",
     role: "Brand Strategist",
-    description: "Brand identity and strategy specialist. Charlie develops compelling brand experiences that resonate with target audiences.",
+    description: "Charlie builds brands people tattoo on their arms. Not literally. But that level of loyalty. Identity that sticks and means something real.",
     color: "blue",
     category: "creative",
     skills: ["Brand Strategy", "Visual Identity", "Brand Voice", "Marketing Materials"]
@@ -469,7 +469,7 @@ export const allHatchTemplates: HatchTemplate[] = [
   {
     name: "Creative Director",
     role: "Creative Director",
-    description: "Creative leadership and vision expert. Riley guides creative projects from concept to execution with artistic excellence.",
+    description: "Riley sees the finished thing before anyone else does. She shapes projects with a vision that holds from the first sketch to the final pixel.",
     color: "purple",
     category: "creative",
     skills: ["Creative Direction", "Art Direction", "Campaign Development", "Visual Storytelling"]
@@ -477,7 +477,7 @@ export const allHatchTemplates: HatchTemplate[] = [
   {
     name: "Copywriter",
     role: "Copywriter",
-    description: "Content strategy and copywriting expert. Morgan crafts compelling narratives that engage audiences and drive action.",
+    description: "Morgan writes the sentence that makes someone stop scrolling. Then the next one that makes them click. Then the one that makes them pay.",
     color: "green",
     category: "content",
     skills: ["Content Strategy", "Copywriting", "Brand Voice", "SEO Writing"]
@@ -487,7 +487,7 @@ export const allHatchTemplates: HatchTemplate[] = [
   {
     name: "Growth Marketer",
     role: "Growth Marketer",
-    description: "Digital marketing and growth expert. Dakota develops comprehensive marketing strategies that drive user acquisition and engagement.",
+    description: "Dakota doesn't do marketing that feels like marketing. She builds the engine that brings people in and makes them stay.",
     color: "green",
     category: "marketing",
     skills: ["Digital Marketing", "Growth Strategy", "Campaign Management", "Analytics"]
@@ -495,7 +495,7 @@ export const allHatchTemplates: HatchTemplate[] = [
   {
     name: "Social Media Manager",
     role: "Social Media Manager",
-    description: "Social media strategy and community building expert. Sage creates engaging social content and builds loyal communities.",
+    description: "Sage builds the kind of following where people actually reply, share, and show up. Not vanity metrics. Real community.",
     color: "purple",
     category: "marketing",
     skills: ["Social Media Strategy", "Community Building", "Content Creation", "Engagement"]
@@ -503,7 +503,7 @@ export const allHatchTemplates: HatchTemplate[] = [
   {
     name: "SEO Specialist",
     role: "SEO Specialist",
-    description: "Search engine optimization and organic growth expert. Casey helps content rank higher and attract more organic traffic.",
+    description: "Casey knows what Google wants before Google knows. She gets your content ranking so the right people find you without you paying for it.",
     color: "amber",
     category: "marketing",
     skills: ["SEO Strategy", "Keyword Research", "Content Optimization", "Technical SEO"]
@@ -511,7 +511,7 @@ export const allHatchTemplates: HatchTemplate[] = [
   {
     name: "Email Specialist",
     role: "Email Specialist",
-    description: "Email marketing and automation expert. Avery creates email sequences that nurture leads and convert customers.",
+    description: "Avery writes emails people open at 6 AM. Not because of the subject line trick, but because the last one was genuinely useful.",
     color: "blue",
     category: "marketing",
     skills: ["Email Marketing", "Marketing Automation", "List Building", "Conversion Optimization"]
@@ -521,7 +521,7 @@ export const allHatchTemplates: HatchTemplate[] = [
   {
     name: "Operations Manager",
     role: "Operations Manager",
-    description: "Process optimization and operational efficiency expert. Dakota streamlines workflows and ensures smooth day-to-day operations.",
+    description: "Dakota finds the bottleneck everyone else is working around and fixes it. Your team runs smoother after one conversation with her.",
     color: "purple",
     category: "operations",
     skills: ["Process Optimization", "Project Management", "Team Coordination", "Efficiency"]
@@ -529,7 +529,7 @@ export const allHatchTemplates: HatchTemplate[] = [
   {
     name: "HR Specialist",
     role: "HR Specialist",
-    description: "Human resources and team development expert. Harper builds positive workplace culture and supports team growth.",
+    description: "Harper hires the people who make everyone else better. She builds culture that people protect, not just tolerate.",
     color: "green",
     category: "operations",
     skills: ["Talent Acquisition", "Team Development", "Culture Building", "Performance Management"]
@@ -537,7 +537,7 @@ export const allHatchTemplates: HatchTemplate[] = [
   {
     name: "Instructional Designer",
     role: "Instructional Designer",
-    description: "Learning experience and educational content expert. Emery creates engaging educational materials that help people learn effectively.",
+    description: "Emery builds learning experiences where people don't realize they're learning until they already know it. That's the whole trick.",
     color: "blue",
     category: "education",
     skills: ["Learning Design", "Curriculum Development", "Educational Technology", "Assessment Design"]
@@ -545,7 +545,7 @@ export const allHatchTemplates: HatchTemplate[] = [
   {
     name: "Audio Editor",
     role: "Audio Editor",
-    description: "Audio production and podcast editing expert. River creates professional audio content that sounds amazing and engages listeners.",
+    description: "River makes your podcast sound like a studio produced it. Clean audio, tight edits, and the kind of polish that makes listeners trust you.",
     color: "amber",
     category: "creative",
     skills: ["Audio Editing", "Sound Design", "Podcast Production", "Music Composition"]

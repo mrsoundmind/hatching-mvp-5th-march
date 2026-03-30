@@ -79,6 +79,7 @@ export class GeminiProvider implements LLMProvider {
         const chat = model.startChat({ history });
         const result = await chat.sendMessage(lastUserMessage);
         const content = result.response.text();
+        const usage = result.response.usageMetadata;
 
         return {
             content,
@@ -89,6 +90,12 @@ export class GeminiProvider implements LLMProvider {
                 latencyMs: Date.now() - started,
                 temperature: request.temperature ?? 0.7,
                 maxTokens: request.maxTokens ?? 500,
+                modelTier: request.modelTier,
+                tokenUsage: usage ? {
+                    promptTokens: usage.promptTokenCount ?? 0,
+                    completionTokens: usage.candidatesTokenCount ?? 0,
+                    totalTokens: usage.totalTokenCount ?? 0,
+                } : undefined,
             },
         };
     }
@@ -111,26 +118,39 @@ export class GeminiProvider implements LLMProvider {
         const chat = model.startChat({ history });
         const result = await chat.sendMessageStream(lastUserMessage);
 
+        const metadata: LLMStreamResult['metadata'] = {
+            provider: this.id,
+            mode,
+            model: modelName,
+            latencyMs: Date.now() - started,
+            temperature: request.temperature ?? 0.7,
+            maxTokens: request.maxTokens ?? 500,
+            modelTier: request.modelTier,
+        };
+
         const stream = (async function* () {
-            for await (const chunk of result.stream) {
-                const token = chunk.text();
-                if (token) {
-                    yield token;
+            try {
+                for await (const chunk of result.stream) {
+                    const token = chunk.text();
+                    if (token) {
+                        yield token;
+                    }
+                    // Capture usage from each chunk (last one has final counts)
+                    const usage = chunk.usageMetadata;
+                    if (usage) {
+                        metadata.tokenUsage = {
+                            promptTokens: usage.promptTokenCount ?? 0,
+                            completionTokens: usage.candidatesTokenCount ?? 0,
+                            totalTokens: usage.totalTokenCount ?? 0,
+                        };
+                    }
                 }
+            } catch (err) {
+                console.error('[GeminiProvider] Stream iteration error:', (err as Error).message);
             }
         })();
 
-        return {
-            stream,
-            metadata: {
-                provider: this.id,
-                mode,
-                model: modelName,
-                latencyMs: Date.now() - started,
-                temperature: request.temperature ?? 0.7,
-                maxTokens: request.maxTokens ?? 500,
-            },
-        };
+        return { stream, metadata };
     }
 
     async healthCheck(_model?: string): Promise<ProviderHealth> {

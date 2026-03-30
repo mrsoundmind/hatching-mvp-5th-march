@@ -1,5 +1,10 @@
 import type { SafetyScore } from "./autonomyTypes.js";
 
+export const AUTONOMOUS_SAFETY_THRESHOLDS = {
+  peerReviewTrigger: 0.35,
+  clarificationRequiredRisk: 0.70,
+} as const;
+
 export const SAFETY_THRESHOLDS = {
   peerReviewTrigger: 0.35,
   doubleReviewTrigger: 0.65,
@@ -50,11 +55,22 @@ const PROMPT_INJECTION_PATTERNS = [
   "tool output says",
 ];
 
+// Explicit creation commands — user intent is clear, no clarification needed
+const EXPLICIT_CREATION_INTENTS = [
+  /\b(create|add|make|build|set up|start|spin up)\b.{0,30}\b(team|hatch|agent|task|project|channel|doc)\b/i,
+  /\b(team|hatch|agent|task)\b.{0,20}\b(called|named|for)\b/i,
+];
+
+export function hasExplicitCreationIntent(userMessage: string): boolean {
+  return EXPLICIT_CREATION_INTENTS.some(pattern => pattern.test(userMessage));
+}
+
 export function evaluateSafetyScore(input: {
   userMessage: string;
   draftResponse?: string;
   conversationMode: "project" | "team" | "agent";
   projectName?: string;
+  executionContext?: "chat" | "autonomous_task";
 }): SafetyScore {
   const user = (input.userMessage || "").toLowerCase();
   const draft = (input.draftResponse || "").toLowerCase();
@@ -64,6 +80,14 @@ export function evaluateSafetyScore(input: {
   let hallucinationRisk = 0.15;
   let scopeRisk = 0.1;
   let executionRisk = 0.1;
+
+  // Explicit creation commands get reduced baselines — user intent is clear
+  if (hasExplicitCreationIntent(input.userMessage)) {
+    hallucinationRisk = 0.05;
+    scopeRisk = 0.05;
+    executionRisk = 0.05;
+    reasons.push("explicit_creation_intent_detected");
+  }
 
   for (const phrase of ABSOLUTE_CLAIMS) {
     if (draft.includes(phrase)) {
@@ -120,6 +144,12 @@ export function evaluateSafetyScore(input: {
       executionRisk += 0.15;
       reasons.push(`high_impact_action:${pattern.source}`);
     }
+  }
+
+  // Autonomous context raises execution risk baseline
+  if (input.executionContext === "autonomous_task") {
+    executionRisk = executionRisk + 0.10;
+    reasons.push("autonomous_context_risk_boost");
   }
 
   // Clamp all risks

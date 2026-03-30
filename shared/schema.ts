@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, boolean, jsonb, timestamp, index, doublePrecision } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, boolean, jsonb, timestamp, index, uniqueIndex, doublePrecision } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -10,6 +10,13 @@ export const users = pgTable("users", {
   avatarUrl: text("avatar_url"),
   provider: text("provider").notNull().default("google"),
   providerSub: text("provider_sub").notNull().unique(),
+  // Billing & Tier
+  tier: text("tier").notNull().default("free").$type<"free" | "pro">(),
+  stripeCustomerId: text("stripe_customer_id"),
+  stripeSubscriptionId: text("stripe_subscription_id"),
+  subscriptionStatus: text("subscription_status").notNull().default("none").$type<"none" | "active" | "past_due" | "cancelled">(),
+  subscriptionPeriodEnd: timestamp("subscription_period_end"),
+  graceExpiresAt: timestamp("grace_expires_at"),
   // Legacy fallback fields (deprecated)
   username: text("username").unique(),
   password: text("password"),
@@ -40,13 +47,23 @@ export const projects = pgTable("projects", {
       id: string;
       title: string;
       content: string;
-      type: 'idea-development' | 'project-plan' | 'meeting-notes' | 'research';
+      type: 'idea-development' | 'project-plan' | 'meeting-notes' | 'research' | 'uploaded-pdf' | 'uploaded-docx' | 'uploaded-txt' | 'uploaded-md';
       createdAt: string;
     }>;
     sharedMemory?: string;
   }>().default({}),
-  executionRules: text("execution_rules"),
+  executionRules: jsonb("execution_rules").$type<{
+    autonomyEnabled?: boolean;
+    autonomyPaused?: boolean;
+    inactivityAutonomyEnabled?: boolean;
+    autonomyLevel?: 'observe' | 'propose' | 'confirm' | 'autonomous';
+    inactivityTriggerMinutes?: number;
+    rules?: string;
+    taskGraph?: unknown;
+  }>().default({}),
   teamCulture: text("team_culture"),
+  lastSeenAt: timestamp("last_seen_at"),
+  lastBriefedAt: timestamp("last_briefed_at"),
 }, (table) => ({
   userIdIdx: index("projects_user_id_idx").on(table.userId),
 }));
@@ -79,6 +96,7 @@ export const agents = pgTable("agents", {
     welcomeMessage?: string;
     adaptedTraits?: Record<string, Record<string, number>>;
     adaptationMeta?: Record<string, { interactionCount: number; adaptationConfidence: number; lastUpdated: string }>;
+    trustMeta?: { tasksCompleted: number; tasksFailed: number; trustScore: number; lastUpdated: string };
   }>().default({}),
   isSpecialAgent: boolean("is_special_agent").notNull().default(false),
 }, (table) => ({
@@ -160,7 +178,7 @@ export const messageReactions = pgTable("message_reactions", {
 export const conversationMemory = pgTable("conversation_memory", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   conversationId: varchar("conversation_id").references(() => conversations.id).notNull(),
-  memoryType: text("memory_type").notNull().$type<"context" | "summary" | "key_points" | "decisions">(),
+  memoryType: text("memory_type").notNull().$type<"context" | "summary" | "key_points" | "decisions" | "compaction_summary">(),
   content: text("content").notNull(),
   importance: integer("importance").notNull().default(5), // 1-10 scale
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -233,6 +251,7 @@ export const autonomyEvents = pgTable("autonomy_events", {
   projectIdIdx: index("autonomy_events_project_id_idx").on(table.projectId),
   conversationIdIdx: index("autonomy_events_conversation_id_idx").on(table.conversationId),
   timestampIdx: index("autonomy_events_timestamp_idx").on(table.timestamp),
+  projectEventTimeIdx: index("autonomy_events_project_event_time_idx").on(table.projectId, table.eventType, table.timestamp),
 }));
 
 export const deliberationTraces = pgTable("deliberation_traces", {
@@ -253,6 +272,103 @@ export const deliberationTraces = pgTable("deliberation_traces", {
   projectIdIdx: index("deliberation_traces_project_id_idx").on(table.projectId),
   conversationIdIdx: index("deliberation_traces_conversation_id_idx").on(table.conversationId),
 }));
+
+// v2.0: Deliverables System
+
+export const deliverables = pgTable("deliverables", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").references(() => projects.id).notNull(),
+  conversationId: varchar("conversation_id"),
+  agentId: varchar("agent_id").references(() => agents.id),
+  parentDeliverableId: varchar("parent_deliverable_id"), // chain link to upstream deliverable
+  packageId: varchar("package_id"), // belongs to a package
+  title: text("title").notNull(),
+  description: text("description"),
+  type: text("type").notNull().$type<
+    "prd" | "tech-spec" | "design-brief" | "gtm-plan" | "user-stories" |
+    "blog-post" | "landing-copy" | "content-calendar" | "email-sequence" |
+    "seo-brief" | "project-plan" | "competitive-analysis" | "market-research" |
+    "process-doc" | "data-report" | "custom"
+  >(),
+  status: text("status").notNull().$type<"draft" | "in_review" | "complete">().default("draft"),
+  content: text("content").notNull().default(""),
+  currentVersion: integer("current_version").notNull().default(1),
+  agentName: text("agent_name"),
+  agentRole: text("agent_role"),
+  handoffNotes: text("handoff_notes"),
+  metadata: jsonb("metadata").$type<{
+    wordCount?: number;
+    sections?: string[];
+    references?: string[];
+    generationTimeMs?: number;
+    chainPosition?: number;
+  }>().default({}),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  projectIdIdx: index("deliverables_project_id_idx").on(table.projectId),
+  agentIdIdx: index("deliverables_agent_id_idx").on(table.agentId),
+  packageIdIdx: index("deliverables_package_id_idx").on(table.packageId),
+  statusIdx: index("deliverables_status_idx").on(table.status),
+}));
+
+export const deliverableVersions = pgTable("deliverable_versions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  deliverableId: varchar("deliverable_id").references(() => deliverables.id).notNull(),
+  versionNumber: integer("version_number").notNull(),
+  content: text("content").notNull(),
+  changeDescription: text("change_description"),
+  createdByAgentId: varchar("created_by_agent_id").references(() => agents.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  deliverableIdIdx: index("deliverable_versions_deliverable_id_idx").on(table.deliverableId),
+  versionIdx: index("deliverable_versions_version_idx").on(table.deliverableId, table.versionNumber),
+}));
+
+export const deliverablePackages = pgTable("deliverable_packages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").references(() => projects.id).notNull(),
+  name: text("name").notNull(),
+  template: text("template").notNull().$type<"launch" | "content-sprint" | "research" | "custom">(),
+  status: text("status").notNull().$type<"not_started" | "in_progress" | "complete">().default("not_started"),
+  description: text("description"),
+  metadata: jsonb("metadata").$type<{
+    expectedDeliverables?: number;
+    completedDeliverables?: number;
+    agentIds?: string[];
+  }>().default({}),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  projectIdIdx: index("deliverable_packages_project_id_idx").on(table.projectId),
+}));
+
+// Billing & Usage Tracking
+export const usageDailySummary = pgTable("usage_daily_summary", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  date: text("date").notNull(), // YYYY-MM-DD format
+  totalMessages: integer("total_messages").notNull().default(0),
+  totalPromptTokens: integer("total_prompt_tokens").notNull().default(0),
+  totalCompletionTokens: integer("total_completion_tokens").notNull().default(0),
+  totalTokens: integer("total_tokens").notNull().default(0),
+  estimatedCostCents: integer("estimated_cost_cents").notNull().default(0),
+  standardModelMessages: integer("standard_model_messages").notNull().default(0),
+  premiumModelMessages: integer("premium_model_messages").notNull().default(0),
+  autonomyExecutions: integer("autonomy_executions").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  userDateIdx: uniqueIndex("usage_daily_user_date_idx").on(table.userId, table.date),
+}));
+
+// Stripe webhook idempotency
+export const processedWebhooks = pgTable("processed_webhooks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  stripeEventId: text("stripe_event_id").notNull().unique(),
+  eventType: text("event_type").notNull(),
+  processedAt: timestamp("processed_at").defaultNow().notNull(),
+});
 
 export const insertProjectSchema = createInsertSchema(projects).omit({
   id: true,
@@ -342,6 +458,35 @@ export const insertDeliberationTraceSchema = createInsertSchema(deliberationTrac
   updatedAt: true,
 });
 
+// v2.0: Deliverable schemas
+export const insertDeliverableSchema = createInsertSchema(deliverables).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertDeliverableVersionSchema = createInsertSchema(deliverableVersions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertDeliverablePackageSchema = createInsertSchema(deliverablePackages).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertUsageDailySummarySchema = createInsertSchema(usageDailySummary).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertProcessedWebhookSchema = createInsertSchema(processedWebhooks).omit({
+  id: true,
+  processedAt: true,
+});
+
 // Type Exports
 export type InsertProject = z.infer<typeof insertProjectSchema>;
 export type Project = typeof projects.$inferSelect;
@@ -368,6 +513,20 @@ export type AutonomyEventRow = typeof autonomyEvents.$inferSelect;
 export type InsertDeliberationTrace = z.infer<typeof insertDeliberationTraceSchema>;
 export type DeliberationTraceRow = typeof deliberationTraces.$inferSelect;
 
+// v2.0 Deliverable Type Exports
+export type InsertDeliverable = z.infer<typeof insertDeliverableSchema>;
+export type Deliverable = typeof deliverables.$inferSelect;
+export type InsertDeliverableVersion = z.infer<typeof insertDeliverableVersionSchema>;
+export type DeliverableVersion = typeof deliverableVersions.$inferSelect;
+export type InsertDeliverablePackage = z.infer<typeof insertDeliverablePackageSchema>;
+export type DeliverablePackage = typeof deliverablePackages.$inferSelect;
+
+// Billing Type Exports
+export type InsertUsageDailySummary = z.infer<typeof insertUsageDailySummarySchema>;
+export type UsageDailySummary = typeof usageDailySummary.$inferSelect;
+export type InsertProcessedWebhook = z.infer<typeof insertProcessedWebhookSchema>;
+export type ProcessedWebhook = typeof processedWebhooks.$inferSelect;
+
 // Right Sidebar Specific Types
 export interface RightSidebarExpandedSections {
   coreDirection: boolean;
@@ -391,6 +550,7 @@ export interface RightSidebarUserPreferences {
   autoSaveDelay: number; // milliseconds
   showTimestamps: boolean;
   compactMode: boolean;
+  activeTab?: 'activity' | 'brain' | 'tasks';
 }
 
 export interface RightSidebarState {
@@ -407,6 +567,9 @@ export interface RightSidebarState {
   expandedSections: RightSidebarExpandedSections;
   recentlySaved: Set<string>;
   activeView: 'project' | 'team' | 'agent' | 'none';
+
+  // Active sidebar tab
+  activeTab: 'activity' | 'brain' | 'tasks';
 
   // User preferences
   preferences: RightSidebarUserPreferences;

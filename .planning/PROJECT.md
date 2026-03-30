@@ -10,11 +10,45 @@ Hatchin solves the prompting problem. Most people can't use AI effectively becau
 
 No one should ever feel alone with their idea, have to start from scratch, or need to know how to prompt AI — just have a conversation and your team takes it from there.
 
+## Current Milestone: v2.0 Hatches That Deliver
+
+**Goal:** Transform Hatchin from "AI chatroom" to "AI team that ships coordinated work" — linked deliverable packages, visible team coordination, async production, professional export.
+
+**Status:** COMPLETE — all features shipped 2026-03-30.
+
+**What's shipped:**
+- Deliverable system — artifact-style panel with markdown rendering, version history, agent attribution
+- Cross-agent deliverable chains — 3 templates (launch, content-sprint, research) with handoff context injection
+- Project packages — grouped deliverables with progress tracking and WS streaming
+- Organic detection — pattern-based intent detection wired into chat flow
+- Iteration UX — inline refine input in ArtifactPanel, calls iterate endpoint
+- 15 deliverable types with role mapping and section schemas
+- Full API (13 endpoints) + 4 WS event types
+- Professional PDF export — branded pdfkit template with TOC, attribution, Hatchin branding
+- Zero-friction onboarding — PackageSuggestionCard auto-suggests best chain template based on project agent roles
+
+**Details:** See plan at `.claude/plans/splendid-munching-flask.md`
+
 ## Current State
 
-**Shipped:** v1.0 — Text-Perfect, Human-First (2026-03-19)
-**Codebase:** ~47,000 LOC TypeScript across 162 files
+**Shipped:** v1.3 — Autonomy Visibility & Right Sidebar Revamp (2026-03-30, Phase 15 polish in progress)
+**Shipped:** v1.2 — Billing + LLM Intelligence (2026-03-23)
+**Previous:** v1.1 — Autonomous Execution Loop (2026-03-23)
+**Previous:** v1.0 — Text-Perfect, Human-First (2026-03-19)
+**Codebase:** ~50,000+ LOC TypeScript
 **Branch:** `reconcile-codex` (active development)
+
+### What v1.1 Delivered
+- Background task execution via pg-boss durable job queue — Hatches produce real output (plans, research, breakdowns)
+- Agent-to-agent handoffs — PM scopes, Engineer picks up, Designer reviews; BFS cycle detection prevents loops
+- Three-tier safety gates — low-risk auto-complete, mid-risk peer review, high-risk surfaces for user approval
+- Progressive trust scoring — agents earn higher autonomy through successful completions (up to +0.15 threshold boost)
+- Maya return briefing — LLM-generated conversational summary when user returns after 15+ min absence
+- Tab notifications — flashing title + OS Notification API when background work completes
+- Inactivity auto-trigger — queued work starts after 2+ hours idle (per-project opt-in)
+- Per-project daily LLM cost cap prevents runaway spend
+- Inline approval cards (Approve/Reject) for high-risk autonomous actions
+- Pause/resume control for all autonomous execution
 
 ### What v1.0 Delivered
 - Domain-specific conversation quality — each Hatch responds with genuine expertise, not generic AI
@@ -31,7 +65,7 @@ No one should ever feel alone with their idea, have to start from scratch, or ne
 ### Autonomous Execution
 The end state is a team that works while you sleep. Human conversation initiates and guides — but execution happens autonomously. Hatches hand off tasks to each other without being asked (Engineer picks up what the PM leaves, Designer gets looped in when UI decisions arise). Hatches police each other — quality gates, peer review, safety checks — all internally coordinated. The user wakes up to progress, not a blank canvas.
 
-This autonomous foundation is already partially built (LangGraph state machine, peer review gates, task detection). The next layer is closing the loop: autonomous handover, background execution, and a Hatch that knows when to act vs when to ask.
+v1.1 shipped the core autonomous loop: background execution via pg-boss, agent-to-agent handoffs with cycle detection, three-tier safety gates, progressive trust scoring, and inactivity-based auto-trigger. The next layer is proactive autonomy — Hatches that notice problems, initiate work without being asked, and coordinate across projects.
 
 ### B2B: Company-Level Intelligence
 When selling to companies, Hatchin is curated to that company's DNA — once. Brand guidelines, tone of voice, design system, product knowledge, company values — uploaded at the company level, not per-project. Every project inside that company inherits this automatically. A Sales Hatch already knows the product. A Designer Hatch already knows the brand. An Engineer Hatch already knows the stack.
@@ -41,25 +75,37 @@ The project brain is singular. No re-adding context. No onboarding every new pro
 ### Collaboration
 Future: multiple real humans working alongside their Hatch team in the same project. Real teammates and AI teammates in the same conversation — the Hatches serve the whole team, not just one person.
 
-## Next Milestone Goals
+## v2.0 Details: Hatches That Deliver
 
-Pending — use `/gsd:new-milestone` to define v1.1 requirements and roadmap.
+**The problem v2.0 solves:** Individual deliverables are table stakes (ChatGPT can write a PRD). The differentiator is **cross-agent coordination** — PM writes PRD → Engineer writes tech spec referencing it → Designer creates brief based on both → Marketing drafts GTM from the PRD. Five linked documents from a coordinated team. Can't do that in any single-chat AI.
 
-Candidate directions from the roadmap:
-- **v1.1 Multimodal Expansion** — image generation from Designer Hatch, Claude coding agent from Engineer Hatch, voice input
-- **v1.2 Autonomous Execution Loop** — Hatches hand off tasks, background execution, user wakes up to progress
-- **v1.3 B2B Company Brain** — company-level knowledge layer inherited by all projects
-- **v1.4 Collaboration** — multiple real users + AI teammates in the same project
+**Target features:**
+- Deliverable system — artifact-style panel (Claude desktop pattern), iteratable through conversation
+- Cross-agent deliverable chains — linked documents where downstream agents reference upstream output
+- Project packages — grouped deliverables by goal ("Launch Package", "Content Sprint", "Research Package")
+- Both trigger paths — organic detection from chat + explicit user request
+- Async deliverable production — team produces documents in background, notifies on completion
+- Professional export — branded PDF with TOC, attribution, clean typography
+- Zero-friction onboarding — first deliverable generating within 3 minutes of signup
+- Visible team coordination — attribution, handoff notes in deliverables, cross-agent discussion
+- Landing page demonstration — show actual output, not feature descriptions
+
+**Use-case clusters:**
+1. Product Launch — PM → PRD, Engineer → tech spec, Designer → design brief, Marketing → GTM plan
+2. Marketing Content — Copywriter → blog posts, Social → calendar, SEO → keyword strategy, Email → sequences
+3. Planning & Research — PM → project plan, Analyst → competitive analysis, Ops → SOPs
+
+**Details:** See plan at `.claude/plans/splendid-munching-flask.md`
 
 ## Use Cases (What "Initiating Dreams" Looks Like)
 
-- A non-technical founder talks to their team about a SaaS idea → Hatches shape the product, break it into tasks, assign ownership, and start executing
-- A designer uses the Designer Hatch to get better at their craft — critique, inspiration, iteration feedback
-- A solo developer talks through architecture decisions with their Engineer Hatch — no rubber duck, a real specialist
-- A marketer drafts a campaign by thinking out loud with the Marketing Hatch — the Hatch asks the right questions, fills in the gaps
-- Anyone wakes up with an idea and has a team ready to run with it by end of day
+- A non-technical founder describes a SaaS idea → PM drafts a PRD, Engineer writes a tech spec referencing it, Marketing produces a GTM plan — all linked, all overnight, all exportable as a professional package
+- A marketer says "I need a content push for launch" → Copywriter drafts blog posts, Social Media generates a content calendar, Email creates a drip sequence — coordinated, on-brand, ready to publish
+- A solo developer talks through architecture decisions with their Engineer Hatch → Engineer produces a technical spec document, flags risks, hands off to QA for a test plan
+- A designer uses the Designer Hatch to get better at their craft — critique, inspiration, iteration feedback — plus a design brief document they can share with stakeholders
+- Anyone wakes up with an idea and has a team ready to run with it — and wakes up the next morning to "Your team produced 4 documents overnight. Review when ready."
 
-The common thread: **you never start from scratch, you never feel alone, you never have to manage AI like a tool.**
+The common thread: **you never start from scratch, you never feel alone, and your team produces real work — not just conversation.**
 
 ## Requirements
 
@@ -80,10 +126,13 @@ The common thread: **you never start from scratch, you never feel alone, you nev
 - ✓ Personality evolution persisted to database (PRES-05) — v1.0
 - ✓ Message idempotency + cursor pagination (DATA-01–03) — v1.0
 - ✓ Modular route architecture (ARCH-01–02) — v1.0
-
-### Active
-
-(Empty — define next milestone with `/gsd:new-milestone`)
+- ✓ Background task execution via pg-boss (EXEC-01–03) — v1.1
+- ✓ Agent-to-agent handoffs with cycle detection (HAND-01–04) — v1.1
+- ✓ Three-tier safety gates for autonomous execution (SAFE-01–03) — v1.1
+- ✓ Progressive trust scoring (SAFE-04) — v1.1
+- ✓ Maya return briefing + tab notifications (UX-03, UX-05) — v1.1
+- ✓ Inline approval cards + pause/resume (UX-01, UX-02, UX-04) — v1.1
+- ✓ Inactivity-based autonomous trigger (EXEC-04) — v1.1
 
 ### Out of Scope (current)
 
@@ -124,12 +173,15 @@ Hatchin: user just talks. The Hatches:
 - Genuine reactions, not assistant-speak
 - Never start with "Great!" or sycophantic openers
 
-**Architecture (post v1.0):**
+**Architecture (post v1.1):**
 - `server/routes.ts` — 430-line thin orchestrator
 - `server/routes/` — 6 focused modules (teams, agents, messages, projects, tasks, chat)
-- Personality evolution persisted to `agents.personality` JSONB
-- Message idempotency via `checkIdempotencyKey()` in WS handler
-- Cursor-based pagination in storage + API + frontend
+- `server/autonomy/` — execution pipeline, handoff orchestrator, peer review, trust scoring, event logger, background runner
+- pg-boss durable job queue for background task execution
+- Three-tier safety gates: auto-complete / peer review / user approval
+- Progressive trust via `trustMeta` in `agents.personality` JSONB
+- Inactivity trigger via `project.lastSeenAt` + `inactivityAutonomyEnabled` flag
+- Maya return briefing via `returnBriefing.ts` (LLM-generated, stored as real message)
 
 ## Constraints
 
@@ -142,6 +194,10 @@ Hatchin: user just talks. The Hatches:
 ## Key Decisions
 
 | Decision | Rationale | Outcome |
+| Use-case-driven development (not feature-driven) | Organizes work around user goals, ensures every feature serves a real workflow | Pending — v2.0 |
+| Deliverable chains as core differentiator | Single deliverables = ChatGPT. Coordinated team output = unique value. | Pending — v2.0 |
+| Artifact panel (Claude desktop pattern) | Proven UX, users already understand it, iterable through conversation | Pending — v2.0 |
+| Text-first deliverables, visual via MCPs later | LLMs produce excellent text. Be realistic about capabilities. | Pending — v2.0 |
 |----------|-----------|---------|
 | Text-first, then multimodal | Perfect the conversation before adding complexity | ✓ Good — v1.0 shipped with strong conversation quality |
 | LangGraph for multi-agent routing | Extensible state machine, supports peer review, deliberation | ✓ Good |
@@ -152,6 +208,12 @@ Hatchin: user just talks. The Hatches:
 | Anti-prompting as core design principle | Differentiator — not another AI chat tool | ✓ Good — validated through v1.0 user journey |
 | Route modularization via deps injection | Avoids circular imports while enabling WS broadcast from route modules | ✓ Good |
 | Personality persistence to agents.personality JSONB | Survives restart, no new table needed, per-user trait adaptation | ✓ Good |
+| pg-boss for durable job queue (v1.1) | Runs on existing Neon PostgreSQL — no Redis needed | ✓ Good — reliable background execution |
+| generateText injection (not runTurn) for autonomous execution | Isolates background pipeline from chat graph — simpler, testable | ✓ Good — clean separation |
+| Stricter safety thresholds in autonomous mode (0.60 vs 0.80) | No user present to catch mistakes — higher bar for auto-approval | ✓ Good |
+| Inactivity trigger gated per-project (not global flag) | Users opt-in per project; no surprise autonomous work | ✓ Good |
+| Return briefing as real agent message (not separate WS event) | Briefing appears in chat history, survives page refresh | ✓ Good |
+| Trust scoring via successRate * maturityFactor (bounded 0–1) | Simple, predictable, needs 10+ completions to reach full trust | ✓ Good |
 
 ---
-*Last updated: 2026-03-19 after v1.0 milestone*
+*Last updated: 2026-03-30 — v1.3 shipping, v2.0 core infrastructure complete*

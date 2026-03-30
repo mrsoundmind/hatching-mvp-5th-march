@@ -1,0 +1,105 @@
+<svg viewBox="0 0 120 130" xmlns="http://www.w3.org/2000/svg">
+  <!-- Friendly Zara Designer -->
+  <g>
+    <animateTransform attributeName="transform" type="translate" values="0,0;0,-2.5;0,0" dur="3.5s" repeatCount="indefinite"/>
+
+    <!-- Neck -->
+    <rect x="53" y="90" width="14" height="14" rx="5" fill="#c68b59"/>
+
+    <!-- Long hair back -->
+    <path d="M24 48c0-26 16-40 36-40 20 0 36 18 36 40l0 38c0 8-2 14-4 18" fill="#1a0a00"/>
+    <path d="M24 48l0 40c0 8 2 14 4 18" fill="#1a0a00"/>
+
+    <!-- Face (warm skin) -->
+    <ellipse cx="60" cy="64" rx="26" ry="30" fill="#c68b59"/>
+
+    <!-- Hair front -->
+    <path d="M34 46c2-22 12-34 26-34 14 0 24 14 26 34" fill="#1a0a00"/>
+
+    <!-- Flowing side hair with sway -->
+    <path d="M34 52c-3 10-5 28-4 42 0 6 2 10 4 14" fill="#1a0a00">
+      <animate attributeName="d" values="M34 52c-3 10-5 28-4 42 0 6 2 10 4 14;M33 52c-4 10-6 28-3 42 0 6 3 10 4 14;M34 52c-3 10-5 28-4 42 0 6 2 10 4 14" dur="4s" repeatCount="indefinite"/>
+    </path>
+    <path d="M86 48c3 12 5 30 3 44 0 6-2 10-4 14" fill="#1a0a00">
+      <animate attributeName="d" values="M86 48c3 12 5 30 3 44 0 6-2 10-4 14;M87 48c4 12 6 30 4 44 0 6-3 10-4 14;M86 48c3 12 5 30 3 44 0 6-2 10-4 14" dur="4s" begin="0.5s" repeatCount="indefinite"/>
+    </path>
+
+    <!-- Ears -->
+    <ellipse cx="34" cy="64" rx="4" ry="6" fill="#c68b59"/>
+    <ellipse cx="86" cy="64" rx="4" ry="6" fill="#c68b59"/>
+
+    <!-- Eyelashes -->
+    <path d="M40 54c-1-2 0-4 2-5" stroke="#1a0a00" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+    <path d="M42 52c0-2 1-4 3-4" stroke="#1a0a00" stroke-width="1" fill="none" stroke-linecap="round"/>
+    <path d="M80 54c1-2 0-4-2-5" stroke="#1a0a00" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+    <path d="M78 52c0-2-1-4-3-4" stroke="#1a0a00" stroke-width="1" fill="none" stroke-linecap="round"/>
+
+    <!-- Eyebrows -->
+    <path d="M40 49c4-4 10-5 14-2" stroke="#1a0a00" stroke-width="1.8" fill="none" stroke-linecap="round">
+      <animateTransform attributeName="transform" type="translate" values="0,0;0,-1;0,0" dur="4s" repeatCount="indefinite"/>
+    </path>
+    <path d="M66 47c4-3 10-2 14 2" stroke="#1a0a00" stroke-width="1.8" fill="none" stroke-linecap="round">
+      <animateTransform attributeName="transform" type="translate" values="0,0;0,-1;0,0" dur="4s" begin="0.3s" repeatCount="indefinite"/>
+    </path>
+
+    <!-- Big doe eyes with blink -->
+    <g>
+      <!-- Left eye -->
+      <ellipse cx="48" cy="60" rx="8" ry="7" fill="white">
+        <animate attributeName="ry" values="7;0.5;7" dur="3.5s" begin="1.5s" repeatCount="indefinite" keyTimes="0;0.04;0.1" keySplines="0.4 0 0.2 1;0.4 0 0.2 1" calcMode="spline"/>
+      </ellipse>
+      <ellipse cx="49" cy="61" rx="4.5" ry="4.8" fill="#10b981">
+        <animate attributeName="ry" values="4.8;0.3;4.8" dur="3.5s" begin="1.5s" repeatCount="indefinite" keyTimes="0;0.04;0.1" keySplines="0.4 0 0.2 1;0.4 0 0.2 1" calcMode="spline"/>
+        <animate attributeName="cx" values="49;50.5;49;47.5;49" dur="5s" repeatCount="indefinite"/>
+      </ellipse>
+      <circle cx="49" cy="61" r="2.2" fill="#064e3b">
+        <animate attributeName="r" values="2.2;0.2;2.2" dur="3.5s" begin="1.5s" repeatCount="indefinite" keyTimes="0;0.04;0.1" keySplines="0.4 0 0.2 1;0.4 0 0.2 1" calcMode="spline"/>
+      </circle>
+      <circle cx="46.5" cy="58.5" r="2" fill="white" opacity="0.95">
+        <animate attributeName="r" values="2;0;2" dur="3.5s" begin="1.5s" repeatCount="indefinite" keyTimes="0;0.04;0.1" keySplines="0.4 0 0.2 1;0.4 0 0.2 1" calcMode="spline"/>
+      </circle>
+      <circle cx="50.5" cy="62.5" r="0.8" fill="white" opacity="0.6">
+        <animate attributeName="r" values="0.8;0;0.8" dur="3.5s" begin="1.5s" repeatCount="indefinite" keyTimes="0;0.04;0.1" keySplines="0.4 0 0.2 1;0.4 0 0.2 1" calcMode="spline"/>
+      </circle>
+
+      <!-- Right eye -->
+      <ellipse cx="72" cy="60" rx="8" ry="7" fill="white">
+        <animate attributeName="ry" values="7;0.5;7" dur="3.5s" begin="1.5s" repeatCount="indefinite" keyTimes="0;0.04;0.1" keySplines="0.4 0 0.2 1;0.4 0 0.2 1" calcMode="spline"/>
+      </ellipse>
+      <ellipse cx="71" cy="61" rx="4.5" ry="4.8" fill="#10b981">
+        <animate attributeName="ry" values="4.8;0.3;4.8" dur="3.5s" begin="1.5s" repeatCount="indefinite" keyTimes="0;0.04;0.1" keySplines="0.4 0 0.2 1;0.4 0 0.2 1" calcMode="spline"/>
+        <animate attributeName="cx" values="71;72.5;71;69.5;71" dur="5s" repeatCount="indefinite"/>
+      </ellipse>
+      <circle cx="71" cy="61" r="2.2" fill="#064e3b">
+        <animate attributeName="r" values="2.2;0.2;2.2" dur="3.5s" begin="1.5s" repeatCount="indefinite" keyTimes="0;0.04;0.1" keySplines="0.4 0 0.2 1;0.4 0 0.2 1" calcMode="spline"/>
+      </circle>
+      <circle cx="69" cy="58.5" r="2" fill="white" opacity="0.95">
+        <animate attributeName="r" values="2;0;2" dur="3.5s" begin="1.5s" repeatCount="indefinite" keyTimes="0;0.04;0.1" keySplines="0.4 0 0.2 1;0.4 0 0.2 1" calcMode="spline"/>
+      </circle>
+      <circle cx="73" cy="62.5" r="0.8" fill="white" opacity="0.6">
+        <animate attributeName="r" values="0.8;0;0.8" dur="3.5s" begin="1.5s" repeatCount="indefinite" keyTimes="0;0.04;0.1" keySplines="0.4 0 0.2 1;0.4 0 0.2 1" calcMode="spline"/>
+      </circle>
+    </g>
+
+    <!-- Nose -->
+    <path d="M58 68c0 3 2 5 4 4" stroke="#a67040" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+
+    <!-- Beauty mark -->
+    <circle cx="78" cy="74" r="1.5" fill="#8b5a2b"/>
+
+    <!-- Rosy cheeks with pulse -->
+    <ellipse cx="39" cy="72" rx="6" ry="3.5" fill="#e8878f" opacity="0.35">
+      <animate attributeName="opacity" values="0.3;0.45;0.3" dur="3s" repeatCount="indefinite"/>
+    </ellipse>
+    <ellipse cx="81" cy="72" rx="6" ry="3.5" fill="#e8878f" opacity="0.35">
+      <animate attributeName="opacity" values="0.3;0.45;0.3" dur="3s" begin="0.5s" repeatCount="indefinite"/>
+    </ellipse>
+
+    <!-- Warm smile -->
+    <path d="M44 78c5 8 14 10 22 6 3-2 5-4 6-7" stroke="#a06040" stroke-width="2" fill="none" stroke-linecap="round">
+      <animate attributeName="d" values="M44 78c5 8 14 10 22 6 3-2 5-4 6-7;M44 77c5 9 14 11 22 7 3-2 5-4 6-7;M44 78c5 8 14 10 22 6 3-2 5-4 6-7" dur="3s" repeatCount="indefinite"/>
+    </path>
+    <!-- Smile fill for open mouth effect -->
+    <path d="M48 80c4 4 12 5 18 2" fill="#c47062" opacity="0.3"/>
+  </g>
+</svg>

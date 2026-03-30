@@ -129,14 +129,33 @@ export function resolveSpeakingAuthority(
 
   // Rule 3: Project Scope Authority
   if (conversationScope === 'project') {
-    // Find Product Manager(s)
+    // Priority 1: Maya (Idea Partner / special agent) — she's the project-level voice
+    const maya = availableAgents.find(agent =>
+      (agent as any).isSpecialAgent || agent.role.toLowerCase() === 'idea partner'
+    );
+
+    if (maya) {
+      const result: SpeakingAuthorityResult = {
+        allowedSpeaker: maya,
+        reason: 'project_scope_maya_authority'
+      };
+
+      if (process.env.NODE_ENV === 'development' || process.env.DEV) {
+        console.log(
+          `[SpeakingAuthority] scope=${conversationScope} speaker=${maya.id} reason=${result.reason}`
+        );
+      }
+
+      return result;
+    }
+
+    // Priority 2: Product Manager (Alex) if Maya doesn't exist
     const productManagers = availableAgents.filter(agent => {
       const roleLower = agent.role.toLowerCase();
       return roleLower.includes('product manager');
     });
 
     if (productManagers.length > 0) {
-      // Pick first PM deterministically
       const pm = productManagers[0];
       const result: SpeakingAuthorityResult = {
         allowedSpeaker: pm,
@@ -151,7 +170,7 @@ export function resolveSpeakingAuthority(
 
       return result;
     }
-    // If no PM exists, fall through to fallback
+    // If neither Maya nor PM exists, fall through to fallback
   }
 
   // Rule 4: Team Scope Authority

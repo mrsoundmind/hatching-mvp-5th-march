@@ -5,7 +5,7 @@ export function AppHeader() {
     <header className="h-16 hatchin-border border-b flex items-center justify-between px-6 hatchin-bg-dark">
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-3 select-none">
-          <span className="text-xl font-bold tracking-tighter text-white">Hatchin<span className="text-indigo-500">.</span></span>
+          <span className="text-xl font-bold tracking-tighter text-foreground">Hatchin<span className="text-indigo-500">.</span></span>
         </div>
       </div>
 

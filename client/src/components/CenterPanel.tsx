@@ -1,5 +1,5 @@
-import { Send } from "lucide-react";
-import { useState, useEffect, useRef, useMemo } from "react";
+import { Send, PauseCircle, PlayCircle, ArrowRightLeft, ArrowUpIcon } from "lucide-react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import type { Project, Team, Agent } from "@shared/schema";
 import { getRoleDefinition } from "@shared/roleRegistry";
@@ -14,7 +14,18 @@ import { buildConversationId } from '@/lib/conversationId';
 import { devLog } from '@/lib/devLog';
 import { deriveChatMode, type ChatMode } from '@/lib/chatMode';
 import { useAuth } from "@/hooks/useAuth";
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
+import { AutonomousApprovalCard } from './AutonomousApprovalCard';
+import UpgradeModal from './UpgradeModal';
+import { HandoffCard } from './chat/HandoffCard';
+import { DeliberationCard } from './chat/DeliberationCard';
+import { DeliverableProposalCard } from '@/components/DeliverableChatCard';
+import { PackageSuggestionCard, suggestPackageTemplate } from '@/components/PackageSuggestionCard';
+import { dispatchAutonomyEvent, AUTONOMY_EVENTS } from '@/lib/autonomyEvents';
+import type { HandoffAnnouncedPayload } from '@/lib/autonomyEvents';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
+import AgentAvatar from '@/components/avatars/AgentAvatar';
+// UsageBar removed — will redesign as notification-only in v1.2 billing
 
 interface ChatContext {
   mode: ChatMode;
@@ -85,6 +96,8 @@ export function CenterPanel({
 
   // Add Hatch Modal state
   const [showAddHatchModal, setShowAddHatchModal] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [upgradeReason, setUpgradeReason] = useState<string | undefined>();
 
   // Message input state (for deterministic send gating)
   const [inputValue, setInputValue] = useState('');
@@ -114,7 +127,48 @@ export function CenterPanel({
   const [hasMoreMessages, setHasMoreMessages] = useState(false);
   const [nextMessageCursor, setNextMessageCursor] = useState<string | null>(null);
   const [typingColleagues, setTypingColleagues] = useState<string[]>([]);
+  const [isTeamWorking, setIsTeamWorking] = useState(false);
+  const [teamWorkingTaskCount, setTeamWorkingTaskCount] = useState(0);
+  const [isAutonomyPaused, setIsAutonomyPaused] = useState(false);
+  // UX-01: Inline approval cards for high-risk autonomous tasks
+  const [approvalRequests, setApprovalRequests] = useState<Array<{
+    taskId: string;
+    agentName: string;
+    riskReasons: string[];
+    projectId: string;
+  }>>([]);
   const lastSendRef = useRef<{ conversationId: string; content: string; at: number } | null>(null);
+
+  // Deliberation state for multi-agent coordination indicator
+  const [deliberationState, setDeliberationState] = useState<{
+    sessionId: string;
+    agentNames: string[];
+    roundCount: number;
+    status: 'ongoing' | 'resolved';
+    summary?: string;
+  } | null>(null);
+  const deliberationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Deliverable proposal state (v2.0)
+  const [deliverableProposal, setDeliverableProposal] = useState<{
+    type: string; title: string; agentName: string; agentRole: string;
+    confidence: number; conversationId: string; projectId: string;
+  } | null>(null);
+
+  // Package suggestion state (v2.0 zero-friction onboarding)
+  const [packageSuggestionDismissed, setPackageSuggestionDismissed] = useState(() => {
+    try {
+      const dismissed = localStorage.getItem('hatchin_pkg_dismissed');
+      return dismissed ? JSON.parse(dismissed) : {};
+    } catch { return {}; }
+  });
+  const isPackageDismissed = activeProject ? !!packageSuggestionDismissed[activeProject.id] : false;
+  const dismissPackageSuggestion = () => {
+    if (!activeProject) return;
+    const next = { ...packageSuggestionDismissed, [activeProject.id]: true };
+    setPackageSuggestionDismissed(next);
+    try { localStorage.setItem('hatchin_pkg_dismissed', JSON.stringify(next)); } catch {}
+  };
 
   const resizeComposer = (el: HTMLTextAreaElement | null) => {
     if (!el) return;
@@ -147,6 +201,8 @@ export function CenterPanel({
   }, [isThinking]);
   const streamingTimeoutRef = useRef<number | null>(null);
   const pendingResponseTimeoutRef = useRef<number | null>(null);
+  // UX-05: Flash interval ref for tab title flashing
+  const flashIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const clearStreamingTimeout = () => {
     if (streamingTimeoutRef.current) {
@@ -171,7 +227,7 @@ export function CenterPanel({
       setStreamingContent('');
       setStreamingAgent(null);
       setStreamingConversationId(null);
-    }, 20000); // 20s watchdog
+    }, 45000); // 45s watchdog — server does post-processing (peer review, AKL, task detection) after last chunk
   };
 
   const clearPendingResponseTimeout = () => {
@@ -202,6 +258,9 @@ export function CenterPanel({
     return () => {
       clearPendingResponseTimeout();
       clearStreamingTimeout();
+      if (deliberationTimeoutRef.current) {
+        clearTimeout(deliberationTimeoutRef.current);
+      }
     };
   }, []);
 
@@ -387,6 +446,69 @@ export function CenterPanel({
   const [isApprovingTasks, setIsApprovingTasks] = useState(false);
   const [showTaskApprovalModal, setShowTaskApprovalModal] = useState(false);
 
+  // UX-05: Flashing tab title utility functions
+  const startFlashingTitle = useCallback((count: number, label: string) => {
+    if (flashIntervalRef.current) clearInterval(flashIntervalRef.current);
+    const notifText = `(${count}) ${label} | Hatchin`;
+    let toggle = true;
+    flashIntervalRef.current = setInterval(() => {
+      document.title = toggle ? notifText : 'Hatchin';
+      toggle = !toggle;
+    }, 1500); // 1.5s — midpoint of user's 1-2s discretion range
+  }, []);
+
+  const stopFlashingTitle = useCallback(() => {
+    if (flashIntervalRef.current) {
+      clearInterval(flashIntervalRef.current);
+      flashIntervalRef.current = null;
+    }
+    document.title = 'Hatchin';
+  }, []);
+
+  // UX-05: Notification API helpers
+  const requestNotificationPermission = useCallback(() => {
+    if (!('Notification' in window)) return;
+    if (Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }, []);
+
+  const fireCompletionNotification = useCallback((projectName: string, summary: string) => {
+    if (!('Notification' in window)) return;
+    if (Notification.permission !== 'granted') return;
+    try {
+      const n = new Notification(projectName, {
+        body: summary,
+        icon: '/favicon.ico',
+      });
+      n.onclick = () => {
+        window.focus();
+        n.close();
+      };
+    } catch {
+      // Non-critical — some browsers may block programmatic notifications
+    }
+  }, []);
+
+  // UX-05: Reset tab title when user returns
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        stopFlashingTitle(); // was just: document.title = 'Hatchin'
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      // Cleanup flash interval on unmount
+      if (flashIntervalRef.current) {
+        clearInterval(flashIntervalRef.current);
+        flashIntervalRef.current = null;
+      }
+    };
+  }, [stopFlashingTitle]);
+
+
   // Handle incoming WebSocket messages
   const handleIncomingMessage = (message: any) => {
     devLog('🔔 Received WebSocket message:', message.type, message);
@@ -435,10 +557,10 @@ export function CenterPanel({
         id: messageId || `msg-${Date.now()}`,
         content: message.message.content,
         senderId: message.message.messageType === 'system'
-          ? 'system'
+          ? 'maya-fallback'
           : (message.message.agentId || message.message.userId),
         senderName: message.message.messageType === 'system'
-          ? 'System'
+          ? 'Maya'
           : (message.message.agentId
             ? getActualAgentName(message.message.agentId)
             : toDisplayText(message.message.senderName, 'You')),
@@ -452,6 +574,22 @@ export function CenterPanel({
         threadDepth: message.message.threadDepth || 0,
         metadata: message.message.metadata
       };
+
+      // Dispatch handoff event to sidebar activity feed
+      if ((message.message.metadata as any)?.isHandoffAnnouncement === true) {
+        const toAgent = activeProjectAgents.find(
+          a => a.id === (message.message.metadata as any)?.nextAgentId
+        );
+        dispatchAutonomyEvent<HandoffAnnouncedPayload>(AUTONOMY_EVENTS.HANDOFF_ANNOUNCED, {
+          fromAgentId: message.message.agentId || '',
+          fromAgentName: newMessage.senderName,
+          toAgentId: (message.message.metadata as any)?.nextAgentId || '',
+          toAgentName: toAgent?.name ?? 'Team',
+          taskTitle: (message.message.metadata as any)?.taskTitle ?? message.message.content,
+          traceId: (message.message.metadata as any)?.traceId ?? message.message.id,
+          projectId: activeProject?.id || '',
+        });
+      }
 
       // Validate conversation context - only process messages for current context
       const isCurrentConversation = currentChatContext?.conversationId === newMessage.conversationId;
@@ -553,7 +691,11 @@ export function CenterPanel({
         return;
       }
 
-      const convId = currentChatContext?.conversationId || '';
+      const convId = currentChatContext?.conversationId;
+      if (!convId) {
+        devLog('⏭️ Skipping streaming_started — no active conversation');
+        return;
+      }
       const convMsgs = allMessages[convId] || [];
       const hasDuplicate = convMsgs.some(m =>
         m.id === message.messageId ||
@@ -610,94 +752,12 @@ export function CenterPanel({
       addMessageToConversation(currentChatContext?.conversationId || '', streamingMessage);
       resetStreamingTimeout();
     }
-    else if (message.type === 'token') {
-      clearPendingResponseTimeout();
-      setIsThinking(false);
-      // Token-by-token streaming for real-time typing effect
-      devLog('🔤 Token received:', message.content);
-
-      // Use streamingConversationId if available, fallback to currentChatContext
-      const conversationId = streamingConversationId || currentChatContext?.conversationId || '';
-
-      if (!conversationId) {
-        console.warn('⚠️ Token received but no conversation context');
-        return;
-      }
-
-      setAllMessages(prev => {
-        const messages = prev[conversationId] || [];
-
-        // Find the streaming message (either by streamingMessageId or last assistant message)
-        let messageIndex = -1;
-
-        if (streamingMessageId.current) {
-          // Prefer the tracked streaming message
-          messageIndex = messages.findIndex(msg => msg.id === streamingMessageId.current);
-        }
-
-        // Fallback: find last assistant message if streaming message not found
-        if (messageIndex === -1) {
-          for (let i = messages.length - 1; i >= 0; i--) {
-            if (messages[i].messageType === 'agent' && (messages[i].isStreaming || messages[i].status === 'streaming')) {
-              messageIndex = i;
-              break;
-            }
-          }
-        }
-
-        if (messageIndex >= 0) {
-          // Append token to existing streaming message (typing effect)
-          const updatedMessages = [...messages];
-          updatedMessages[messageIndex] = {
-            ...updatedMessages[messageIndex],
-            content: updatedMessages[messageIndex].content + (message.content || ''), // APPEND token
-            isStreaming: true,
-            status: 'streaming' as const
-          };
-          devLog('✅ Appended token to streaming message:', updatedMessages[messageIndex].id, 'content length:', updatedMessages[messageIndex].content.length);
-          return { ...prev, [conversationId]: updatedMessages };
-        } else {
-          // Create new streaming message if none exists
-          const getActualAgentName = (agentId: string) => {
-            const agent = activeProjectAgents.find(a => a.id === agentId);
-            return agent ? agent.name : agentId.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase());
-          };
-
-          const newStreamingMessage = {
-            id: message.messageId || `streaming-${Date.now()}`,
-            content: message.content || '',
-            senderId: message.agentId || 'ai-agent',
-            senderName: message.agentName || getActualAgentName(message.agentId || 'ai-agent'),
-            messageType: 'agent' as const,
-            timestamp: new Date().toISOString(),
-            conversationId,
-            status: 'streaming' as const,
-            isStreaming: true,
-            metadata: { isStreaming: true }
-          };
-
-          // Track this as the streaming message
-          if (message.messageId && !streamingMessageId.current) {
-            streamingMessageId.current = message.messageId;
-            setIsStreaming(true);
-            setStreamingConversationId(conversationId);
-          }
-
-          devLog('🆕 Created new streaming message for token:', newStreamingMessage.id);
-          return { ...prev, [conversationId]: [...messages, newStreamingMessage] };
-        }
-      });
-
-      // Update streaming content state
-      setStreamingContent(prev => prev + (message.content || ''));
-      resetStreamingTimeout();
-    }
     else if (message.type === 'streaming_chunk') {
       clearPendingResponseTimeout();
       setIsThinking(false);
       devLog('📦 Streaming chunk:', message.chunk);
       if (message.messageId === streamingMessageId.current) {
-        setStreamingContent(message.accumulatedContent);
+        setStreamingContent(message.accumulatedContent ?? '');
 
         // Update the streaming message content with create-or-merge logic
         setAllMessages(prev => {
@@ -835,16 +895,16 @@ export function CenterPanel({
       const failedStreamingId = streamingMessageId.current;
       const normalizedErrorCode = typeof message.code === 'string' ? message.code : 'STREAMING_GENERATION_FAILED';
       const fallbackErrorMessageByCode: Record<string, string> = {
-        OPENAI_NOT_CONFIGURED: 'I’m temporarily unavailable right now. Please retry in a moment.',
-        OPENAI_RATE_LIMITED: 'I’m handling high traffic right now. Please retry in a minute.',
-        OPENAI_AUTH_FAILED: 'I’m temporarily unavailable right now. Please retry in a moment.',
-        OPENAI_MODEL_UNAVAILABLE: 'I’m temporarily unavailable right now. Please retry in a moment.',
-        CONVERSATION_BUSY: 'I’m finishing the previous response. Please wait a moment and try again.',
-        STREAMING_GENERATION_FAILED: 'I’m still here, but this reply could not be completed. Please try again.'
+        OPENAI_NOT_CONFIGURED: "Hmm, I couldn't connect to my brain for a second there. Give it another try?",
+        OPENAI_RATE_LIMITED: "We're getting a lot of traffic right now - give me a minute and try again.",
+        OPENAI_AUTH_FAILED: "Something's off on my end. Try again in a moment - I'll be right here.",
+        OPENAI_MODEL_UNAVAILABLE: "My thinking engine is temporarily offline. Try again in a sec.",
+        CONVERSATION_BUSY: "Still working on my last thought - give me a moment to finish up.",
+        STREAMING_GENERATION_FAILED: "I started a reply but it didn't come through. Mind sending that again?"
       };
       const normalizedErrorMessage = (typeof message.error === 'string' && message.error.trim().length > 0)
         ? message.error
-        : (fallbackErrorMessageByCode[normalizedErrorCode] || 'Something went wrong while generating a reply. Please retry.');
+        : (fallbackErrorMessageByCode[normalizedErrorCode] || "Something tripped me up - try sending that again?");
 
       setIsStreaming(false);
       streamingMessageId.current = null;
@@ -886,13 +946,13 @@ export function CenterPanel({
             cleanedMessages.push({
               id: `sys-streaming-error-${normalizedErrorCode}-${Date.now()}`,
               content: normalizedErrorMessage,
-              senderId: 'system',
-              senderName: 'System',
+              senderId: 'maya-fallback',
+              senderName: 'Maya',
               messageType: 'agent' as const,
               timestamp: new Date().toISOString(),
               conversationId,
               status: 'delivered' as const,
-              metadata: { systemNotice: true, errorCode: normalizedErrorCode }
+              metadata: { systemNotice: true, errorCode: normalizedErrorCode, agentRole: 'pm' }
             });
           }
 
@@ -1065,6 +1125,124 @@ export function CenterPanel({
         console.warn('Failed to dispatch task_created_from_chat event');
       }
     }
+    else if (message.type === 'deliverable_proposal') {
+      devLog('📄 [Deliverable] Proposal received:', message);
+      setDeliverableProposal({
+        type: message.proposalType,
+        title: message.title,
+        agentName: message.agentName,
+        agentRole: message.agentRole,
+        confidence: message.confidence,
+        conversationId: message.conversationId,
+        projectId: message.projectId,
+      });
+    }
+    else if (message.type === 'deliverable_created') {
+      devLog('📄 [Deliverable] Created:', message);
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${message.deliverable?.projectId || activeProject?.id}/deliverables`] });
+      // Open the artifact panel
+      window.dispatchEvent(new CustomEvent('open_deliverable', { detail: { deliverableId: message.deliverable?.id } }));
+      setDeliverableProposal(null);
+    }
+    else if (message.type === 'background_execution_started') {
+      setIsTeamWorking(true);
+      if (message.taskCount != null) {
+        setTeamWorkingTaskCount(message.taskCount);
+      }
+      // UX-04: execution started means not paused — reset pause state
+      setIsAutonomyPaused(false);
+      // UX-05: Request notification permission contextually
+      requestNotificationPermission();
+      // UX-05: Tab notification badge
+      if (document.hidden) {
+        document.title = '\u2728 Team working... | Hatchin';
+      }
+      // Bridge to sidebar: dispatch TASK_EXECUTING + AGENT_WORKING_STATE
+      dispatchAutonomyEvent(AUTONOMY_EVENTS.TASK_EXECUTING, {
+        agentId: message.agentId ?? '',
+        agentName: message.agentName ?? 'Agent',
+        taskTitle: message.taskTitle ?? '',
+        traceId: message.traceId ?? '',
+        projectId: activeProject?.id ?? '',
+      });
+      if (message.agentId) {
+        dispatchAutonomyEvent(AUTONOMY_EVENTS.AGENT_WORKING_STATE, {
+          agentId: message.agentId,
+          isWorking: true,
+          projectId: activeProject?.id ?? '',
+        });
+      }
+    }
+    else if (message.type === 'background_execution_completed' || message.type === 'task_execution_completed') {
+      setIsTeamWorking(false);
+      setTeamWorkingTaskCount(0);
+      // UX-05: Flashing tab title (Slack/Gmail pattern)
+      if (document.hidden) {
+        const count = message.completedCount ?? message.taskCount ?? 1;
+        startFlashingTitle(count, 'Work complete');
+        // UX-05: OS notification
+        const projectName = activeProject?.name ?? 'Hatchin';
+        const pendingCount = (message as any).pendingApprovalCount ?? 0;
+        const summary = pendingCount > 0
+          ? `${count} task${count > 1 ? 's' : ''} completed, ${pendingCount} need${pendingCount > 1 ? '' : 's'} review`
+          : `${count} task${count > 1 ? 's' : ''} completed`;
+        fireCompletionNotification(projectName, summary);
+      }
+      // Bridge to sidebar: dispatch TASK_COMPLETED + clear AGENT_WORKING_STATE
+      dispatchAutonomyEvent(AUTONOMY_EVENTS.TASK_COMPLETED, {
+        agentId: message.agentId ?? '',
+        agentName: message.agentName ?? 'Agent',
+        taskTitle: message.taskTitle ?? '',
+        traceId: message.traceId ?? '',
+        projectId: activeProject?.id ?? '',
+      });
+      if (message.agentId) {
+        dispatchAutonomyEvent(AUTONOMY_EVENTS.AGENT_WORKING_STATE, {
+          agentId: message.agentId,
+          isWorking: false,
+          projectId: activeProject?.id ?? '',
+        });
+      }
+    }
+    else if (message.type === 'task_requires_approval') {
+      // UX-01: High-risk autonomous task — show inline approval card instead of toast
+      devLog('⚠️ [Autonomy] Task requires approval:', message.taskId, message.riskReasons);
+      const currentProjectId = activeProject?.id;
+      if (!currentProjectId) return; // Skip if no active project — card would be non-functional
+      queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
+      setApprovalRequests((prev) => [
+        ...prev.filter((r) => r.taskId !== message.taskId),
+        {
+          taskId: message.taskId ?? '',
+          agentName: message.agentName ?? 'Agent',
+          riskReasons: message.riskReasons ?? [],
+          projectId: currentProjectId,
+        },
+      ]);
+      // Bridge to sidebar: dispatch APPROVAL_REQUIRED for activity feed + approvals tab
+      dispatchAutonomyEvent(AUTONOMY_EVENTS.APPROVAL_REQUIRED, {
+        traceId: message.traceId ?? '',
+        agentId: message.agentId ?? '',
+        agentName: message.agentName ?? 'Agent',
+        taskTitle: message.taskTitle ?? '',
+        riskScore: message.riskScore ?? 0,
+        projectId: activeProject?.id ?? '',
+      });
+    }
+    else if (message.type === 'task_approval_rejected') {
+      // Remove rejected approval card (handles multi-tab sync)
+      setApprovalRequests((prev) => prev.filter((r) => r.taskId !== message.taskId));
+      queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
+    }
+    else if (message.type === 'task_execution_failed') {
+      // Notify user when an autonomous task fails
+      setIsTeamWorking(false);
+      toast({
+        title: 'Task failed',
+        description: `${message.agentName ?? 'Agent'} couldn't complete the task: ${message.error ?? 'Unknown error'}`,
+        duration: 8000,
+      });
+    }
     else if (message.type === 'brain_updated_from_chat') {
       devLog('🧠 [ChatIntelligence] Project Brain updated from chat:', message.field, message.value);
       // Refresh project data in the right sidebar overview
@@ -1072,19 +1250,69 @@ export function CenterPanel({
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${message.projectId}`] });
       toast({ title: 'Project memory updated', description: `Captured: ${message.field || 'new insight'}` });
       try {
-        window.dispatchEvent(new CustomEvent('brain_updated_from_chat', {
+        // Dispatch project_brain_updated so home.tsx cache + useRightSidebarState pick it up
+        window.dispatchEvent(new CustomEvent('project_brain_updated', {
           detail: {
-            field: message.field,
-            value: message.value,
-            updatedBy: message.updatedBy,
             projectId: message.projectId,
+            patch: {
+              coreDirection: message.field === 'coreDirection' ? message.value : undefined,
+              executionRules: message.field === 'executionRules' ? message.value : undefined,
+              teamCulture: message.field === 'teamCulture' ? message.value : undefined,
+            },
           }
         }));
       } catch (e) {
-        console.warn('Failed to dispatch brain_updated_from_chat event');
+        console.warn('Failed to dispatch project_brain_updated event');
       }
     }
     // ─── END Chat Intelligence Events ────────────────────────────────────────
+    // ─── Billing Events ─────────────────────────────────────────────────────
+    else if (message.type === 'upgrade_required') {
+      if (message.reason === 'rate_limit') {
+        // Rate limit — just show a toast, no upgrade modal
+        toast({ title: 'Slow down', description: message.message || 'You\'re sending messages too fast.', duration: 4000 });
+      } else {
+        // Daily cap or feature gate — show upgrade modal
+        setUpgradeReason(message.reason);
+        setShowUpgradeModal(true);
+      }
+    }
+    // ─── END Billing Events ─────────────────────────────────────────────────
+    else if (message.type === 'conductor_decision') {
+      const payload = message as any;
+      // Only show deliberation card when review is required (mid/high risk)
+      if (payload.reviewRequired || (payload.reviewerCount && payload.reviewerCount >= 1)) {
+        const agentNames: string[] = [];
+        if (payload.selectedAgent) agentNames.push(payload.selectedAgent);
+        if (payload.reviewers) agentNames.push(...(payload.reviewers as string[]));
+
+        // Clear any existing timeout
+        if (deliberationTimeoutRef.current) {
+          clearTimeout(deliberationTimeoutRef.current);
+        }
+
+        setDeliberationState(prev => ({
+          sessionId: payload.traceId || `delib-${Date.now()}`,
+          agentNames: agentNames.length > 0 ? agentNames : prev?.agentNames || ['Agents'],
+          roundCount: (prev?.roundCount || 0) + 1,
+          status: 'ongoing',
+        }));
+
+        // Auto-resolve after 30 seconds
+        deliberationTimeoutRef.current = setTimeout(() => {
+          setDeliberationState(prev => prev ? { ...prev, status: 'resolved' } : null);
+        }, 30000);
+      }
+    } else if (message.type === 'synthesis_completed') {
+      if (deliberationTimeoutRef.current) {
+        clearTimeout(deliberationTimeoutRef.current);
+      }
+      setDeliberationState(prev => prev ? {
+        ...prev,
+        status: 'resolved',
+        summary: (message as any).synthesis || 'Coordination complete',
+      } : null);
+    }
   };
 
   // === SUBTASK 3.1.4: Message Persistence Integration ===
@@ -1118,8 +1346,8 @@ export function CenterPanel({
       return {
         id: msg.id,
         content: msg.content,
-        senderId: msg.messageType === 'system' ? 'system' : (msg.agentId || msg.userId || 'unknown'),
-        senderName: msg.messageType === 'system' ? 'System' : (msg.agentId ? (() => {
+        senderId: msg.messageType === 'system' ? 'maya-fallback' : (msg.agentId || msg.userId || 'unknown'),
+        senderName: msg.messageType === 'system' ? 'Maya' : (msg.agentId ? (() => {
           const agent = activeProjectAgents.find((a: any) => a.id === msg.agentId);
           return agent ? agent.name : msg.agentId.replace('-', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase());
         })() : 'You'),
@@ -1357,6 +1585,22 @@ export function CenterPanel({
 
   // === END TASK 3.1 ===
 
+  // UX-01: Clear approval requests that belong to the old project when switching
+  useEffect(() => {
+    if (activeProject?.id) {
+      setApprovalRequests((prev) =>
+        prev.filter((r) => r.projectId === activeProject.id),
+      );
+    } else {
+      setApprovalRequests([]);
+    }
+  }, [activeProject?.id]);
+
+  // UX-04: Sync pause state from project data when project changes
+  useEffect(() => {
+    setIsAutonomyPaused((activeProject?.executionRules as any)?.autonomyPaused ?? false);
+  }, [activeProject?.id, activeProject?.executionRules]);
+
   // useEffect to listen to activeProjectId, activeTeamId, activeAgentId changes
   useEffect(() => {
     if (!activeProject) {
@@ -1431,6 +1675,8 @@ export function CenterPanel({
     }
 
     setCurrentChatContext(newChatContext);
+    // Clear input when switching conversations to prevent state leaking
+    setInputValue('');
 
     // Join new conversation room via WebSocket when connected
     if (connectionStatus === 'connected') {
@@ -1530,10 +1776,10 @@ export function CenterPanel({
     switch (currentChatContext.mode) {
       case 'project':
         return {
-          // Header identity in project mode is hard-locked to PM Maya
+          // Header identity in project mode is hard-locked to Maya
           // and derived ONLY from mode (not from agents list).
           title: 'Maya',
-          subtitle: 'Project Manager',
+          subtitle: 'Idea Partner',
           participants,
           placeholder: "Message your team...",
           welcomeTitle: 'Talk to your entire project team',
@@ -1593,7 +1839,7 @@ export function CenterPanel({
       (window as any).HATCHIN_UI_AUDIT &&
       currentChatContext?.mode === 'project'
     ) {
-      if (contextDisplay.title !== 'Maya' || contextDisplay.subtitle !== 'Project Manager') {
+      if (contextDisplay.title !== 'Maya' || contextDisplay.subtitle !== 'Idea Partner') {
         devLog('HEADER_INVARIANT_VIOLATION', {
           mode: currentChatContext.mode,
           title: contextDisplay.title,
@@ -1759,6 +2005,41 @@ export function CenterPanel({
 
   // === END TASK 2.3 ===
 
+  // UX-01: Approve / reject mutations for autonomous task approval cards
+  const approveMutation = useMutation({
+    mutationFn: (taskId: string) => apiRequest('POST', `/api/tasks/${taskId}/approve`, {}),
+    onSuccess: (_data, taskId) => {
+      setApprovalRequests((prev) => prev.filter((r) => r.taskId !== taskId));
+      queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
+    },
+    onError: (_err, taskId) => {
+      setApprovalRequests((prev) => prev.filter((r) => r.taskId !== taskId));
+    },
+  });
+
+  const rejectMutation = useMutation({
+    mutationFn: (taskId: string) => apiRequest('POST', `/api/tasks/${taskId}/reject`, {}),
+    onSuccess: (_data, taskId) => {
+      setApprovalRequests((prev) => prev.filter((r) => r.taskId !== taskId));
+      queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
+    },
+    onError: (_err, taskId) => {
+      setApprovalRequests((prev) => prev.filter((r) => r.taskId !== taskId));
+    },
+  });
+
+  // UX-04: Pause/resume autonomous execution for this project
+  const pauseMutation = useMutation({
+    mutationFn: (paused: boolean) =>
+      apiRequest('PATCH', `/api/projects/${activeProject?.id}`, {
+        executionRules: { ...((activeProject?.executionRules as any) ?? {}), autonomyPaused: paused },
+      }),
+    onSuccess: (_data, paused) => {
+      setIsAutonomyPaused(paused);
+      queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
+    },
+  });
+
   // A1.1 & A1.4: Handle message reactions for AI training
   const reactionMutation = useMutation({
     mutationFn: async ({ messageId, reactionType, agentId }: {
@@ -1766,7 +2047,7 @@ export function CenterPanel({
       reactionType: 'thumbs_up' | 'thumbs_down';
       agentId?: string;
     }) => {
-      return await apiRequest(`/api/messages/${messageId}/reactions`, 'POST', {
+      return await apiRequest('POST', `/api/messages/${messageId}/reactions`, {
         reactionType,
         agentId,
         feedbackData: {
@@ -1805,6 +2086,26 @@ export function CenterPanel({
   // Clear reply state
   const clearReply = () => {
     setReplyingTo(null);
+  };
+
+  // Handoff dropdown — list of agents eligible to receive a handoff
+  const handoffableAgents = useMemo(() => {
+    // Get the currently-focused agent (if in agent mode)
+    const focusedAgentId = currentChatContext?.mode === 'agent' ? currentChatContext?.participantIds[0] : null;
+    return activeProjectAgents.filter((agent) => {
+      // Exclude Maya (special agent)
+      if ((agent as unknown as { isSpecialAgent?: boolean; is_special_agent?: boolean }).isSpecialAgent ||
+          (agent as unknown as { isSpecialAgent?: boolean; is_special_agent?: boolean }).is_special_agent) return false;
+      // Exclude the currently focused agent
+      if (focusedAgentId && agent.id === focusedAgentId) return false;
+      return true;
+    });
+  }, [activeProjectAgents, currentChatContext]);
+
+  // Prepopulate input with @AgentName mention for manual handoff
+  const handleHandoff = (agent: { id: string; name: string; role: string }) => {
+    setInputValue(`@${agent.name} `);
+    messageInputRef.current?.focus();
   };
 
 
@@ -2171,8 +2472,8 @@ export function CenterPanel({
               {contextDisplay.title}
             </h1>
             {currentChatContext?.mode && (
-              <span className="text-xs px-2 py-0.5 rounded-full bg-white/8 text-gray-400 border border-white/10">
-                {currentChatContext.mode === 'project' ? '🌐 All agents' :
+              <span className="text-xs px-2 py-0.5 rounded-full bg-[var(--hatchin-surface)] hatchin-text-muted border border-[var(--hatchin-border-subtle)]">
+                {currentChatContext.mode === 'project' ? '🌐 Everyone' :
                  currentChatContext.mode === 'agent' ? `💬 1-on-1` :
                  '👥 Team chat'}
               </span>
@@ -2182,7 +2483,7 @@ export function CenterPanel({
           <button
             onClick={() => setShowAddHatchModal(true)}
             disabled={!activeProject}
-            className="hatchin-bg-blue text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-opacity-90 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="btn-primary-glow px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 btn-press disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="10" />
@@ -2238,11 +2539,7 @@ export function CenterPanel({
       </div>
       {/* Message Display Area */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {isTestMode && (
-          <div className="px-6 py-2 border-b hatchin-border bg-amber-500/10 text-amber-200 text-xs">
-            Test Mode: Local AI model ({runtimeProviderLabel}). Responses are for system testing only.
-          </div>
-        )}
+
         {getCurrentMessages().length === 0 && !isStreaming && !isThinking ? (
           /* Welcome Screen - Show when no messages */
           (<div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
@@ -2282,8 +2579,22 @@ export function CenterPanel({
           /* Message List - Show when messages exist */
           (<>
             <div className="relative flex-1 min-h-0">
+              {/* Connection status banner */}
+              {connectionStatus !== 'connected' && (
+                <div className={`flex items-center justify-center gap-2 py-1.5 text-xs font-medium ${
+                  connectionStatus === 'connecting' ? 'bg-yellow-500/10 text-yellow-500' :
+                  connectionStatus === 'error' ? 'bg-red-500/10 text-red-500' :
+                  'bg-gray-500/10 text-gray-400'
+                }`} role="status" aria-live="assertive">
+                  <div className={`w-2 h-2 rounded-full ${connectionConfig.bgColor}`} />
+                  {connectionConfig.text}
+                  {connectionStatus === 'disconnected' && (
+                    <span className="text-muted-foreground">— messages may not sync</span>
+                  )}
+                </div>
+              )}
               {/* Messages Container */}
-              <div className="h-full overflow-y-auto hide-scrollbar p-6 space-y-4">
+              <div className="h-full overflow-y-auto hide-scrollbar p-6 space-y-4" role="log" aria-label="Chat messages" aria-live="polite">
                 {messagesLoading && (
                   <div className="flex items-center justify-center py-4">
                     <div className="hatchin-text-muted text-sm">Loading conversation...</div>
@@ -2310,12 +2621,28 @@ export function CenterPanel({
                     currentMessages[index - 1].senderId === message.senderId &&
                     (new Date(message.timestamp).getTime() - new Date(currentMessages[index - 1].timestamp).getTime()) < 300000;
 
+                  // Handoff announcement → render HandoffCard instead of MessageBubble
+                  const isHandoff = (message.metadata as any)?.isHandoffAnnouncement === true;
+                  if (isHandoff) {
+                    const toAgent = activeProjectAgents.find(
+                      a => a.id === (message.metadata as any)?.nextAgentId
+                    );
+                    return (
+                      <HandoffCard
+                        key={message.id}
+                        fromAgentName={message.senderName}
+                        fromAgentRole={(message.metadata as any)?.agentRole}
+                        toAgentName={toAgent?.name ?? 'Team'}
+                        toAgentRole={toAgent?.role}
+                        taskTitle={(message.metadata as any)?.taskTitle ?? message.content}
+                        timestamp={message.timestamp}
+                      />
+                    );
+                  }
+
                   return (
-                    <motion.div
+                    <div
                       key={message.id}
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.2 }}
                     >
                       <MessageBubble
                         message={{
@@ -2344,7 +2671,7 @@ export function CenterPanel({
                           color: chatContextColor
                         }}
                       />
-                    </motion.div>
+                    </div>
                   );
                 })}
 
@@ -2381,7 +2708,7 @@ export function CenterPanel({
 
                 {/* Inline Task Approval UI */}
                 {suggestedTasks.length > 0 && taskSuggestionContext && (
-                  <div className="mt-2 p-4 border border-gray-700 rounded-xl bg-[#2b2f36]">
+                  <div className="mt-2 p-4 border border-hatchin-border-subtle rounded-xl bg-hatchin-surface-elevated">
                     <div className="flex items-center justify-between mb-2">
                       <div className="hatchin-text font-medium text-sm">Suggested tasks from this conversation</div>
                       <span className="text-xs hatchin-text-muted">{suggestedTasks.length} item(s)</span>
@@ -2438,7 +2765,7 @@ export function CenterPanel({
                           setTaskSuggestionContext(null);
                           setShowTaskApprovalModal(false);
                         }}
-                        className="px-3 py-2 bg-gray-700 text-white rounded-md text-xs hover:bg-gray-600"
+                        className="px-3 py-2 bg-hatchin-surface text-foreground rounded-md text-xs hover:bg-hatchin-surface-elevated"
                       >
                         Dismiss
                       </button>
@@ -2446,6 +2773,70 @@ export function CenterPanel({
                   </div>
                 )}
 
+
+                {/* Team working indicator — shown during background autonomous execution */}
+                {isTeamWorking && (
+                  <div className="flex items-center justify-between px-4 py-2 text-sm text-amber-600 bg-amber-50 rounded-lg mx-4 mb-2">
+                    <div className="flex items-center gap-2">
+                      <div className="flex gap-1">
+                        {!isAutonomyPaused && (
+                          <>
+                            <span className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                            <span className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                            <span className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                          </>
+                        )}
+                      </div>
+                      <span>
+                        {isAutonomyPaused
+                          ? 'Autonomous execution paused'
+                          : `Team is working on ${teamWorkingTaskCount} task${teamWorkingTaskCount !== 1 ? 's' : ''}...`}
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => pauseMutation.mutate(!isAutonomyPaused)}
+                      disabled={pauseMutation.isPending}
+                      className="flex items-center gap-1 px-2.5 py-1 text-xs rounded-md transition-colors hover:bg-amber-100 disabled:opacity-40"
+                    >
+                      {isAutonomyPaused ? (
+                        <><PlayCircle className="w-3.5 h-3.5" /> Resume</>
+                      ) : (
+                        <><PauseCircle className="w-3.5 h-3.5" /> Pause</>
+                      )}
+                    </button>
+                  </div>
+                )}
+
+                {/* Deliberation indicator — shown when multi-agent coordination is underway */}
+                <AnimatePresence>
+                  {deliberationState && (
+                    <DeliberationCard
+                      key={deliberationState.sessionId}
+                      agentNames={deliberationState.agentNames}
+                      roundCount={deliberationState.roundCount}
+                      status={deliberationState.status}
+                      summary={deliberationState.summary}
+                      onDismiss={() => setDeliberationState(null)}
+                    />
+                  )}
+                </AnimatePresence>
+
+                {/* UX-01: Inline approval cards for high-risk autonomous tasks */}
+                <AnimatePresence>
+                  {approvalRequests
+                    .filter((r) => r.projectId === activeProject?.id)
+                    .map((req) => (
+                      <AutonomousApprovalCard
+                        key={req.taskId}
+                        taskId={req.taskId}
+                        agentName={req.agentName}
+                        riskReasons={req.riskReasons}
+                        onApprove={(id) => approveMutation.mutate(id)}
+                        onReject={(id) => rejectMutation.mutate(id)}
+                        isLoading={approveMutation.isPending || rejectMutation.isPending}
+                      />
+                    ))}
+                </AnimatePresence>
 
                 {/* Auto-scroll helper */}
                 <div ref={(el) => {
@@ -2456,14 +2847,63 @@ export function CenterPanel({
               </div>
 
               {/* Bottom fade to separate long chat history from input composer */}
-              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[#171A21] via-[#171A21]/85 to-transparent" />
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[var(--premium-bg-end)] via-[var(--premium-bg-end)]/85 to-transparent" />
             </div>
           </>)
         )}
       </div>
+      {/* Package Suggestion Card (zero-friction onboarding) */}
+      {!isPackageDismissed && activeProject && activeProjectAgents.length >= 2 && (() => {
+        const template = suggestPackageTemplate(activeProjectAgents.filter(a => !a.isSpecialAgent).map(a => a.role));
+        if (!template) return null;
+        return (
+          <PackageSuggestionCard
+            projectId={activeProject.id}
+            projectName={activeProject.name}
+            suggestedTemplate={template}
+            onDismiss={dismissPackageSuggestion}
+            onStarted={dismissPackageSuggestion}
+          />
+        );
+      })()}
+      {/* Deliverable Proposal Card */}
+      {deliverableProposal && (
+        <div className="px-6 py-2">
+          <DeliverableProposalCard
+            type={deliverableProposal.type}
+            title={deliverableProposal.title}
+            agentName={deliverableProposal.agentName}
+            agentRole={deliverableProposal.agentRole}
+            onAccept={async () => {
+              try {
+                const res = await fetch('/api/deliverables/generate', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  credentials: 'include',
+                  body: JSON.stringify({
+                    projectId: deliverableProposal.projectId,
+                    type: deliverableProposal.type,
+                    title: deliverableProposal.title,
+                    description: '',
+                  }),
+                });
+                if (res.ok) {
+                  const data = await res.json();
+                  window.dispatchEvent(new CustomEvent('open_deliverable', { detail: { deliverableId: data.deliverable?.id } }));
+                  queryClient.invalidateQueries({ queryKey: [`/api/projects/${deliverableProposal.projectId}/deliverables`] });
+                }
+              } catch (err) {
+                console.error('Failed to generate deliverable:', err);
+              }
+              setDeliverableProposal(null);
+            }}
+            onDismiss={() => setDeliverableProposal(null)}
+          />
+        </div>
+      )}
       {/* Typing Indicator Bar */}
       {typingColleagues.length > 0 && !isStreaming && (
-        <div className="flex items-center gap-2 px-6 py-1.5 text-xs text-gray-400 border-t hatchin-border">
+        <div className="flex items-center gap-2 px-6 py-1.5 text-xs text-muted-foreground border-t hatchin-border">
           <div className="flex gap-0.5">
             <span className="animate-bounce" style={{ animationDelay: '0ms' }}>·</span>
             <span className="animate-bounce" style={{ animationDelay: '75ms' }}>·</span>
@@ -2475,21 +2915,21 @@ export function CenterPanel({
         </div>
       )}
       {/* Chat Input */}
-      <div className="p-6 hatchin-border border-t">
+      <div className="p-6">
         {/* C1.2: Reply preview */}
         {replyingTo && (
           <div className="mb-3 rounded-lg border border-blue-500/30 bg-blue-500/10 px-3 py-2.5">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0 flex-1">
                 <div className="text-[11px] uppercase tracking-wide text-blue-300">Replying to {replyingTo.senderName}</div>
-                <div className="mt-1 text-sm text-gray-200 truncate">
+                <div className="mt-1 text-sm text-foreground truncate">
                   {replyingTo.content.length > 100 ? `${replyingTo.content.substring(0, 100)}...` : replyingTo.content}
                 </div>
               </div>
               <button
                 type="button"
                 onClick={clearReply}
-                className="rounded-md p-1 text-gray-400 hover:text-gray-200 hover:bg-white/5 transition-colors"
+                className="rounded-md p-1 text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors"
                 aria-label="Clear reply target"
               >
                 ×
@@ -2498,7 +2938,36 @@ export function CenterPanel({
           </div>
         )}
 
-        <form onSubmit={handleChatSubmit} className={`relative rounded-lg ${isStreaming || isThinking ? 'ai-thinking-ring' : ''}`}>
+        <form onSubmit={handleChatSubmit} className="relative bg-[var(--hatchin-surface)]/60 backdrop-blur-md rounded-xl border border-[var(--hatchin-border)]">
+          {/* Hand off to... dropdown — only shown when a project is active and there are eligible agents */}
+          {activeProject && handoffableAgents.length > 0 && (
+            <div className="flex items-center px-3 pt-2">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    className="flex items-center gap-1 px-2 py-1 text-[11px] text-[var(--hatchin-text-muted)] hover:text-[var(--hatchin-text)] hover:bg-[var(--hatchin-surface-elevated)] rounded-md transition-colors"
+                  >
+                    <ArrowRightLeft className="w-3 h-3" />
+                    Hand off to...
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="min-w-[200px]">
+                  {handoffableAgents.map((agent) => (
+                    <DropdownMenuItem
+                      key={agent.id}
+                      onClick={() => handleHandoff(agent)}
+                      className="flex items-center gap-2 cursor-pointer"
+                    >
+                      <AgentAvatar agentName={agent.name} role={agent.role} size={20} />
+                      <span className="text-sm">{agent.name}</span>
+                      <span className="text-xs text-[var(--hatchin-text-muted)]">{agent.role}</span>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          )}
           <textarea
             ref={messageInputRef}
             data-testid="input-message"
@@ -2518,36 +2987,44 @@ export function CenterPanel({
               }
             }}
             aria-label="Message input"
-            className="w-full hatchin-bg-card hatchin-border border rounded-lg px-4 pr-14 py-3 text-sm hatchin-text placeholder-hatchin-text-muted focus:outline-none focus:ring-2 focus:ring-hatchin-blue focus:border-transparent resize-none min-h-[48px] max-h-[180px] overflow-y-auto"
+            className="w-full bg-transparent px-4 py-4 text-sm text-[var(--hatchin-text)] placeholder:text-[var(--hatchin-text-muted)] focus:outline-none focus-visible:ring-0 resize-none min-h-[64px] max-h-[200px] overflow-y-auto border-none"
+            style={{ overflow: 'hidden' }}
           />
-          {/* B1.3: Show stop button during streaming, send button otherwise */}
-          {isStreaming ? (
-            <button
-              type="button"
-              onClick={() => {
-                if (streamingMessageId.current) {
-                  sendWebSocketMessage({
-                    type: 'cancel_streaming',
-                    messageId: streamingMessageId.current
-                  });
-                }
-              }}
-              className="absolute right-3 bottom-2 w-8 h-8 rounded-full bg-red-500/10 hover:bg-red-500/20 text-red-500 flex items-center justify-center transition-colors"
-              aria-label="Stop generating"
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="6" y="6" width="12" height="12" />
-              </svg>
-            </button>
-          ) : (
-            <button
-              type="submit"
-              aria-label="Send message"
-              className="absolute right-3 bottom-2 w-8 h-8 rounded-full hatchin-blue hover:bg-white/10 flex items-center justify-center transition-colors"
-            >
-              <Send className="w-4 h-4" />
-            </button>
-          )}
+          {/* Footer with send/stop */}
+          <div className="flex items-center justify-end p-3 pt-0">
+            {isStreaming ? (
+              <button
+                type="button"
+                onClick={() => {
+                  if (streamingMessageId.current) {
+                    sendWebSocketMessage({
+                      type: 'cancel_streaming',
+                      messageId: streamingMessageId.current
+                    });
+                  }
+                }}
+                className="flex items-center gap-1 px-3 py-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-500 transition-colors"
+                aria-label="Stop generating"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="6" y="6" width="12" height="12" />
+                </svg>
+              </button>
+            ) : (
+              <button
+                type="submit"
+                disabled={!inputValue.trim()}
+                aria-label="Send message"
+                className={`flex items-center gap-1 px-3 py-2 rounded-lg transition-colors ${
+                  inputValue.trim()
+                    ? 'bg-[var(--hatchin-surface-elevated)] text-[var(--hatchin-text)] hover:bg-[var(--hatchin-border)]'
+                    : 'bg-[var(--hatchin-surface-elevated)] text-[var(--hatchin-text-muted)] cursor-not-allowed opacity-50'
+                }`}
+              >
+                <ArrowUpIcon className="w-4 h-4" />
+              </button>
+            )}
+          </div>
         </form>
       </div>
       {/* Add Hatch Modal */}
@@ -2558,6 +3035,13 @@ export function CenterPanel({
         activeProject={activeProject || null}
         existingAgents={activeProjectAgents}
         activeTeamId={activeTeamId}
+      />
+
+      {/* Upgrade Modal */}
+      <UpgradeModal
+        open={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        reason={upgradeReason}
       />
 
       {/* Task Approval Modal */}
@@ -2585,6 +3069,10 @@ export function CenterPanel({
 
             if (response.ok) {
               devLog('✅ Tasks created successfully');
+              // Notify RightSidebar of new tasks
+              try {
+                window.dispatchEvent(new CustomEvent('tasks_updated', { detail: { projectId: taskSuggestionContext?.projectId } }));
+              } catch { }
               // Close modal
               setShowTaskApprovalModal(false);
               setSuggestedTasks([]);

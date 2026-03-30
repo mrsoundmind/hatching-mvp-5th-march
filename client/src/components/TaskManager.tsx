@@ -16,6 +16,16 @@ import { TaskSuggestionModal } from './TaskSuggestionModal';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { useToast } from '@/hooks/use-toast';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from './ui/alert-dialog';
 
 interface HierarchicalTask extends Task {
   subtasks?: HierarchicalTask[];
@@ -346,6 +356,7 @@ const TaskManager: React.FC<TaskManagerProps> = ({
   const [showNewTaskForm, setShowNewTaskForm] = useState(false);
   const [draggedTask, setDraggedTask] = useState<string | null>(null);
   const [dragOverSection, setDragOverSection] = useState<string | null>(null);
+  const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
 
   // Initialize sections with sample data only when SEED_SAMPLE=true
   useEffect(() => {
@@ -369,14 +380,14 @@ const TaskManager: React.FC<TaskManagerProps> = ({
 
       const mapped: HierarchicalTask[] = (tasks || []).map((t: any) => {
         // Find human-readable name from agents list, otherwise fallback to original value
-        const mappedAgent = agents.find((a: any) => a.id === t.assigneeId);
+        const mappedAgent = agents.find((a: any) => a.id === t.assignee || a.name === t.assignee || a.role === t.assignee);
 
         return {
           id: t.id,
           title: t.title,
           status: t.status || 'todo',
           priority: (t.priority || 'medium').toLowerCase(),
-          assignee: mappedAgent ? mappedAgent.name : t.assigneeId,
+          assignee: mappedAgent ? mappedAgent.name : (t.assignee || null),
           createdAt: new Date(t.createdAt),
           updatedAt: new Date(t.updatedAt),
           projectId: t.projectId,
@@ -390,8 +401,8 @@ const TaskManager: React.FC<TaskManagerProps> = ({
         };
       });
 
-      const urgent = mapped.filter(t => t.status !== 'completed' && t.priority === 'high');
-      const normal = mapped.filter(t => t.status !== 'completed' && t.priority !== 'high');
+      const urgent = mapped.filter(t => t.status !== 'completed' && (t.priority === 'high' || t.priority === 'urgent'));
+      const normal = mapped.filter(t => t.status !== 'completed' && t.priority !== 'high' && t.priority !== 'urgent');
       const completed = mapped.filter(t => t.status === 'completed');
 
       setSections([
@@ -442,7 +453,7 @@ const TaskManager: React.FC<TaskManagerProps> = ({
       const res = await fetch(`/api/tasks/${taskId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus, completedAt: newCompletedAt })
+        body: JSON.stringify({ status: newStatus })
       });
       if (res.ok) {
         refreshTasks();
@@ -515,7 +526,13 @@ const TaskManager: React.FC<TaskManagerProps> = ({
         })
       });
 
-      const data = await response.json();
+      let data: any;
+      try {
+        data = await response.json();
+      } catch {
+        toast({ title: 'Error', description: 'Invalid response from server.', variant: 'destructive' });
+        return;
+      }
 
       if (data.suggestions && data.suggestions.length > 0) {
         setTaskSuggestions(data.suggestions);
@@ -706,11 +723,11 @@ const TaskManager: React.FC<TaskManagerProps> = ({
     const indent = level > 0 ? `ml-${level * 6}` : '';
 
     return (
-      <div key={task.id} className={`${indent} ${level > 0 ? 'border-l border-gray-600 pl-4' : ''}`}>
+      <div key={task.id} className={`${indent} ${level > 0 ? 'border-l border-hatchin-border-subtle pl-4' : ''}`}>
         <div
           draggable={sectionId !== 'completed'}
           onDragStart={(e) => handleDragStart(e, task.id)}
-          className="group rounded-lg p-3 hover:bg-gray-800/60 transition-all cursor-move bg-[#33373d] mb-2"
+          className="group rounded-xl p-3 hover:bg-[var(--glass-hover-bg)] hover:shadow-sm transition-all duration-200 cursor-move bg-[var(--glass-frosted)] backdrop-blur-sm border border-[var(--glass-border)] mb-2"
           data-testid={`task-${task.id}`}
         >
           <div className="flex items-start gap-3">
@@ -750,7 +767,7 @@ const TaskManager: React.FC<TaskManagerProps> = ({
 
                 <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button
-                    onClick={() => deleteTask(task.id)}
+                    onClick={() => setTaskToDelete(task.id)}
                     className="text-red-400 hover:text-red-300 transition-colors p-1"
                     data-testid={`delete-task-${task.id}`}
                   >
@@ -837,7 +854,7 @@ const TaskManager: React.FC<TaskManagerProps> = ({
 
       {/* New Task Form */}
       {showNewTaskForm && (
-        <div className="mb-4 p-3 bg-gray-800/30 rounded-lg border border-gray-700">
+        <div className="mb-4 p-3 bg-hatchin-panel/30 rounded-lg border border-hatchin-border-subtle">
           <input
             type="text"
             value={newTaskTitle}
@@ -869,7 +886,7 @@ const TaskManager: React.FC<TaskManagerProps> = ({
                 setShowNewTaskForm(false);
                 setNewTaskTitle('');
               }}
-              className="px-4 py-2 bg-gray-600 text-white rounded-lg text-sm hover:bg-gray-700 transition-colors"
+              className="px-4 py-2 bg-hatchin-surface text-foreground rounded-lg text-sm hover:bg-hatchin-surface transition-colors"
               data-testid="button-cancel-task"
             >
               Cancel
@@ -888,7 +905,7 @@ const TaskManager: React.FC<TaskManagerProps> = ({
             Ask Maya to outline a project and watch this board fill up automatically.
           </p>
           <button
-            className="text-xs px-3 py-1.5 bg-hatchin-blue/20 text-hatchin-blue rounded-full hover:bg-hatchin-blue/30 transition-colors border border-hatchin-blue/30"
+            className="text-xs px-3 py-1.5 btn-primary-glow rounded-full btn-press"
             onClick={() => {
               const event = new CustomEvent('hatchin:suggest-task-chat');
               window.dispatchEvent(event);
@@ -915,7 +932,7 @@ const TaskManager: React.FC<TaskManagerProps> = ({
                   <ChevronDown className="w-4 h-4 hatchin-text-muted" />
                 )}
                 <span className="font-medium hatchin-text text-[12px]">{section.title}</span>
-                <span className="text-sm hatchin-text-muted bg-gray-700 px-2 py-1 rounded-full">
+                <span className="text-sm hatchin-text-muted bg-hatchin-surface px-2 py-1 rounded-full">
                   {section.tasks.length}
                 </span>
               </div>
@@ -952,6 +969,26 @@ const TaskManager: React.FC<TaskManagerProps> = ({
         onApproveTasks={handleApproveTasks}
         onRejectAll={handleRejectAll}
       />
+
+      <AlertDialog open={!!taskToDelete} onOpenChange={(open) => { if (!open) setTaskToDelete(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete task?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. The task will be permanently removed.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => { if (taskToDelete) { deleteTask(taskToDelete); setTaskToDelete(null); } }}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 };

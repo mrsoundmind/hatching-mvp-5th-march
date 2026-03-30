@@ -122,7 +122,11 @@ export async function runPeerReview(input: {
     contradictsCanon: input.contradictsCanon,
   });
 
-  if (!trigger.triggered || input.reviewers.length === 0) {
+  const selectedReviewers = input.reviewers
+    .filter((agent) => agent.id !== input.primaryHatchId)
+    .slice(0, Math.max(1, BUDGETS.maxReviewers));
+
+  if (!trigger.triggered || selectedReviewers.length === 0) {
     return {
       triggered: false,
       reason: trigger.reasons,
@@ -133,10 +137,6 @@ export async function runPeerReview(input: {
       overrideUsed: false,
     };
   }
-
-  const selectedReviewers = input.reviewers
-    .filter((agent) => agent.id !== input.primaryHatchId)
-    .slice(0, Math.max(1, Math.min(BUDGETS.maxReviewers, 2)));
 
   await logAutonomyEvent({
     eventType: 'peer_review_started',

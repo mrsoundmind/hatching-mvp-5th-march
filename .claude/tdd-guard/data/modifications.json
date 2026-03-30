@@ -1,0 +1,12 @@
+{
+  "session_id": "519f4050-5380-4bc2-b521-758b3332116b",
+  "transcript_path": "/Users/shashankrai/.claude/projects/-Users-shashankrai-Documents-hatching-mvp-5th-march/519f4050-5380-4bc2-b521-758b3332116b.jsonl",
+  "hook_event_name": "PreToolUse",
+  "tool_name": "Edit",
+  "tool_input": {
+    "file_path": "/Users/shashankrai/Documents/hatching-mvp-5th-march/server/ai/conductor.ts",
+    "old_string": "export function evaluateConductorDecision(input: {\n  userMessage: string;\n  conversationMode: \"project\" | \"team\" | \"agent\";\n  availableAgents: ExpertiseAgent[];\n  addressedAgentId?: string;\n  projectName?: string;\n}): {\n  decision: ConductorDecision;\n  safetyScore: SafetyScore;\n  primaryMatch?: ExpertiseAgent;\n  fallbackMatches: ExpertiseAgent[];\n} {\n  const matches = findBestAgentMatch(input.userMessage, input.availableAgents);",
+    "new_string": "export function evaluateConductorDecision(input: {\n  userMessage: string;\n  conversationMode: \"project\" | \"team\" | \"agent\";\n  availableAgents: ExpertiseAgent[];\n  addressedAgentId?: string;\n  projectName?: string;\n}): {\n  decision: ConductorDecision;\n  safetyScore: SafetyScore;\n  primaryMatch?: ExpertiseAgent;\n  fallbackMatches: ExpertiseAgent[];\n} {\n  // Guard: no agents available — return safe default decision\n  if (!input.availableAgents || input.availableAgents.length === 0) {\n    const safetyScore = evaluateSafetyScore({\n      userMessage: input.userMessage,\n      conversationMode: input.conversationMode,\n      projectName: input.projectName,\n    });\n    return {\n      decision: {\n        route: \"authority_default\",\n        reviewRequired: false,\n        interventionRequired: false,\n        gateRequired: false,\n        confidence: 0,\n        reviewerCount: 0,\n        reasons: [\"no_agents_available\"],\n      },\n      safetyScore,\n      primaryMatch: undefined,\n      fallbackMatches: [],\n    };\n  }\n\n  const matches = findBestAgentMatch(input.userMessage, input.availableAgents);",
+    "replace_all": false
+  }
+}

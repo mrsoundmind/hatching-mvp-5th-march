@@ -14,10 +14,121 @@ Hatchin is an **AI-powered collaborative project execution platform**. Think of 
 - Update the project "brain" (goals, direction, culture) based on discussions
 - Learn user working styles over time
 - Coordinate autonomously via multi-agent deliberation
+- Execute tasks autonomously in the background and hand off work between specialists
+- Self-review quality via peer review gates and progressive trust scoring
 
-**Current Phase**: v1.0 shipped (2026-03-19). All 31 requirements satisfied. Next milestone TBD.
+**Current Phase**: v1.3 in progress (2026-03-24). v1.2 shipped (16/16). v1.1 shipped (17/17). v1.0 shipped (31/31). Post-v1.1: World-class agent intelligence upgrade shipped (30 roles, 294 new tests).
+
+**Latest Milestone**: v1.3 — Autonomy Visibility & Right Sidebar Revamp (5 phases, 23 requirements, in progress). Tabbed right sidebar (Activity/Brain & Docs/Approvals), live autonomy feed, handoff visualization, agent working avatar state, approvals hub, task pipeline, project brain file upload, autonomy settings dial, work output viewer. Details: `.planning/v1.3-autonomy-visibility-sidebar-revamp.md`.
+
+**Previous Milestone**: v1.2 — Billing + LLM Intelligence (shipped 2026-03-23). Stripe monetization (Free/Pro tiers, $19/mo), smart LLM routing (Gemini Flash/Pro + Groq free tier), token tracking, usage capping, conversation compaction, reasoning cache, background task batching. Audit: `.planning/v1.2-MILESTONE-AUDIT.md`.
 
 **Current Branch**: `reconcile-codex` (feature branch) — main is the canonical production branch.
+
+### v1.1 — Autonomous Execution Loop
+
+Before v1.1, Hatches could only talk. Now they can **work**.
+
+- **Background Execution (EXEC-01–04):** Users tell a Hatch "go ahead and work on this" and it executes in the background via a durable job queue (pg-boss) — producing real output (plans, breakdowns, research). A per-project daily cost cap prevents runaway LLM spend. If a user goes idle for 2+ hours, queued work starts automatically.
+
+- **Agent Handoffs (HAND-01–04):** When one Hatch finishes a task, the system routes the next task to the right specialist via `evaluateConductorDecision`. Hatches announce handoffs in character ("Done with the scope, tagging @Engineer"). BFS cycle detection prevents infinite loops. Each agent in the chain receives the previous agent's output as context.
+
+- **Safety Gates (SAFE-01–04):** Three-tier safety system for autonomous execution:
+  - Low-risk (< 0.35): auto-complete, no gates
+  - Mid-risk (0.35–0.59): peer review by another Hatch before delivery (`runPeerReview`)
+  - High-risk (≥ 0.60): blocked for user approval via inline approval card (Approve/Reject)
+  - Progressive trust scoring: agents build trust through successful completions, gradually relaxing safety thresholds (up to +0.15 on peer review and clarification triggers)
+
+- **User Experience (UX-01–05):** "Team is working..." indicator during execution. Inline approval cards for high-risk actions (one-click Approve/Reject). Browser tab badge when work completes in background. Maya delivers a return briefing summarizing completed work. Pause/cancel button to stop all autonomous execution.
+
+**Key modules:**
+- `server/autonomy/execution/taskExecutionPipeline.ts` — core execution with safety gates + peer review + trust scoring + role-aware escalation
+- `server/autonomy/handoff/handoffOrchestrator.ts` — specialist routing + cycle detection + structured handoff context via `handoffProtocol`
+- `server/autonomy/handoff/handoffAnnouncement.ts` — in-character handoff messages
+- `server/autonomy/peerReview/peerReviewRunner.ts` — cross-agent peer review with role-specific `peerReviewLens`
+- `server/autonomy/trustScoring/trustScorer.ts` — progressive trust calculation
+- `server/autonomy/trustScoring/trustAdapter.ts` — trust-adjusted safety thresholds
+- `server/autonomy/config/policies.ts` — budgets, cost caps, max hops
+- `server/autonomy/events/eventLogger.ts` — autonomy event audit trail
+- `client/src/components/AutonomousApprovalCard.tsx` — inline approval UI
+- `shared/roleRegistry.ts` — 30 role definitions with deep personality (voice, pushback, collaboration, domain depth)
+- `shared/roleIntelligence.ts` — 30 role intelligence profiles (reasoning, output standards, peer review lens, handoff protocol, escalation rules)
+- `server/ai/openaiService.ts` — injects PROFESSIONAL DEPTH + DOMAIN INTELLIGENCE sections into LLM prompt
+- `server/ai/personalityEvolution.ts` — dynamic `resolveBaseTraits()` from roleIntelligence (replaces hardcoded defaults)
+
+### v1.2 — Billing + LLM Intelligence (shipped 2026-03-23)
+
+Stripe billing (Free $0 / Pro $19/mo), smart LLM model routing, token tracking, usage capping, and 35-50% cost optimization. Existing users get 15-day Pro grace period on launch.
+
+**7 phases:** Groq Eval → Token Tracking + Schema → Smart LLM Routing → Tier Gating → Stripe Integration → Frontend Billing UI → Deep Cost Optimization
+
+**Tier structure:**
+| | Free ("Hatcher") | Pro ($19/mo or $190/yr) |
+|---|---|---|
+| Chat messages | Unlimited* | Unlimited |
+| Projects | 3 | Unlimited |
+| Agents | All 30 | All 30 |
+| Model | Gemini Pro (same quality) | Gemini Pro |
+| Autonomy | Disabled | Full (50 exec/day) |
+
+*Invisible safety cap: 500/day + 15 msgs/min rate limit. No counter shown. 99% of users never hit it.
+
+**LLM routing (actual):**
+- Simple messages → Groq llama-3.3-70b (FREE) → fallback → Gemini Pro
+- Standard/Complex chat → Gemini Pro (all users, same quality)
+- Task extraction → Groq (FREE) → fallback → Gemini Pro
+- Conversation compaction → Groq (FREE)
+- Autonomy tasks → Gemini Pro (Pro users only)
+
+**Key modules:**
+- `server/billing/usageTracker.ts` — token usage recording + daily aggregation + cost calculation
+- `server/billing/stripeClient.ts` — Stripe SDK initialization (gracefully disabled without keys)
+- `server/billing/checkoutService.ts` — Stripe Checkout + Customer Portal session creation
+- `server/billing/webhookHandler.ts` — Stripe webhook handling with idempotency (4 event types)
+- `server/routes/billing.ts` — billing API routes (status, checkout, portal, webhook)
+- `server/middleware/tierGate.ts` — Free/Pro enforcement with kill switch (`FEATURE_BILLING_GATES`)
+- `server/ai/taskComplexityClassifier.ts` — heuristic message complexity for adaptive maxTokens
+- `server/ai/conversationCompactor.ts` — context compaction via Groq (feature-flagged: `FEATURE_CONVERSATION_COMPACTION`)
+- `server/ai/reasoningCache.ts` — reasoning pattern cache (in-memory, 1hr TTL, project-scoped)
+- `client/src/components/UpgradeModal.tsx` — upgrade prompt with Free vs Pro comparison
+- `client/src/components/UsageBar.tsx` — usage progress bar in chat header
+- `client/src/pages/AccountPage.tsx` — account + billing dashboard at `/account`
+
+**Audit:** `.planning/v1.2-MILESTONE-AUDIT.md` — 16/16 requirements, 8/8 E2E flows verified
+
+### v1.3 — Autonomy Visibility & Right Sidebar Revamp (in progress, started 2026-03-24)
+
+The autonomy backend (v1.1) is powerful but invisible. v1.3 makes it visible and controllable.
+
+- **Right Sidebar Revamp (SIDE-01–04):** Tabbed layout — Activity / Brain & Docs / Approvals. CSS-hide inactive tabs (preserves scroll/draft state). Badge counts for unread events and pending approvals. Mobile-responsive via Sheet drawer with swipe gesture.
+
+- **Live Activity Feed (FEED-01–05):** Real-time feed of autonomy events (task started, completed, handoff, peer review) with agent avatars and timestamps. Stats summary card (tasks completed, handoffs, cost). Filter chips by event type, agent, or time range. Event aggregation prevents flooding. Compelling empty state for new projects.
+
+- **Handoff Visualization (HAND-01–04):** Chat handoff cards replace plain text announcements (from-agent avatar → arrow → to-agent avatar + task title). Sidebar handoff chain timeline with animated connectors. "Hand off to..." dropdown button for user-initiated handoffs. Deliberation indicator card when agents coordinate.
+
+- **Agent Status (AGNT-01):** Avatar "working" state — pulsing/rotating animation when executing background tasks.
+
+- **Approvals Hub (APPR-01–04):** Dedicated Approvals tab with one-click approve/reject. Task pipeline view (Queued → Assigned → In Progress → Review → Done). Approval expiry handling with clear "expired" messaging. Empty state.
+
+- **Brain Redesign (BRAIN-01–04):** PDF/DOCX/TXT/MD file upload via drag-and-drop (10MB max, multer v2 + pdf-parse). Card-based knowledge base with type badges. 4-level autonomy dial (Observe/Propose/Confirm/Autonomous). Work output viewer for background deliverables.
+
+- **Polish (PLSH-01):** Premium component design via Stitch/Magic MCPs matching Hatchin's visual style.
+
+**Key modules (v1.3 — will be created):**
+- `client/src/components/sidebar/` — SidebarTabBar, ActivityFeed, FeedItem, AutonomyStatsCard, EmptyState, HandoffChainTimeline, DeliberationCard, ApprovalsTab, ApprovalItem, TaskPipelineView, BrainDocsTab, DocumentUpload, DocumentViewer, AutonomySettings, WorkOutputViewer
+- `client/src/components/chat/` — HandoffCard, HandoffButton
+- `client/src/hooks/useAutonomyFeed.ts` — real-time autonomy event feed hook
+
+**Architecture decisions (v1.3):**
+- CustomEvent bridge from CenterPanel to sidebar (existing pattern)
+- CSS-hide tabs (not conditional unmount) to preserve state
+- multer v2.0.2 required (v1.x has active CVEs)
+- No DB migrations — all data fits existing JSONB columns
+- Wrap-then-restructure sidebar approach
+
+**Phases:** 11 (Sidebar Shell + Activity Feed) → 12 (Handoff Viz) → 13 (Approvals Hub) → 14 (Brain Redesign) → 15 (Polish). Phase 11 gates all. Phases 12-14 are independent. Phase 15 depends on all.
+
+**Details:** `.planning/v1.3-autonomy-visibility-sidebar-revamp.md`
 
 ---
 
@@ -65,7 +176,7 @@ hatching-mvp-5th-march/
 ├── client/src/
 │   ├── App.tsx                   # Router: /, /login, /onboarding, /maya/:id, /404
 │   ├── pages/
-│   │   ├── home.tsx              # Main layout: LeftSidebar + CenterPanel + RightSidebar
+│   │   ├── home.tsx              # Main layout: LeftSidebar + CenterPanel + RightSidebar + mobile Sheet drawers
 │   │   ├── MayaChat.tsx          # Project-level Maya AI chat
 │   │   ├── login.tsx             # Google OAuth login (animated gradient background)
 │   │   ├── LandingPage.tsx       # Public landing page (wired at / for logged-out users)
@@ -85,6 +196,8 @@ hatching-mvp-5th-march/
 │   │   ├── OnboardingSteps.tsx   # Step-by-step onboarding UI
 │   │   ├── TaskSuggestionModal.tsx # AI task approval flow
 │   │   ├── EggHatchingAnimation.tsx # Animated egg 🥚 loading state
+│   │   ├── ErrorFallbacks.tsx    # AppErrorFallback + PanelErrorFallback components
+│   │   ├── AutonomousApprovalCard.tsx # Inline approval UI for high-risk actions
 │   │   └── ui/                   # Shadcn primitives (never modify directly)
 │   ├── hooks/
 │   │   ├── useAuth.ts            # Session + user auth state
@@ -119,7 +232,8 @@ hatching-mvp-5th-march/
 │   │   ├── personalityEvolution.ts # Agent learning from feedback
 │   │   ├── trainingSystem.ts     # Feedback collection for training
 │   │   ├── colleagueLogic.ts     # Role-specific response logic
-│   │   ├── roleProfiles.ts       # Role definitions (PM, Engineer, Designer, etc.)
+│   │   ├── roleProfiles.ts       # Role → RoleProfile (expertise, toolkit, domain depth, critical thinking)
+│   │   ├── characterProfiles.ts  # Role → CharacterProfile (voice, negative handling, collaboration style)
 │   │   ├── actionParser.ts       # Parse [[ACTION]] blocks from responses
 │   │   ├── mentionParser.ts      # Parse @agent and /route commands
 │   │   └── responsePostProcessing.ts # Tone guard + response validation
@@ -129,6 +243,7 @@ hatching-mvp-5th-march/
 │   │   └── providers/
 │   │       ├── geminiProvider.ts # Gemini 2.5-Flash (PRIMARY)
 │   │       ├── openaiProvider.ts # GPT-4o-mini (FALLBACK)
+│   │       ├── groqProvider.ts  # Groq llama-3.3-70b (FREE tier)
 │   │       ├── ollamaProvider.ts # Local testing
 │   │       └── mockProvider.ts   # CI/unit tests
 │   ├── autonomy/
@@ -164,6 +279,8 @@ hatching-mvp-5th-march/
 │
 ├── shared/
 │   ├── schema.ts                 # Drizzle ORM schema (ALL tables)
+│   ├── roleRegistry.ts           # 30 role definitions: personality, voice, expertise, pushback, collaboration
+│   ├── roleIntelligence.ts       # 30 role intelligence: reasoning, peer review lens, handoff protocol, escalation
 │   ├── conversationId.ts         # Canonical conversation ID format
 │   ├── templates.ts              # Starter pack definitions
 │   └── dto/
@@ -214,6 +331,16 @@ ALLOWED_ORIGIN=http://localhost:5001
 LANGSMITH_API_KEY=ls_...               # Optional LLM tracing
 LANGSMITH_PROJECT=hatchin-chat
 STORAGE_MODE=db|memory                 # db = PostgreSQL, memory = MemStorage
+
+# v1.2 Billing & LLM Optimization
+GROQ_API_KEY=gsk_...                   # Free tier at console.groq.com
+GEMINI_PRO_MODEL=gemini-2.5-pro       # Premium model for autonomy (Pro users)
+STRIPE_SECRET_KEY=sk_...               # Stripe billing
+STRIPE_WEBHOOK_SECRET=whsec_...        # Stripe webhook signature
+STRIPE_PRO_MONTHLY_PRICE_ID=price_...  # Stripe price ID
+STRIPE_PRO_ANNUAL_PRICE_ID=price_...   # Stripe annual price ID
+FEATURE_BILLING_GATES=true|false       # Kill switch for tier gating (default: true in prod)
+FEATURE_CONVERSATION_COMPACTION=false  # Context compaction (default: off)
 ```
 
 > **RULE**: Never hardcode secrets. Never commit `.env`. Always read from `process.env`.
@@ -329,13 +456,21 @@ POST   /api/hatch/chat                     → LangGraph chat (non-streaming fal
 POST   /api/training/feedback              → store feedback for agent training
 ```
 
+### Billing (v1.2)
+```
+POST   /api/billing/checkout               → Stripe Checkout Session URL
+POST   /api/billing/portal                 → Stripe Customer Portal URL
+GET    /api/billing/status                 → subscription + usage summary (works without Stripe)
+POST   /api/billing/webhook               → Stripe webhook (no auth, raw body, sig verified)
+```
+
 ### System
 ```
 GET    /api/health                         → {status, wsConnections, ...}
 GET    /api/system/storage-status          → dev only: shows storage mode
 ```
 
-> **All routes except /auth require a valid session (`req.session.userId`). Return 401 if missing.**
+> **All routes except /auth and /billing/webhook require a valid session (`req.session.userId`). Return 401 if missing.**
 
 ---
 
@@ -388,6 +523,10 @@ Client connects to: ws://host/ws  (upgraded from HTTP)
 { type: 'brain_updated_from_chat', projectId: string, field: string, value: string }
 { type: 'project_created', project: Project, userId: string }
 
+// Billing (v1.2)
+{ type: 'upgrade_required', reason: string, currentUsage: number, limit: number, upgradeUrl: string }
+{ type: 'usage_warning', reason: 'approaching_limit', currentUsage: number, limit: number, percentUsed: number }
+
 // Errors
 { type: 'error', code: string, message: string, details?: object, correlationId?: string }
 ```
@@ -398,8 +537,12 @@ Client connects to: ws://host/ws  (upgraded from HTTP)
 
 ### LLM Provider Chain
 ```
-Production:
-  GEMINI_API_KEY present? → Gemini 2.5-Flash → [fallback] → GPT-4o-mini
+Production (v1.2 — shipped, final routing):
+  Simple messages         → Groq llama-3.3-70b (FREE) → [fallback] → Gemini Pro
+  Standard/Complex chat   → Gemini 2.5-Pro (all users, same quality)
+  Task extraction         → Groq llama-3.3-70b (FREE) → [fallback] → Gemini Pro
+  Conversation compaction → Groq (FREE)
+  Autonomy tasks          → Gemini 2.5-Pro (Pro users only)
 
 Test Mode (LLM_MODE=test):
   TEST_LLM_PROVIDER=openai  → GPT-4o-mini
@@ -413,9 +556,12 @@ Test Mode (LLM_MODE=test):
 1. WebSocket: receive send_message_streaming
 2. Parse mentions/routes (@engineer, /route backend)
 3. Conductor: resolve which agent(s) should respond
+   - Project-level chat: Maya (isSpecialAgent) has priority, then PM fallback
+   - resolveSpeakingAuthority.ts also prioritizes Maya for project scope
 4. Safety gate: score risk (hallucination, scope, execution)
-   - risk >= 0.8: block + request clarification
-   - risk >= 0.6: peer review required
+   - Explicit creation intents ("create a team", "add a task") get reduced baselines (0.05)
+   - risk >= 0.70: block + request clarification (clarificationRequiredRisk)
+   - risk >= 0.35: peer review required (peerReviewTrigger)
 5. LangGraph state machine:
    - router_node: detect role from keywords/explicit mentions
    - hatch_node: inject personality prompt + call LLM + validate tone
@@ -427,15 +573,33 @@ Test Mode (LLM_MODE=test):
 11. Emit streaming_completed
 ```
 
-### Agent Roles (from `roleProfiles.ts`)
-- Product Manager (default/fallback)
-- Software Engineer
-- UI/UX Designer
-- Data Scientist
-- Marketing Specialist
-- Business Analyst
-- DevOps Engineer
-- Maya (special agent — project-level AI with broader context)
+### Agent Roles — World-Class Intelligence System (30 roles)
+
+Two-file architecture designed for 200+ roles:
+- **`shared/roleRegistry.ts`** — Identity/personality: `voicePrompt`, `negativeHandling`, `criticalThinking`, `collaborationStyle`, `domainDepth` for each role
+- **`shared/roleIntelligence.ts`** — Expertise/autonomy: `reasoningPattern`, `outputStandards`, `peerReviewLens`, `handoffProtocol`, `escalationRules`, `baseTraitDefaults` for each role
+
+Adding role #31+ requires only adding entries to these two arrays — no other code changes.
+
+**LLM prompt injection** (in `openaiService.ts`): Two sections injected after CHARACTER VOICE:
+- `PROFESSIONAL DEPTH` — domain depth, critical thinking, pushback style, collaboration style
+- `DOMAIN INTELLIGENCE` — reasoning pattern, output standards
+
+**30 roles (character names):**
+Product Manager (Alex), Business Analyst (Morgan), Backend Developer (Dev), Software Engineer (Coda), Technical Lead (Jordan), AI Developer (Nyx), DevOps Engineer (Remy), Product Designer (Cleo), UX Designer (Lumi), UI Engineer (Finn), UI Designer (Arlo), Designer (Roux), Creative Director (Zara), Brand Strategist (Cass), QA Lead (Sam), Content Writer (Mira), Copywriter (Wren), Growth Marketer (Kai), Marketing Specialist (Nova), Social Media Manager (Pixel), SEO Specialist (Robin), Email Specialist (Drew), Data Analyst (Rio), Data Scientist (Sage), Operations Manager (Quinn), Business Strategist (Blake), HR Specialist (Taylor), Instructional Designer (Lee), Audio Editor (Vince), Maya (Idea Partner)
+
+**Maya (Idea Partner) — special agent rules:**
+- `isSpecialAgent: true` — marks Maya as the project-level intelligence, not a regular team member
+- **Hidden from sidebar**: `ProjectTree.tsx` filters `!a.isSpecialAgent` on both team and individual agent lists
+- **Routing priority**: Conductor and resolveSpeakingAuthority both route project-level chat to Maya first, PM Alex second
+- **Welcome message**: `server/routes/projects.ts` inserts Maya's greeting on project creation (idea + starter pack variants)
+- **No 1-on-1 conversation**: Maya speaks at project level only — no `agent:{projectId}:{mayaId}` conversation created
+
+**Autonomy integration:**
+- Peer review uses each reviewer's `peerReviewLens` for domain-specific checks (7 categories: engineering, design, data, strategy, marketing, QA, ops)
+- Handoffs use `handoffProtocol.passes` / `handoffProtocol.receives` for structured context
+- Escalation thresholds adjusted per role via `getRoleRiskMultiplier()` (infra roles escalate sooner, creative roles get more autonomy)
+- Personality evolution uses `baseTraitDefaults` from roleIntelligence instead of hardcoded defaults
 
 ### Prompt Rules (CRITICAL — enforce always)
 ```
@@ -550,6 +714,16 @@ npm run gate:performance # Latency benchmarks
 npm run eval:routing     # Agent routing accuracy
 npm run eval:bench       # Full LLM benchmark
 npm run eval:alive       # System liveness
+
+# Agent Intelligence Tests (294 tests)
+npm run test:voice       # Voice distinctiveness — unique names, Jaccard similarity, field coverage (8 tests)
+npm run test:pushback    # Agent pushback — negativeHandling populated, domain-relevant, no duplicates (46 tests)
+npm run test:reasoning   # Reasoning patterns — all roleIntelligence fields valid for 30 roles (240 tests)
+
+# Unified Benchmark Suite (14 metric sections, graded A-F)
+npm run benchmark        # Run all evals + DB metrics (works without LLM keys)
+npm run benchmark:report # Generate markdown report from latest result
+npm run benchmark:full   # Run benchmark + generate report in one command
 ```
 
 ---
@@ -626,6 +800,33 @@ Persisted to `agents.personality` JSONB (`adaptedTraits` + `adaptationMeta` per 
 **Risk**: LOW now, MEDIUM when deploying to different domains
 **Current**: `ALLOWED_ORIGIN` accepts one value
 **Recommendation**: Support comma-separated list when needed for CDN/subdomain setups.
+
+### Launch Audit Hardening (2026-03-22)
+A 4-session production readiness audit was performed. Full tracker: `LAUNCH-AUDIT.md`. Key changes:
+
+**Security:**
+- Explicit auth guards added to `/api/safety/evaluate-turn` and `/api/forecasts/decision` (previously relied on global middleware only)
+- Zod validation added to `/api/training/feedback` and `/api/tasks/extract`
+- Session secret hardcoded fallback replaced with random dev-only secret
+- Express body size limit set to 2MB explicitly
+
+**Code Quality:**
+- App-level `<ErrorBoundary>` wrapping Router in `App.tsx` (uses `ErrorFallbacks.tsx`)
+- Panel-level error boundaries already existed in `home.tsx`
+
+**UI/UX:**
+- Mobile responsive: Sheet drawers for LeftSidebar/RightSidebar on `< lg` breakpoint (`home.tsx`)
+- Mobile header bar with hamburger + panel toggle buttons
+- WebSocket connection status banner in `CenterPanel.tsx`
+- Inline form validation in `ProjectNameModal.tsx` (touched state, error messages, character counter)
+- ARIA attributes: `role="log"`, `aria-live="polite"` on message list
+
+**Marketing:**
+- SEO meta tags added to `client/index.html` (description, OG, Twitter card)
+- Footer/login legal links fixed from `href="#"` to `/legal/privacy` and `/legal/terms`
+- Skip-to-signup link visible during all tour states on landing page
+
+**Remaining (post-launch):** See `LAUNCH-AUDIT.md` for full backlog (chat.ts split, AddHatchModal validation, OG image, legal page content).
 
 ---
 
@@ -747,11 +948,18 @@ const result = await db.execute(sql`SELECT * FROM projects WHERE id = ${projectI
 - [x] Implement cursor pagination in `CenterPanel.tsx`
 - [x] Add message deduplication key
 
-### Short-Term (1-2 weeks) — Highly Achievable
+### v1.2 — Completed (shipped 2026-03-23)
+- [x] **Billing + LLM Intelligence** — Stripe monetization, Free/Pro tiers ($19/mo), smart LLM routing (Flash/Pro/Groq), token tracking, usage capping, conversation compaction, reasoning cache, task batching
+- Audit: `.planning/v1.2-MILESTONE-AUDIT.md` — 16/16 requirements, 8/8 E2E flows
+
+### v1.3 — In Progress (started 2026-03-24)
+- [ ] **Autonomy Visibility & Right Sidebar Revamp** — 5 phases (11-15), 23 requirements
+- Details: `.planning/v1.3-autonomy-visibility-sidebar-revamp.md`
+
+### Short-Term (post-v1.3)
 - [ ] Write CHANGELOG and README for onboarding new developers
 - [ ] User analytics / usage metrics (Posthog or custom)
 - [ ] Conversation archival and search
-- [ ] Mobile responsive improvements
 
 ### Medium-Term (1-2 months) — Achievable with focus
 - [ ] Agent marketplace / public templates
@@ -770,7 +978,6 @@ const result = await db.execute(sql`SELECT * FROM projects WHERE id = ${projectI
 
 ### NOT Realistic Right Now (Avoid)
 - Building a mobile app before web is stable
-- Complex billing/payment before product-market fit
 - Multi-tenant SaaS infrastructure before user validation
 - Training custom LLMs before sufficient feedback data (need 10K+ examples)
 - Real-time video calls (massive infra complexity, not core value)
@@ -958,5 +1165,5 @@ class HatchinGraphError extends Error {
 
 ---
 
-*Last updated: 2026-03-19 | Branch: reconcile-codex | v1.0 shipped | Author: Claude Code*
+*Last updated: 2026-03-24 | Branch: reconcile-codex | v1.2 shipped | v1.3 in progress: Autonomy Visibility & Right Sidebar Revamp (5 phases, 23 requirements) | Author: Claude Code*
 *This file should be updated whenever a significant architectural change is made.*

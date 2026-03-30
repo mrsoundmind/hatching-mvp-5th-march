@@ -1,62 +1,105 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: Text-Perfect, Human-First
-status: Milestone v1.0 shipped — 31/31 requirements satisfied, archived
-stopped_at: Milestone v1.0 complete
-last_updated: "2026-03-19"
-last_activity: "2026-03-19 — v1.0 milestone shipped: all 5 phases complete, audit passed 31/31, archived to milestones/"
+milestone: v2.0
+milestone_name: Hatches That Deliver
+status: complete
+stopped_at: v2.0 all features shipped
+last_updated: "2026-03-30"
+last_activity: 2026-03-30 — PDF export + zero-friction onboarding shipped, v2.0 milestone complete
 progress:
-  total_phases: 5
-  completed_phases: 5
-  total_plans: 13
-  completed_plans: 13
+  total_phases: 6
+  completed_phases: 6
+  total_plans: 0
+  completed_plans: 0
+  percent: 100
 ---
 
 # State: Hatchin
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-19)
+See: .planning/PROJECT.md (updated 2026-03-30)
 
 **Core value:** No one should ever feel alone with their idea, have to start from scratch, or need to know how to prompt AI — just have a conversation and your team takes it from there.
-**Current focus:** Planning next milestone
+**Current focus:** v2.0 — Hatches That Deliver (COMPLETE)
 
 ---
 
 ## Current Position
 
-Milestone: v1.0 — SHIPPED (2026-03-19)
-Next: `/gsd:new-milestone` to define v1.1+
+Phase: v2.0 complete
+Status: All v2.0 features shipped. v1.3 Phase 15 polish complete. Ready for production.
+Last activity: 2026-03-30 — PDF export (pdfkit branded template), zero-friction onboarding (PackageSuggestionCard with role-based template matching)
+
+Progress: [██████████] 100%
 
 ---
 
-## Phase History
+## v2.0 Implementation Status
 
-| Phase | Name | Status | Notes |
-|-------|------|--------|-------|
-| — | Pre-GSD | Complete | Core platform: auth, streaming chat, agents, tasks, WebSocket, LangGraph |
-| 1 | Hatch Conversation Quality | Complete | All 8 gaps: graph.ts removed, emotional signature, LLM memory, first-message opener, opinion injection, open questions, userDesignation derivation, handoff acknowledgment |
-| 2 | User Journey Fixes | Complete | 7 plans: landing page, onboarding, project creation, team accordion, typing indicators, bubble colors, agentRole backfill |
-| 3 | Hatch Presence and Avatar System | Complete | 26 SVG avatars, unique idle animations, thinking bubble, character names, personality persistence to DB (PRES-01 to PRES-05) |
-| 4 | Data Reliability and Resilience | Complete | Production guard (DATA-03), client idempotencyKey (DATA-01), cursor pagination + Load earlier messages UI (DATA-02) |
-| 5 | Route Architecture Cleanup | Complete | Extracted all 5 modules (teams, agents, messages, projects, tasks, chat); routes.ts reduced to 430-line orchestrator (ARCH-01 + ARCH-02) |
+| Feature | Status | Key Files |
+|---------|--------|-----------|
+| Database schema (3 tables) | **SHIPPED** | migrations/0003, shared/schema.ts |
+| API endpoints (12 routes) | **SHIPPED** | server/routes/deliverables.ts |
+| LLM generation + iteration | **SHIPPED** | server/ai/deliverableGenerator.ts |
+| Cross-agent chains (3 templates) | **SHIPPED** | server/ai/deliverableChainOrchestrator.ts |
+| Organic detection (patterns) | **SHIPPED** | server/ai/deliverableDetector.ts |
+| Detection wired into chat | **SHIPPED** | server/routes/chat.ts (line ~2735) |
+| ArtifactPanel (viewer + version nav) | **SHIPPED** | client/src/components/ArtifactPanel.tsx |
+| Refine/iterate UI | **SHIPPED** | ArtifactPanel.tsx (footer) |
+| DeliverableChatCard + ProposalCard | **SHIPPED** | client/src/components/DeliverableChatCard.tsx |
+| PackageProgress UI | **SHIPPED** | client/src/components/PackageProgress.tsx |
+| Package streaming (WS progress) | **SHIPPED** | deliverableChainOrchestrator.ts, deliverables.ts |
+| Type registry (15 types) | **SHIPPED** | shared/deliverableTypes.ts |
+| WS event schemas (4 events) | **SHIPPED** | shared/dto/wsSchemas.ts |
+| PDF export (branded with TOC) | **SHIPPED** | server/ai/pdfExport.ts, server/routes/deliverables.ts |
+| Zero-friction onboarding | **SHIPPED** | client/src/components/PackageSuggestionCard.tsx, CenterPanel.tsx |
+
+## v1.3 Completion Status
+
+| Phase | Status |
+|-------|--------|
+| 11 - Sidebar Shell + Activity Feed | **SHIPPED** |
+| 12 - Handoff Visualization | **SHIPPED** |
+| 13 - Approvals Hub | **SHIPPED** |
+| 14 - Brain Redesign | **SHIPPED** |
+| 15 - Polish | **SHIPPED** |
 
 ---
 
-## Decisions
+## Accumulated Context
 
-| Date | Phase | Decision |
-|------|-------|----------|
-| 2026-03-18 | 04-01 | Guard extracted to server/productionGuard.ts for testability |
-| 2026-03-18 | 04-01 | idempotencyKey uses tempMessageId + Date.now() composite |
-| 2026-03-18 | 04-02 | Cursor = createdAt ISO timestamp; hasMore = response length === limit |
-| 2026-03-18 | 05-01 | Helpers re-declared locally in each route module — avoids circular deps |
-| 2026-03-18 | 05-02 | Typed deps interface (RegisterProjectDeps, RegisterTaskDeps) for broadcast injection |
-| 2026-03-18 | 05-03 | chat.ts receives httpServer via parameter; preserves single httpServer instance |
+### Decisions
+
+Key decisions for v2.0:
+- **Use-case-driven development**: Organize around user goals (Product Launch, Marketing Content, Planning & Research), not features
+- **Deliverable chains as core differentiator**: Single deliverables = ChatGPT. Coordinated team output across agents = unique value
+- **Artifact panel (Claude desktop pattern)**: Non-blocking absolute-position overlay on RightSidebar
+- **Text-first deliverables**: Focus on what LLMs produce well (PRDs, specs, plans, copy)
+- **Both trigger paths**: Explicit request + organic detection (pattern-based, conservative, never auto-creates)
+- **Project packages as unit of value**: "Launch Package" not 12 loose docs
+- **Refine via instruction**: ArtifactPanel has inline refine input, calls /api/deliverables/:id/iterate
+- **Chain progress streaming**: executeDeliverableChain accepts onProgress callback, broadcasts per-step WS events
+- **deliverable_versions as separate table**: Keeps base row small; supports pagination
+- **Groq LLM verified**: All deliverable generation works with Groq llama-3.3-70b via OpenAI SDK
+
+### v1.3 Decisions (preserved)
+
+- CSS-hide pattern for tab panels to preserve scroll/draft state
+- Separate layoutId namespaces for Framer Motion
+- HandoffCard renders in message loop when metadata.isHandoffAnnouncement===true
+- Frontend-only expiry derivation for approval state
+- Optimistic document deletion with rollback
+- BrainDocsTab replaces old brain tab for all contexts
+
+### Remaining Work
+
+- **Chat inline deliverable cards**: Render DeliverableChatCard when deliverable_created events arrive (component exists, not yet wired to message rendering)
 
 ---
 
-## Blockers / Concerns
+## Session Continuity
 
-None.
+Last session: 2026-03-30
+Stopped at: v2.0 milestone complete, all features shipped
+Next action: Push reconcile-codex to main, visual audit, launch preparation

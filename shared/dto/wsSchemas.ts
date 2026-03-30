@@ -120,6 +120,9 @@ const requiredServerSchemas = z.union([
     type: z.literal('conductor_decision'),
   }).passthrough(),
   z.object({
+    type: z.literal('synthesis_completed'),
+  }).passthrough(),
+  z.object({
     type: z.literal('safety_intervention'),
   }).passthrough(),
   z.object({
@@ -170,6 +173,126 @@ const requiredServerSchemas = z.union([
     field: z.string(),
     value: z.string(),
     updatedBy: z.string().optional(),
+  }),
+  // Autonomy execution events
+  z.object({
+    type: z.literal('task_requires_approval'),
+    taskId: z.string(),
+    agentName: z.string(),
+    riskReasons: z.array(z.string()).optional(),
+  }),
+  z.object({
+    type: z.literal('task_execution_completed'),
+    taskId: z.string(),
+    agentId: z.string(),
+    agentName: z.string(),
+  }),
+  z.object({
+    type: z.literal('background_execution_started'),
+  }).passthrough(),
+  z.object({
+    type: z.literal('background_execution_completed'),
+  }).passthrough(),
+  z.object({
+    type: z.literal('task_execution_failed'),
+  }).passthrough(),
+  z.object({
+    type: z.literal('handoff_cycle_detected'),
+    projectId: z.string(),
+    chain: z.array(z.string()),
+  }),
+  z.object({
+    type: z.literal('handoff_chain_completed'),
+    projectId: z.string(),
+    reason: z.string(),
+    hops: z.number(),
+  }),
+  // Smart task detection events
+  z.object({
+    type: z.literal('task_created_direct'),
+  }).passthrough(),
+  z.object({
+    type: z.literal('task_lifecycle_result'),
+  }).passthrough(),
+  z.object({
+    type: z.literal('task_completion_suggested'),
+  }).passthrough(),
+  z.object({
+    type: z.literal('return_briefing'),
+    projectId: z.string(),
+    summary: z.string(),
+    completedTasks: z.number(),
+    newMessages: z.number(),
+  }),
+  z.object({
+    type: z.literal('task_approval_rejected'),
+    taskId: z.string(),
+  }),
+  // Billing events
+  z.object({
+    type: z.literal('upgrade_required'),
+    reason: z.string(),
+    currentUsage: z.number(),
+    limit: z.number(),
+    upgradeUrl: z.string().optional(),
+  }),
+  z.object({
+    type: z.literal('usage_warning'),
+    reason: z.literal('approaching_limit'),
+    currentUsage: z.number(),
+    limit: z.number(),
+    percentUsed: z.number(),
+  }),
+  // Project events
+  z.object({
+    type: z.literal('project_updated'),
+    projectId: z.string(),
+    name: z.string().optional(),
+    updatedBy: z.string().optional(),
+  }),
+  z.object({
+    type: z.literal('project_brain_updated'),
+    projectId: z.string(),
+    field: z.string().optional(),
+    value: z.unknown().optional(),
+    source: z.string().optional(),
+    patch: z.record(z.unknown()).optional(),
+  }),
+  // Safety events
+  z.object({
+    type: z.literal('safety_intervention'),
+    conversationId: z.string().optional(),
+    messageId: z.string().optional(),
+    safetyScore: z.record(z.unknown()).optional(),
+    decision: z.record(z.unknown()).optional(),
+    content: z.string().optional(),
+  }),
+  // v2.0: Deliverable events
+  z.object({
+    type: z.literal('deliverable_created'),
+    deliverable: z.record(z.unknown()),
+    generationTimeMs: z.number().optional(),
+  }),
+  z.object({
+    type: z.literal('deliverable_updated'),
+    deliverableId: z.string(),
+    status: z.string().optional(),
+  }),
+  z.object({
+    type: z.literal('package_complete'),
+    packageId: z.string(),
+    packageName: z.string(),
+    deliverableCount: z.number(),
+    skippedSteps: z.array(z.record(z.unknown())).optional(),
+    totalTimeMs: z.number().optional(),
+  }),
+  z.object({
+    type: z.literal('deliverable_proposal'),
+    proposalType: z.string(),
+    title: z.string(),
+    agentName: z.string(),
+    agentRole: z.string(),
+    confidence: z.number(),
   }),
 ]);
 

@@ -294,6 +294,41 @@ export async function readAutonomyEvents(limit = 500): Promise<AutonomyEvent[]> 
     .slice(-Math.max(1, limit));
 }
 
+export async function readAutonomyEventsByProject(
+  projectId: string,
+  limit = 50
+): Promise<AutonomyEvent[]> {
+  // Try DB-level filtering first (more efficient)
+  const pool = await getDbPool();
+  if (pool) {
+    try {
+      const result = await pool.query(
+        `
+        select
+          trace_id, turn_id, request_id, "timestamp",
+          user_id, project_id, team_id, conversation_id,
+          hatch_id, provider, mode, latency_ms,
+          confidence, risk_score, event_type, payload
+        from autonomy_events
+        where project_id = $1
+        order by "timestamp" desc
+        limit $2
+        `,
+        [projectId, Math.max(1, limit)],
+      );
+      return result.rows.map(mapDbRowToEvent).reverse();
+    } catch {
+      // Fall through to in-memory filtering
+    }
+  }
+
+  // Fallback: read all and filter in memory
+  const allEvents = await readAutonomyEvents(Math.max(limit * 3, 500));
+  return allEvents
+    .filter(e => e.projectId === projectId)
+    .slice(-limit);
+}
+
 export async function summarizeLatency(events: AutonomyEvent[]): Promise<{
   count: number;
   p50: number;

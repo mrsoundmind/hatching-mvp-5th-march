@@ -22,6 +22,7 @@ type RightSidebarAction =
   | { type: 'UPDATE_PREFERENCES'; payload: Partial<RightSidebarUserPreferences> }
   | { type: 'UPDATE_LAST_SAVED'; payload: { section: string; timestamp: number } }
   | { type: 'LOAD_PREFERENCES'; payload: RightSidebarUserPreferences }
+  | { type: 'SET_ACTIVE_TAB'; payload: 'activity' | 'brain' | 'tasks' }
   | { type: 'RESET_STATE' };
 
 // State reducer function
@@ -89,11 +90,15 @@ function rightSidebarReducer(state: RightSidebarState, action: RightSidebarActio
         }
       };
     
+    case 'SET_ACTIVE_TAB':
+      return { ...state, activeTab: action.payload };
+
     case 'LOAD_PREFERENCES':
       return {
         ...state,
         preferences: { ...defaultPreferences, ...action.payload },
-        expandedSections: { ...defaultPreferences.expandedSections, ...action.payload.expandedSections }
+        expandedSections: { ...defaultPreferences.expandedSections, ...action.payload.expandedSections },
+        activeTab: action.payload.activeTab || state.activeTab,
       };
     
     case 'RESET_STATE':
@@ -126,6 +131,7 @@ const defaultPreferences: RightSidebarUserPreferences = {
   autoSaveDelay: 2000, // 2 seconds
   showTimestamps: true,
   compactMode: false,
+  activeTab: 'activity',
 };
 
 const defaultState: RightSidebarState = {
@@ -139,6 +145,7 @@ const defaultState: RightSidebarState = {
   expandedSections: defaultPreferences.expandedSections,
   recentlySaved: new Set(),
   activeView: 'none',
+  activeTab: 'activity',
   preferences: defaultPreferences,
   isLoading: false,
   error: null,
@@ -174,6 +181,11 @@ export function useRightSidebarState(
     }
   }, []);
 
+  // Auto-save preferences to localStorage whenever they change (fixes stale closure bug)
+  useEffect(() => {
+    savePreferences(state.preferences);
+  }, [state.preferences, savePreferences]);
+
   // Update active view based on selections
   useEffect(() => {
     let newView: RightSidebarState['activeView'] = 'none';
@@ -199,7 +211,7 @@ export function useRightSidebarState(
           whoFor: activeProject.coreDirection?.whoFor || '',
         }
       });
-      dispatch({ type: 'UPDATE_EXECUTION_RULES', payload: activeProject.executionRules || '' });
+      dispatch({ type: 'UPDATE_EXECUTION_RULES', payload: (activeProject.executionRules as any)?.rules || '' });
       dispatch({ type: 'UPDATE_TEAM_CULTURE', payload: activeProject.teamCulture || '' });
     }
   }, [activeProject]);
@@ -266,13 +278,7 @@ export function useRightSidebarState(
 
   const toggleSection = useCallback((section: keyof RightSidebarExpandedSections) => {
     dispatch({ type: 'TOGGLE_SECTION', payload: section });
-    
-    // Save updated preferences to localStorage
-    // Note: This will be handled by a separate effect that watches for preference changes
-    setTimeout(() => {
-      savePreferences(state.preferences);
-    }, 0);
-  }, [savePreferences, state.preferences]);
+  }, []);
 
   const setRecentlySaved = useCallback((section: string) => {
     dispatch({ type: 'SET_RECENTLY_SAVED', payload: section });
@@ -290,13 +296,7 @@ export function useRightSidebarState(
 
   const updatePreferences = useCallback((newPreferences: Partial<RightSidebarUserPreferences>) => {
     dispatch({ type: 'UPDATE_PREFERENCES', payload: newPreferences });
-    
-    // Save to localStorage - use timeout to ensure state has updated
-    setTimeout(() => {
-      const updatedPreferences = { ...state.preferences, ...newPreferences };
-      savePreferences(updatedPreferences);
-    }, 0);
-  }, [savePreferences, state.preferences]);
+  }, []);
 
   const resetPreferences = useCallback(() => {
     dispatch({ type: 'LOAD_PREFERENCES', payload: defaultPreferences });
@@ -309,6 +309,10 @@ export function useRightSidebarState(
 
   const setError = useCallback((error: string | null) => {
     dispatch({ type: 'SET_ERROR', payload: error });
+  }, []);
+
+  const setActiveTab = useCallback((tab: 'activity' | 'brain' | 'tasks') => {
+    dispatch({ type: 'SET_ACTIVE_TAB', payload: tab });
   }, []);
 
   return {
@@ -324,6 +328,7 @@ export function useRightSidebarState(
       resetPreferences,
       setLoading,
       setError,
+      setActiveTab,
     },
   };
 }

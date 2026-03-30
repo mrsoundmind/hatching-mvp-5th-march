@@ -2,21 +2,35 @@ import { ErrorBoundary } from 'react-error-boundary';
 import { PanelErrorFallback } from '@/components/ErrorFallbacks';
 import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Menu, PanelRight } from "lucide-react";
 
 import { LeftSidebar } from "@/components/LeftSidebar";
 import { CenterPanel } from "@/components/CenterPanel";
 import { RightSidebar } from "@/components/RightSidebar";
+import { Sheet, SheetContent, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { EggHatchingAnimation } from "@/components/EggHatchingAnimation";
 import { OnboardingManager } from "@/components/OnboardingManager";
+import { ArtifactPanel } from "@/components/ArtifactPanel";
+import { AnimatePresence } from "framer-motion";
 import QuickStartModal from "@/components/QuickStartModal";
 import StarterPacksModal from "@/components/StarterPacksModal";
 import ProjectNameModal from "@/components/ProjectNameModal";
+import UpgradeModal from "@/components/UpgradeModal";
 import type { Project, Team, Agent } from "@shared/schema";
 import { devLog } from "@/lib/devLog";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Home() {
   const queryClient = useQueryClient();
-  const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
+  const { toast } = useToast();
+  // Restore last active project from localStorage on mount
+  const [activeProjectId, setActiveProjectId] = useState<string | null>(() => {
+    try {
+      const stored = localStorage.getItem('hatchin_active_project');
+      if (stored && stored !== 'null' && stored !== 'undefined') return stored;
+    } catch { /* ignore */ }
+    return null;
+  });
   const [activeTeamId, setActiveTeamId] = useState<string | null>(null);
   const [activeAgentId, setActiveAgentId] = useState<string | null>(null);
   // All projects should always be expanded, and teams should be expanded by default
@@ -39,8 +53,17 @@ export default function Home() {
   const [showQuickStart, setShowQuickStart] = useState(false);
   const [showStarterPacks, setShowStarterPacks] = useState(false);
   const [showProjectName, setShowProjectName] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [upgradeReason, setUpgradeReason] = useState<string>('project_limit');
   const [selectedTemplate, setSelectedTemplate] = useState<any>(null);
   const [isCreatingProject, setIsCreatingProject] = useState(false);
+
+  // Artifact panel state (v2.0)
+  const [activeDeliverableId, setActiveDeliverableId] = useState<string | null>(null);
+
+  // Mobile drawer state
+  const [mobileLeftOpen, setMobileLeftOpen] = useState(false);
+  const [mobileRightOpen, setMobileRightOpen] = useState(false);
 
   const { data: projects = [], refetch: refetchProjects } = useQuery<Project[]>({
     queryKey: ["/api/projects"],
@@ -94,7 +117,18 @@ export default function Home() {
 
 
 
-  // FIX 17: Auto-select first project if none is active
+  // Persist activeProjectId to localStorage so it survives page reload
+  useEffect(() => {
+    try {
+      if (activeProjectId) {
+        localStorage.setItem('hatchin_active_project', activeProjectId);
+      } else {
+        localStorage.removeItem('hatchin_active_project');
+      }
+    } catch { /* ignore */ }
+  }, [activeProjectId]);
+
+  // Auto-select first project if none is active (and stored project is gone)
   useEffect(() => {
     if (projects && projects.length > 0 && !activeProjectId) {
       devLog('Auto-selecting first project:', projects[0].id);
@@ -302,11 +336,21 @@ export default function Home() {
 
         // Return the created project for undo functionality
         return newProject;
+      } else if (response.status === 403) {
+        const errorData = await response.json().catch(() => ({}));
+        if (errorData.code === 'PROJECT_LIMIT_REACHED') {
+          setUpgradeReason('project_limit');
+          setShowUpgradeModal(true);
+        } else {
+          toast({ title: 'Error', description: errorData.error || 'Not allowed', variant: 'destructive' });
+        }
       } else {
         console.error('Failed to create project');
+        toast({ title: 'Error', description: 'Failed to create project. Please try again.', variant: 'destructive' });
       }
     } catch (error) {
       console.error('Error creating project:', error);
+      toast({ title: 'Error', description: 'Failed to create project. Please try again.', variant: 'destructive' });
     }
   };
 
@@ -354,9 +398,11 @@ export default function Home() {
         return newProject;
       } else {
         console.error('Failed to create idea project');
+        toast({ title: 'Error', description: 'Failed to create project. Please try again.', variant: 'destructive' });
       }
     } catch (error) {
       console.error('Error creating idea project:', error);
+      toast({ title: 'Error', description: 'Failed to create project. Please try again.', variant: 'destructive' });
     }
   };
 
@@ -483,6 +529,7 @@ export default function Home() {
       console.error('Error creating project from template:', error);
       setIsPackHatching(false);
       setStarterPackProjectData(null);
+      toast({ title: 'Error', description: 'Failed to create project from template. Please try again.', variant: 'destructive' });
     }
   };
 
@@ -551,6 +598,9 @@ export default function Home() {
         devLog('Agents data refreshed');
 
         // Set the new agent as active and ensure its team and project are expanded
+        // FIX BUG #5: Also set activeTeamId so CenterPanel's chat context stays coherent
+        setActiveProjectId(newAgent.projectId);
+        setActiveTeamId(newAgent.teamId ?? null);
         setActiveAgentId(newAgent.id);
         setExpandedProjects(new Set([newAgent.projectId]));
         if (newAgent.teamId) {
@@ -821,8 +871,20 @@ export default function Home() {
     return () => document.removeEventListener('keydown', handleKeydown);
   }, []);
 
+  // Listen for deliverable open events (v2.0)
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail?.deliverableId) {
+        setActiveDeliverableId(detail.deliverableId);
+      }
+    };
+    window.addEventListener('open_deliverable', handler);
+    return () => window.removeEventListener('open_deliverable', handler);
+  }, []);
+
   return (
-    <div className="hatchin-bg-dark min-h-screen overflow-hidden">
+    <div className="app-mesh-bg min-h-screen overflow-hidden">
       {/* Onboarding System */}
       <OnboardingManager
         onComplete={(path, templateData) => {
@@ -844,35 +906,112 @@ export default function Home() {
         }}
       />
 
-      <div className="h-screen min-h-0 flex gap-3">
-        <ErrorBoundary FallbackComponent={PanelErrorFallback}>
-          <LeftSidebar
-            projects={projects}
-            teams={teams}
-            agents={agents}
-            activeProjectId={activeProjectId}
-            activeTeamId={activeTeamId}
-            activeAgentId={activeAgentId}
-            expandedProjects={expandedProjects}
-            expandedTeams={expandedTeams}
-            onSelectProject={handleSelectProject}
-            onSelectTeam={handleSelectTeam}
-            onSelectAgent={handleSelectAgent}
-            onToggleProjectExpanded={toggleProjectExpanded}
-            onToggleTeamExpanded={toggleTeamExpanded}
-            onCreateProject={handleCreateProject}
-            onCreateProjectFromTemplate={handleCreateProjectFromTemplate}
-            onCreateIdeaProject={handleCreateIdeaProject}
-            onCreateTeam={handleCreateTeam}
-            onCreateAgent={handleCreateAgent}
-            onDeleteTeam={handleDeleteTeam}
-            onDeleteAgent={handleDeleteAgent}
-            onDeleteProject={handleDeleteProject}
-            onUpdateProject={handleUpdateProject}
-            onUpdateTeam={handleUpdateTeam}
-            onUpdateAgent={handleUpdateAgent}
-          />
-        </ErrorBoundary>
+      {/* Mobile header bar — visible on < lg only */}
+      <div className="lg:hidden flex items-center justify-between px-3 py-2 border-b border-border/40 bg-background/80 backdrop-blur-sm">
+        <button
+          onClick={() => setMobileLeftOpen(true)}
+          className="p-2 rounded-lg hover:bg-muted transition-colors"
+          aria-label="Open navigation"
+        >
+          <Menu className="w-5 h-5" />
+        </button>
+        <span className="text-sm font-semibold tracking-tight">
+          {activeProject?.name || 'Hatchin'}
+        </span>
+        <button
+          onClick={() => setMobileRightOpen(true)}
+          className="p-2 rounded-lg hover:bg-muted transition-colors"
+          aria-label="Open project details"
+        >
+          <PanelRight className="w-5 h-5" />
+        </button>
+      </div>
+
+      {/* Mobile left drawer */}
+      <Sheet open={mobileLeftOpen} onOpenChange={setMobileLeftOpen}>
+        <SheetContent side="left" className="p-0 w-[300px] backdrop-blur-xl bg-[var(--glass-frosted-strong)]">
+          <div className="w-10 h-1 bg-[var(--hatchin-border)] rounded-full mx-auto mt-3 mb-0 shrink-0" />
+          <SheetTitle className="sr-only">Navigation</SheetTitle>
+          <SheetDescription className="sr-only">Project navigation and team browser</SheetDescription>
+          <ErrorBoundary FallbackComponent={PanelErrorFallback}>
+            <LeftSidebar
+              projects={projects}
+              teams={teams}
+              agents={agents}
+              activeProjectId={activeProjectId}
+              activeTeamId={activeTeamId}
+              activeAgentId={activeAgentId}
+              expandedProjects={expandedProjects}
+              expandedTeams={expandedTeams}
+              onSelectProject={(id) => { handleSelectProject(id); setMobileLeftOpen(false); }}
+              onSelectTeam={(id) => { handleSelectTeam(id); setMobileLeftOpen(false); }}
+              onSelectAgent={(id) => { handleSelectAgent(id); setMobileLeftOpen(false); }}
+              onToggleProjectExpanded={toggleProjectExpanded}
+              onToggleTeamExpanded={toggleTeamExpanded}
+              onCreateProject={handleCreateProject}
+              onCreateProjectFromTemplate={handleCreateProjectFromTemplate}
+              onCreateIdeaProject={handleCreateIdeaProject}
+              onCreateTeam={handleCreateTeam}
+              onCreateAgent={handleCreateAgent}
+              onDeleteTeam={handleDeleteTeam}
+              onDeleteAgent={handleDeleteAgent}
+              onDeleteProject={handleDeleteProject}
+              onUpdateProject={handleUpdateProject}
+              onUpdateTeam={handleUpdateTeam}
+              onUpdateAgent={handleUpdateAgent}
+            />
+          </ErrorBoundary>
+        </SheetContent>
+      </Sheet>
+
+      {/* Mobile right drawer */}
+      <Sheet open={mobileRightOpen} onOpenChange={setMobileRightOpen}>
+        <SheetContent side="right" className="p-0 w-[320px] backdrop-blur-xl bg-[var(--glass-frosted-strong)]">
+          <div className="w-10 h-1 bg-[var(--hatchin-border)] rounded-full mx-auto mt-3 mb-0 shrink-0" />
+          <SheetTitle className="sr-only">Project Details</SheetTitle>
+          <SheetDescription className="sr-only">Activity feed, project brain, and approvals</SheetDescription>
+          <ErrorBoundary FallbackComponent={PanelErrorFallback}>
+            <RightSidebar
+              activeProject={activeProject}
+              activeTeam={teams.find(t => t.id === activeTeamId)}
+              activeAgent={agents.find(a => a.id === activeAgentId)}
+            />
+          </ErrorBoundary>
+        </SheetContent>
+      </Sheet>
+
+      <div className="h-[calc(100vh-theme(spacing.0))] lg:h-screen min-h-0 flex gap-3">
+        {/* Desktop left sidebar — hidden on mobile */}
+        <div className="hidden lg:block h-full">
+          <ErrorBoundary FallbackComponent={PanelErrorFallback}>
+            <LeftSidebar
+              projects={projects}
+              teams={teams}
+              agents={agents}
+              activeProjectId={activeProjectId}
+              activeTeamId={activeTeamId}
+              activeAgentId={activeAgentId}
+              expandedProjects={expandedProjects}
+              expandedTeams={expandedTeams}
+              onSelectProject={handleSelectProject}
+              onSelectTeam={handleSelectTeam}
+              onSelectAgent={handleSelectAgent}
+              onToggleProjectExpanded={toggleProjectExpanded}
+              onToggleTeamExpanded={toggleTeamExpanded}
+              onCreateProject={handleCreateProject}
+              onCreateProjectFromTemplate={handleCreateProjectFromTemplate}
+              onCreateIdeaProject={handleCreateIdeaProject}
+              onCreateTeam={handleCreateTeam}
+              onCreateAgent={handleCreateAgent}
+              onDeleteTeam={handleDeleteTeam}
+              onDeleteAgent={handleDeleteAgent}
+              onDeleteProject={handleDeleteProject}
+              onUpdateProject={handleUpdateProject}
+              onUpdateTeam={handleUpdateTeam}
+              onUpdateAgent={handleUpdateAgent}
+            />
+          </ErrorBoundary>
+        </div>
 
         <ErrorBoundary FallbackComponent={PanelErrorFallback}>
           <CenterPanel
@@ -890,13 +1029,26 @@ export default function Home() {
           />
         </ErrorBoundary>
 
-        <ErrorBoundary FallbackComponent={PanelErrorFallback}>
-          <RightSidebar
-            activeProject={activeProject}
-            activeTeam={teams.find(t => t.id === activeTeamId)}
-            activeAgent={agents.find(a => a.id === activeAgentId)}
-          />
-        </ErrorBoundary>
+        {/* Artifact panel — slides in when a deliverable is open */}
+        <AnimatePresence>
+          {activeDeliverableId && (
+            <ArtifactPanel
+              deliverableId={activeDeliverableId}
+              onClose={() => setActiveDeliverableId(null)}
+            />
+          )}
+        </AnimatePresence>
+
+        {/* Desktop right sidebar — hidden on mobile */}
+        <div className="hidden lg:block h-full">
+          <ErrorBoundary FallbackComponent={PanelErrorFallback}>
+            <RightSidebar
+              activeProject={activeProject}
+              activeTeam={teams.find(t => t.id === activeTeamId)}
+              activeAgent={agents.find(a => a.id === activeAgentId)}
+            />
+          </ErrorBoundary>
+        </div>
       </div>
 
       {/* Egg Hatching Animation */}
@@ -938,6 +1090,11 @@ export default function Home() {
         templateName={selectedTemplate?.title || ''}
         templateDescription={selectedTemplate?.description || ''}
         isLoading={isCreatingProject}
+      />
+      <UpgradeModal
+        open={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        reason={upgradeReason}
       />
     </div>
   );

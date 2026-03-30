@@ -79,7 +79,12 @@ export default {
   			'hatchin-text-muted': 'var(--hatchin-text-muted)',
   			'hatchin-blue': 'var(--hatchin-blue)',
   			'hatchin-green': 'var(--hatchin-green)',
-  			'hatchin-orange': 'var(--hatchin-orange)'
+  			'hatchin-orange': 'var(--hatchin-orange)',
+  			'hatchin-surface': 'var(--hatchin-surface)',
+  			'hatchin-surface-elevated': 'var(--hatchin-surface-elevated)',
+  			'hatchin-surface-muted': 'var(--hatchin-surface-muted)',
+  			'hatchin-border-subtle': 'var(--hatchin-border-subtle)',
+  			'hatchin-text-bright': 'var(--hatchin-text-bright)',
   		},
   		keyframes: {
   			'accordion-down': {

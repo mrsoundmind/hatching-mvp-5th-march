@@ -51,7 +51,7 @@ export function ProgressTimeline({ progress }: ProgressTimelineProps) {
           
           return (
             <div key={phase.name} className="flex items-center gap-3">
-              <div className={`w-4 h-4 rounded-full flex items-center justify-center ${getPhaseColor(status)}`}>
+              <div className={`w-4 h-4 rounded-full flex items-center justify-center ${getPhaseColor(status)} ${status === 'active' ? 'agent-online-pulse' : ''}`}>
                 {status === 'completed' && (
                   <Check className="w-3 h-3 text-white" />
                 )}

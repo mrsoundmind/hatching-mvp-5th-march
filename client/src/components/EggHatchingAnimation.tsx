@@ -32,7 +32,7 @@ export function EggHatchingAnimation({
 
   return (
     <div className="fixed inset-0 flex items-center justify-center z-50" style={{
-      background: 'radial-gradient(ellipse at center, #1a1d28 0%, #0d0e14 100%)'
+      background: 'radial-gradient(ellipse at center, var(--hatchin-panel) 0%, var(--background) 100%)'
     }}>
       {/* Ambient glow backdrop */}
       <div className="absolute inset-0 overflow-hidden">
@@ -277,7 +277,7 @@ export function EggHatchingAnimation({
           <h2 className="text-sm font-medium mb-1" style={{ color: '#6C82FF', letterSpacing: '0.15em', textTransform: 'uppercase' }}>
             Initializing
           </h2>
-          <h1 className="text-3xl font-bold text-white mb-1">{projectName}</h1>
+          <h1 className="text-3xl font-bold text-foreground mb-1">{projectName}</h1>
         </motion.div>
 
         {/* Status message during maya-appears */}
@@ -289,7 +289,7 @@ export function EggHatchingAnimation({
               transition={{ delay: 0.3, duration: 0.4 }}
               className="mt-3"
             >
-              <p className="text-sm font-medium text-white mb-0.5">{completionTitle}</p>
+              <p className="text-sm font-medium text-foreground mb-0.5">{completionTitle}</p>
               <p className="text-xs" style={{ color: 'rgba(108,130,255,0.8)' }}>{completionSubtitle}</p>
             </motion.div>
           )}
