@@ -15,16 +15,16 @@ interface DocumentCardProps {
 
 function getTypeBadgeClass(type: string): string {
   if (type === 'uploaded-pdf') {
-    return 'bg-[var(--hatchin-blue)] text-white';
+    return 'bg-[var(--hatchin-blue)]/15 text-[var(--hatchin-blue)]';
   }
   if (type === 'uploaded-docx') {
-    return 'bg-[var(--hatchin-orange)] text-white';
+    return 'bg-[var(--hatchin-orange)]/15 text-[var(--hatchin-orange)]';
   }
   if (type === 'uploaded-md') {
-    return 'bg-[var(--hatchin-green)] text-white';
+    return 'bg-[var(--hatchin-green)]/15 text-[var(--hatchin-green)]';
   }
   // TXT and others
-  return 'bg-[var(--hatchin-surface)] text-[var(--hatchin-text-muted)]';
+  return 'bg-[var(--hatchin-text-muted)]/15 text-[var(--hatchin-text-muted)]';
 }
 
 function formatDate(dateStr: string): string {
@@ -39,11 +39,12 @@ export function DocumentCard({ doc, onDelete }: DocumentCardProps) {
   return (
     <motion.div
       layout
-      initial={{ opacity: 0, y: 6 }}
+      initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -4 }}
+      whileHover={{ y: -1 }}
       transition={{ duration: 0.18, ease: 'easeOut' }}
-      className="flex items-center gap-2.5 px-3 py-3 rounded-[10px] bg-[var(--hatchin-surface-elevated)] border border-[var(--hatchin-border-subtle)]"
+      className="premium-card flex items-center gap-3 px-3 py-3"
     >
       {/* File icon */}
       <FileText className="w-4 h-4 text-[var(--hatchin-text-muted)] shrink-0" />
@@ -55,7 +56,7 @@ export function DocumentCard({ doc, onDelete }: DocumentCardProps) {
         </p>
         <div className="flex items-center gap-1.5 mt-0.5">
           <span
-            className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${getTypeBadgeClass(doc.type)}`}
+            className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${getTypeBadgeClass(doc.type)}`}
           >
             {getBadgeLabel(doc.type)}
           </span>
@@ -70,7 +71,7 @@ export function DocumentCard({ doc, onDelete }: DocumentCardProps) {
         type="button"
         aria-label={`Delete ${doc.title}`}
         onClick={() => onDelete(doc.id)}
-        className="w-8 h-8 flex items-center justify-center rounded text-[var(--hatchin-text-muted)] hover:text-red-400 transition-colors shrink-0"
+        className="min-h-[44px] min-w-[44px] lg:min-h-auto lg:min-w-auto w-8 h-8 flex items-center justify-center rounded-lg text-[var(--hatchin-text-muted)] hover:text-red-400 hover:bg-red-500/10 transition-colors shrink-0"
       >
         <Trash2 className="w-3.5 h-3.5" />
       </button>

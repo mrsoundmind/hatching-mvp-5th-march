@@ -2,17 +2,47 @@ import { randomUUID } from 'crypto';
 
 interface ConversationState {
   lastTimestampMs: number;
+  lastAccessedMs: number;
   seenMessageIds: Set<string>;
   seenIdempotencyKeys: Set<string>;
 }
 
 const stateByConversation = new Map<string, ConversationState>();
 
+// TTL pruning: remove entries older than 2 hours, run every 30 minutes
+const PRUNE_INTERVAL_MS = 30 * 60 * 1000;
+const STATE_TTL_MS = 2 * 60 * 60 * 1000;
+const MAX_CONVERSATIONS = 10_000;
+
+function pruneStaleState(): void {
+  const now = Date.now();
+  for (const [key, state] of stateByConversation) {
+    if (now - state.lastAccessedMs > STATE_TTL_MS) {
+      stateByConversation.delete(key);
+    }
+  }
+  // Hard cap: if still over limit, remove oldest entries
+  if (stateByConversation.size > MAX_CONVERSATIONS) {
+    const sorted = [...stateByConversation.entries()].sort((a, b) => a[1].lastAccessedMs - b[1].lastAccessedMs);
+    const toRemove = sorted.slice(0, stateByConversation.size - MAX_CONVERSATIONS);
+    for (const [key] of toRemove) {
+      stateByConversation.delete(key);
+    }
+  }
+}
+
+const _pruneTimer = setInterval(pruneStaleState, PRUNE_INTERVAL_MS);
+if (_pruneTimer.unref) _pruneTimer.unref(); // Don't keep process alive for cleanup
+
 function getState(conversationId: string): ConversationState {
   const existing = stateByConversation.get(conversationId);
-  if (existing) return existing;
+  if (existing) {
+    existing.lastAccessedMs = Date.now();
+    return existing;
+  }
   const created: ConversationState = {
     lastTimestampMs: 0,
+    lastAccessedMs: Date.now(),
     seenMessageIds: new Set(),
     seenIdempotencyKeys: new Set(),
   };
@@ -25,12 +55,19 @@ export function ensureMessageId(messageId?: string): string {
   return candidate.length > 0 ? candidate : `msg-${randomUUID()}`;
 }
 
+const MAX_SEEN_IDS_PER_CONVERSATION = 2000;
+
 export function assertUniqueMessageId(conversationId: string, messageId: string): { unique: boolean; reason?: string } {
   const state = getState(conversationId);
   if (state.seenMessageIds.has(messageId)) {
     return { unique: false, reason: 'duplicate_message_id' };
   }
   state.seenMessageIds.add(messageId);
+  // Cap per-conversation Set to prevent unbounded growth
+  if (state.seenMessageIds.size > MAX_SEEN_IDS_PER_CONVERSATION) {
+    const iter = state.seenMessageIds.values();
+    state.seenMessageIds.delete(iter.next().value!);
+  }
   return { unique: true };
 }
 

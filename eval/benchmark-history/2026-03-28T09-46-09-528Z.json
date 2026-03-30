@@ -1,0 +1,310 @@
+{
+  "runId": "2026-03-28T09-46-09-528Z",
+  "generatedAt": "2026-03-28T09:46:19.775Z",
+  "durationMs": 10247,
+  "llmKeysAvailable": {
+    "gemini": true,
+    "openai": false,
+    "groq": true
+  },
+  "satisfaction": {
+    "totalReactions": 2,
+    "thumbsUp": 0,
+    "thumbsDown": 2,
+    "approvalRate": 0,
+    "avgQuality": 2,
+    "avgHelpfulness": 2,
+    "avgAccuracy": null,
+    "byAgent": [
+      {
+        "agentId": "a68aa053-2968-40e9-a584-325147c4eee9",
+        "agentName": "Product Manager",
+        "role": "Product Manager",
+        "thumbsUp": 0,
+        "thumbsDown": 2,
+        "approvalRate": 0,
+        "avgQuality": 2,
+        "avgHelpfulness": 2,
+        "avgAccuracy": null
+      }
+    ]
+  },
+  "taskValue": {
+    "aiSuggested": 0,
+    "aiApproved": 0,
+    "aiCompleted": 0,
+    "userCreated": 6,
+    "approvalRate": 0,
+    "completionRate": 0
+  },
+  "conversationQuality": {
+    "avgMessagesPerConversation": 16.8,
+    "totalConversations": 3,
+    "clarificationLoopRate": 33.33333333333333,
+    "firstResponseHitRate": 91.66666666666666,
+    "voiceConsistencyScore": 0.36,
+    "streamingCancellationRate": 0
+  },
+  "knowledge": {
+    "totalMemoryEntries": 1,
+    "avgMemoriesPerProject": 0.2,
+    "avgImportance": 10,
+    "projectsWithBrain": 0,
+    "projectsWithCoreDirection": 0,
+    "totalProjects": 5
+  },
+  "personality": {
+    "totalAgents": 7,
+    "agentsWithAdaptation": 4,
+    "avgAdaptationConfidence": 0.3,
+    "avgInteractionCount": 7,
+    "coldStartAgents": 3,
+    "matureAgents": 1,
+    "avgTraitDelta": 0
+  },
+  "trust": {
+    "totalAgents": 7,
+    "avgTrustScore": 0,
+    "distribution": {
+      "high": 0,
+      "medium": 0,
+      "low": 0,
+      "noData": 7
+    },
+    "fullyMature": 0,
+    "avgTasksCompleted": 0,
+    "avgTasksFailed": 0
+  },
+  "training": {
+    "totalFeedback": 0,
+    "goodCount": 0,
+    "badCount": 0,
+    "successRate": 0,
+    "learningPatterns": 0,
+    "avgPatternConfidence": 0,
+    "available": false
+  },
+  "feedbackCorrelation": {
+    "highAdaptationSatisfaction": 0,
+    "lowAdaptationSatisfaction": null,
+    "highTrustSatisfaction": null,
+    "lowTrustSatisfaction": null,
+    "correlationSignal": "insufficient_data"
+  },
+  "intelligence": {
+    "smartnessScore": 26.83,
+    "smartnessMax": 35,
+    "drift": {
+      "driftDetected": false,
+      "thresholdPercent": 7,
+      "currentScore": 26.83,
+      "rollingAverage": 26.5,
+      "deltaPercent": 1.245283018867918,
+      "sampleSize": 1,
+      "history": [
+        26.5
+      ]
+    },
+    "perCategory": {},
+    "skipped": false
+  },
+  "routing": {
+    "hatchAccuracy": null,
+    "modeAccuracy": null,
+    "overallAccuracy": null,
+    "totalCases": 30,
+    "avgRealTrafficConfidence": null,
+    "specialistRoutePercent": null,
+    "verdict": "skipped"
+  },
+  "autonomy": {
+    "totalEvents": 647,
+    "eventsByType": {
+      "hatch_selected": 159,
+      "provider_fallback": 75,
+      "revision_completed": 87,
+      "synthesis_completed": 129,
+      "memory_written": 73,
+      "safety_triggered": 34,
+      "task_graph_created": 13,
+      "peer_review_started": 2,
+      "peer_review_feedback": 4,
+      "revision_requested": 2,
+      "conductor_resolution": 2,
+      "proposal_created": 3,
+      "autonomous_task_execution": 64
+    },
+    "executionSuccessRate": 0,
+    "handoffCount": 0,
+    "peerReviewCount": 6,
+    "peerReviewRevisionRate": 1483.3333333333335,
+    "safetyTriggerCount": 34,
+    "avgConfidence": 0.8,
+    "avgRiskScore": 0.19
+  },
+  "safety": {
+    "baselineCasesRun": 0,
+    "baselinePassed": true,
+    "interventionRate": 5.255023183925812,
+    "falsePositiveProxy": 14.705882352941178,
+    "verdict": "skipped"
+  },
+  "latency": {
+    "overall": {
+      "count": 414,
+      "p50": 1092,
+      "p95": 4628
+    },
+    "byClass": {
+      "unknown": {
+        "count": 235,
+        "p50": 1439,
+        "p95": 4628
+      },
+      "single": {
+        "count": 114,
+        "p50": 840,
+        "p95": 4819
+      },
+      "deliberation": {
+        "count": 15,
+        "p50": 1,
+        "p95": 1
+      },
+      "safety": {
+        "count": 34,
+        "p50": 1,
+        "p95": 1
+      },
+      "task": {
+        "count": 16,
+        "p50": 1,
+        "p95": 4584
+      }
+    },
+    "verdict": "WARN"
+  },
+  "cost": {
+    "totalTokens": 0,
+    "totalCostCents": 0,
+    "totalMessages": 30,
+    "standardMessages": 30,
+    "premiumMessages": 0,
+    "autonomyExecutions": 0,
+    "costPerMessage": 0,
+    "groqSavingsPercent": 100,
+    "last7Days": [
+      {
+        "date": "2026-03-23",
+        "messages": 28,
+        "tokens": 0,
+        "costCents": 0
+      },
+      {
+        "date": "2026-03-26",
+        "messages": 1,
+        "tokens": 0,
+        "costCents": 0
+      },
+      {
+        "date": "2026-03-26",
+        "messages": 1,
+        "tokens": 0,
+        "costCents": 0
+      }
+    ]
+  },
+  "qualityTests": [
+    {
+      "name": "Voice Distinctiveness",
+      "passed": true,
+      "testCount": 8
+    },
+    {
+      "name": "Reasoning Patterns",
+      "passed": true,
+      "testCount": 240
+    },
+    {
+      "name": "Agent Pushback",
+      "passed": true,
+      "testCount": 46
+    }
+  ],
+  "healthScore": {
+    "overall": 34.4,
+    "grade": "F",
+    "breakdown": {
+      "User Satisfaction": {
+        "score": 0,
+        "weight": 18.8,
+        "weighted": 0
+      },
+      "Task Value": {
+        "score": 0,
+        "weight": 0,
+        "weighted": 0
+      },
+      "Conversation Quality": {
+        "score": 91.7,
+        "weight": 12.5,
+        "weighted": 11.5
+      },
+      "Knowledge Building": {
+        "score": 4,
+        "weight": 6.3,
+        "weighted": 0.3
+      },
+      "Personality Adaptation": {
+        "score": 30,
+        "weight": 12.5,
+        "weighted": 3.8
+      },
+      "Trust Progression": {
+        "score": 0,
+        "weight": 12.5,
+        "weighted": 0
+      },
+      "Training": {
+        "score": 0,
+        "weight": 0,
+        "weighted": 0
+      },
+      "Feedback-Quality": {
+        "score": 0,
+        "weight": 0,
+        "weighted": 0
+      },
+      "Intelligence": {
+        "score": 76.7,
+        "weight": 12.5,
+        "weighted": 9.6
+      },
+      "Routing": {
+        "score": 0,
+        "weight": 0,
+        "weighted": 0
+      },
+      "Autonomy Health": {
+        "score": 0,
+        "weight": 12.5,
+        "weighted": 0
+      },
+      "Safety": {
+        "score": 0,
+        "weight": 0,
+        "weighted": 0
+      },
+      "Performance": {
+        "score": 50,
+        "weight": 6.3,
+        "weighted": 3.1
+      },
+      "Cost Efficiency": {
+        "score": 100,
+        "weight": 6.3,
+        "weighted": 6.3
+      }
+    }
+  }
+}

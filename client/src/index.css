@@ -569,6 +569,27 @@
   to { transform: rotate(360deg); }
 }
 
+/* Avatar working state — pulsing outer glow ring (pairs with rotating dashed ring for dual-ring effect) */
+@keyframes avatar-working-pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.4;
+  }
+  50% {
+    transform: scale(1.18);
+    opacity: 0;
+  }
+}
+.avatar-working-pulse-ring {
+  animation: avatar-working-pulse 2s ease-out infinite;
+  border: 2px solid rgba(108, 130, 255, 0.4);
+  border-radius: 9999px;
+  position: absolute;
+  inset: -2px;
+  pointer-events: none;
+  box-shadow: 0 0 8px rgba(108, 130, 255, 0.3);
+}
+
 /* 14c — One-shot green flash on save */
 @keyframes flash-save-border {
   0% {

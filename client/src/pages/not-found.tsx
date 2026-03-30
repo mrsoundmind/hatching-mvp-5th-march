@@ -12,8 +12,11 @@ export default function NotFound() {
           </div>
 
           <p className="mt-4 text-sm text-muted-foreground">
-            Did you forget to add the page to the router?
+            This page doesn't exist or may have been moved.
           </p>
+          <a href="/" className="mt-4 inline-block text-sm text-blue-500 hover:text-blue-400 transition-colors">
+            Back to your projects
+          </a>
         </CardContent>
       </Card>
     </div>

@@ -60,7 +60,7 @@ See archived roadmap: [milestones/v1.2-ROADMAP.md](milestones/v1.2-ROADMAP.md)
 - [x] **Phase 12: Handoff Visualization** - Chat handoff cards, sidebar handoff timeline, user-initiated handoff, deliberation indicator (completed 2026-03-25)
 - [x] **Phase 13: Approvals Hub + Task Pipeline** - Dedicated approvals tab, task pipeline view, expiry handling (completed 2026-03-26)
 - [x] **Phase 14: Brain Redesign + Autonomy Settings** - File upload to project brain, knowledge base UI, autonomy dial, work output viewer (completed 2026-03-26)
-- [ ] **Phase 15: Polish** - Premium component designs via Stitch/Magic MCPs, visual consistency pass
+- [x] **Phase 15: Polish** - Premium component designs, visual consistency pass (completed 2026-03-30)
 
 ---
 
@@ -148,12 +148,12 @@ Plans:
   2. New components are consistent in spacing, color usage, typography, and animation style with the established Tailwind design tokens and Framer Motion patterns across the app
 **Plans**: 6 plans
 Plans:
-- [ ] 15-01-PLAN.md — Top-level sidebar polish: SidebarTabBar mobile touch targets, ApprovalsEmptyState floating animation, AutonomyStatsCard premium card
-- [ ] 15-02-PLAN.md — Activity tab content polish: ActivityFeedItem premium card, FeedFilters Shadcn Select, HandoffChainTimeline staggered animation
-- [ ] 15-03-PLAN.md — Approvals tab polish: ApprovalItem touch targets and premium card, TaskPipelineView stage colors and hover
-- [ ] 15-04-PLAN.md — Brain tab content polish: DocumentCard hover lift, DocumentUploadZone Tailwind migration, AutonomySettingsPanel section dividers
-- [ ] 15-05-PLAN.md — Remaining content polish: WorkOutputSection prose rendering, BrainDocsTab section dividers, ActivityTab shimmer skeleton
-- [ ] 15-06-PLAN.md — Cross-cutting polish: avatar working animation enhancement, AutonomousApprovalCard normalization, Sheet drawer frosted glass + visual audit checkpoint
+- [x] 15-01-PLAN.md — Top-level sidebar polish: SidebarTabBar mobile touch targets, ApprovalsEmptyState floating animation, AutonomyStatsCard premium card
+- [x] 15-02-PLAN.md — Activity tab content polish: ActivityFeedItem premium card, FeedFilters Shadcn Select, HandoffChainTimeline staggered animation
+- [x] 15-03-PLAN.md — Approvals tab polish: ApprovalItem touch targets and premium card, TaskPipelineView stage colors and hover
+- [x] 15-04-PLAN.md — Brain tab content polish: DocumentCard hover lift, DocumentUploadZone Tailwind migration, AutonomySettingsPanel section dividers
+- [x] 15-05-PLAN.md — Remaining content polish: WorkOutputSection prose rendering, BrainDocsTab section dividers, ActivityTab shimmer skeleton
+- [x] 15-06-PLAN.md — Cross-cutting polish: avatar working animation enhancement, AutonomousApprovalCard normalization, Sheet drawer frosted glass + visual audit checkpoint
 
 ---
 

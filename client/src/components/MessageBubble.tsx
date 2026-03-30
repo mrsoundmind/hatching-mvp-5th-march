@@ -81,7 +81,12 @@ export function MessageBubble({
     return fallback;
   };
 
-  const safeContent = toDisplayText(message.content, '');
+  const safeContent = toDisplayText(message.content, '')
+    // Strip action block comments that may leak through during streaming
+    .replace(/<!--(?:TASK_SUGGESTION|HATCH_SUGGESTION|BRAIN_UPDATE):[\s\S]*?-->/g, '')
+    // Strip partial action blocks (streaming in progress, closing --> not yet received)
+    .replace(/<!--(?:TASK_SUGGESTION|HATCH_SUGGESTION|BRAIN_UPDATE):[\s\S]*$/g, '')
+    .trim();
   // P8: Role-aware bubble colors + character name from registry
   const agentRole = message.metadata?.agentRole;
   const agentColors = getAgentColors(agentRole);
@@ -93,19 +98,24 @@ export function MessageBubble({
   const safeSenderName = displayName;
 
   const getBubbleStyles = () => {
+    const isDark = document.documentElement.classList.contains('dark');
+
     if (isUser) {
       return {
-        className: 'text-foreground rounded-br-sm',
+        className: 'text-foreground rounded-br-sm chat-bubble-user',
         style: { backgroundColor: 'var(--hatchin-card)' }
       };
     }
 
     if (isAgent) {
+      // Boost agent bubble opacity in light mode (0.12 → 0.22) for better contrast
+      const bg = !isDark ? agentColors.bg.replace(/,\s*0\.12\)/, ', 0.22)') : agentColors.bg;
+      const border = !isDark ? agentColors.border.replace(/,\s*0\.35\)/, ', 0.5)') : agentColors.border;
       return {
         className: 'text-foreground rounded-bl-sm',
         style: {
-          backgroundColor: agentColors.bg,
-          border: `1px solid ${agentColors.border}`,
+          backgroundColor: bg,
+          border: `1px solid ${border}`,
         }
       };
     }
@@ -352,7 +362,7 @@ export function MessageBubble({
                                 {children}
                               </code>
                             ) : (
-                              <pre className="bg-hatchin-panel p-3 rounded-lg overflow-x-auto my-2">
+                              <pre className="bg-hatchin-panel p-3 rounded-lg overflow-x-auto my-2 max-h-[400px] overflow-y-auto">
                                 <code className="text-green-400 text-xs font-mono" {...props}>
                                   {children}
                                 </code>
@@ -385,11 +395,7 @@ export function MessageBubble({
                 </div>
               </div>
 
-              {isAgent && message.metadata?.llm?.mode === 'test' && (
-                <div className="mt-2 text-xs text-amber-300/90">
-                  Test Mode (Local Model)
-                </div>
-              )}
+
 
               {/* Timestamp - moved outside bubble */}
               <div className={`text-xs mt-1 px-1 ${isUser ? 'text-right text-muted-foreground' : 'text-left text-muted-foreground'}`}>
@@ -430,10 +436,10 @@ export function MessageBubble({
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-7 w-7 p-0 hover:bg-green-500/20 text-muted-foreground hover:text-green-400"
+                            className="h-8 w-8 p-0 rounded-full hover:bg-green-500/20 text-muted-foreground hover:text-green-400 transition-transform duration-150 hover:scale-110"
                             onClick={() => handleReaction('thumbs_up')}
                           >
-                            <ThumbsUp className="h-3 w-3" />
+                            <ThumbsUp className="h-3.5 w-3.5" />
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent>
@@ -446,10 +452,10 @@ export function MessageBubble({
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-7 w-7 p-0 hover:bg-red-500/20 text-muted-foreground hover:text-red-400"
+                            className="h-8 w-8 p-0 rounded-full hover:bg-red-500/20 text-muted-foreground hover:text-red-400 transition-transform duration-150 hover:scale-110"
                             onClick={() => handleReaction('thumbs_down')}
                           >
-                            <ThumbsDown className="h-3 w-3" />
+                            <ThumbsDown className="h-3.5 w-3.5" />
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent>
@@ -465,10 +471,10 @@ export function MessageBubble({
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="h-7 w-7 p-0 hover:bg-blue-500/20 text-muted-foreground hover:text-blue-400"
+                          className="h-8 w-8 p-0 rounded-full hover:bg-blue-500/20 text-muted-foreground hover:text-blue-400 transition-transform duration-150 hover:scale-110"
                           onClick={handleReplyToMessage}
                         >
-                          <Reply className="h-3 w-3" />
+                          <Reply className="h-3.5 w-3.5" />
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent>
@@ -482,10 +488,10 @@ export function MessageBubble({
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-7 w-7 p-0 hover:bg-blue-500/20 text-muted-foreground hover:text-blue-400"
+                        className="h-8 w-8 p-0 rounded-full hover:bg-blue-500/20 text-muted-foreground hover:text-blue-400 transition-transform duration-150 hover:scale-110"
                         onClick={handleCopyMessage}
                       >
-                        <Copy className="h-3 w-3" />
+                        <Copy className="h-3.5 w-3.5" />
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>

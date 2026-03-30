@@ -131,16 +131,19 @@ export function AvatarWrapper({ state, size, className = "", children }: AvatarW
         />
       </motion.div>
 
-      {/* Working state — rotating dashed ring overlay */}
+      {/* Working state — dual ring: pulsing outer glow + rotating inner dashed ring */}
       {state === "working" && (
-        <div
-          className="absolute inset-0 rounded-full pointer-events-none"
-          style={{
-            border: '2px dashed rgba(108,130,255,0.6)',
-            animation: 'agent-working-ring 3s linear infinite',
-            boxShadow: '0 0 8px rgba(108,130,255,0.3)',
-          }}
-        />
+        <>
+          <div className="avatar-working-pulse-ring" />
+          <div
+            className="absolute inset-0 rounded-full pointer-events-none"
+            style={{
+              border: '2px dashed rgba(108,130,255,0.6)',
+              animation: 'agent-working-ring 3s linear infinite',
+              boxShadow: '0 0 8px rgba(108,130,255,0.3)',
+            }}
+          />
+        </>
       )}
     </div>
   );

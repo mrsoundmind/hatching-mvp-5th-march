@@ -67,6 +67,11 @@ import { extractDueDate, extractPriority, checkRateLimit } from "../ai/tasks/tas
 import { checkForDuplicate } from "../ai/tasks/duplicateDetector.js";
 import { executeLifecycleCommand, type LifecycleContext } from "../ai/tasks/taskLifecycle.js";
 import { detectCompletionSignal } from "../ai/tasks/completionDetector.js";
+import { extractOrganicTasks } from "../ai/tasks/organicExtractor.js";
+import { detectDeliverableIntent } from "../ai/deliverableDetector.js";
+import { compactConversation, getCompactedContext } from "../ai/conversationCompactor.js";
+import { recordUsage } from "../billing/usageTracker.js";
+import { checkAutonomyAccess, checkMessageSafetyCap } from "../middleware/tierGate.js";
 
 async function checkForAutonomyTrigger(
   userMessage: string,
@@ -77,12 +82,17 @@ async function checkForAutonomyTrigger(
 ): Promise<void> {
   if (!FEATURE_FLAGS.backgroundExecution) return;
   try {
+    // Billing: check if user's tier allows autonomy
+    const project = await stor.getProject(projectId);
+    if (!project) return;
+    if (project.userId) {
+      const canAutomate = await checkAutonomyAccess(project.userId);
+      if (!canAutomate) return;
+    }
+
     const today = new Date().toISOString().slice(0, 10);
     const todayCount = await stor.countAutonomyEventsForProjectToday(projectId, today);
     if (todayCount >= BUDGETS.maxBackgroundLlmCallsPerProjectPerDay) return;
-
-    const project = await stor.getProject(projectId);
-    if (!project) return;
 
     const tasks = await stor.getTasksByProject(projectId);
     const trigger = resolveAutonomyTrigger({
@@ -141,8 +151,8 @@ export function registerChatRoutes(
   const isProd = process.env.NODE_ENV === "production";
 
   const getOwnedProjectIds = async (userId: string): Promise<Set<string>> => {
-    const projects = await storage.getProjects();
-    return new Set(projects.filter((project: any) => project.userId === userId).map((project) => project.id));
+    const projects = await storage.getProjectsByUserId(userId);
+    return new Set(projects.map((project) => project.id));
   };
 
   const conversationOwnedByUser = async (conversationId: string, userId: string): Promise<boolean> => {
@@ -180,7 +190,7 @@ export function registerChatRoutes(
     if (error instanceof OpenAIConfigurationError || error?.code === "OPENAI_API_KEY_MISSING") {
       return {
         code: "OPENAI_NOT_CONFIGURED",
-        error: "I'm temporarily unavailable right now. Please retry in a moment."
+        error: "Hmm, I couldn't connect to my brain for a second there. Give it another try?"
       };
     }
 
@@ -191,7 +201,7 @@ export function registerChatRoutes(
     if (status === 401 || apiCode.includes("invalid_api_key") || message.includes("invalid api key")) {
       return {
         code: "OPENAI_AUTH_FAILED",
-        error: "I'm temporarily unavailable right now. Please retry in a moment."
+        error: "Something's off on my end. Try again in a moment - I'll be right here."
       };
     }
 
@@ -204,7 +214,7 @@ export function registerChatRoutes(
     ) {
       return {
         code: "OPENAI_RATE_LIMITED",
-        error: "I'm handling high traffic right now. Please retry in a minute."
+        error: "We're getting a lot of traffic right now - give me a minute and try again."
       };
     }
 
@@ -215,13 +225,13 @@ export function registerChatRoutes(
     ) {
       return {
         code: "OPENAI_MODEL_UNAVAILABLE",
-        error: "I'm temporarily unavailable right now. Please retry in a moment."
+        error: "My thinking engine is temporarily offline. Try again in a sec."
       };
     }
 
     return {
       code: "STREAMING_GENERATION_FAILED",
-      error: "I'm still here, but this reply could not be completed. Please try again."
+      error: "I started a reply but it didn't come through. Mind sending that again?"
     };
   }
 
@@ -643,7 +653,8 @@ export function registerChatRoutes(
                     personalityEngine.seedProfileFromDB(
                       seedAgentId, uid,
                       persisted.adaptedTraits[uid],
-                      persisted.adaptationMeta[uid]
+                      persisted.adaptationMeta[uid],
+                      seedAgent?.role
                     );
                   }
                 }
@@ -765,6 +776,23 @@ export function registerChatRoutes(
               });
               break;
             }
+            // Invisible safety cap — no counter shown, only blocks at abuse-level volumes.
+            if (sessionUserId) {
+              const safetyCap = await checkMessageSafetyCap(sessionUserId);
+              if (!safetyCap.allowed) {
+                const msg = safetyCap.reason === 'rate_limit'
+                  ? 'You\'re sending messages too fast — take a breath and try again in a moment.'
+                  : 'You\'ve had an incredibly productive day! Come back tomorrow, or upgrade to Pro for higher limits.';
+                ws.send(JSON.stringify({
+                  type: 'upgrade_required',
+                  reason: safetyCap.reason === 'rate_limit' ? 'rate_limit' : 'daily_cap',
+                  message: msg,
+                  upgradeUrl: safetyCap.tier === 'free' ? '/api/billing/checkout' : undefined,
+                }));
+                break;
+              }
+            }
+
             const finalUserId = (streamingData.userId === 'user' || streamingData.userId === 'current-user' || !streamingData.userId)
               ? sessionUserId
               : streamingData.userId;
@@ -810,6 +838,47 @@ export function registerChatRoutes(
               timestamp: new Date().toISOString()
             });
 
+            // Early explicit task detection (runs BEFORE streaming — zero LLM cost)
+            // This catches TODO:/task:/action item: patterns immediately, regardless of streaming outcome.
+            try {
+              const earlyAgents = await storage.getAgentsByProject(validatedProjectId);
+              const earlyAgentList = earlyAgents.map(a => ({ id: a.id, name: a.name, role: a.role }));
+              const earlyIntent = classifyTaskIntent(savedUserMessage.content, {
+                availableAgents: earlyAgentList,
+                conversationDepth: 999, // Skip depth guard for explicit patterns
+              });
+              devLog('[TaskDetection:Early] Intent:', earlyIntent.type, 'msg:', savedUserMessage.content.substring(0, 80));
+
+              if (earlyIntent.type === 'EXPLICIT_TASK_REQUEST') {
+                const earlyUserId = (ws as any).__userId || 'anonymous';
+                const earlyRateCheck = checkRateLimit(earlyUserId);
+                if (earlyRateCheck.allowed) {
+                  const existingTasks = await storage.getTasksByProject(validatedProjectId);
+                  const dupCheck = checkForDuplicate(earlyIntent.taskDescription, existingTasks as any);
+                  if (!dupCheck.isDuplicate) {
+                    const dueDate = extractDueDate(savedUserMessage.content);
+                    const priority = extractPriority(savedUserMessage.content) || 'medium';
+                    const allTaskDescs = [earlyIntent.taskDescription, ...(earlyIntent.additionalTasks || [])];
+                    const tasks = allTaskDescs.map(desc => ({
+                      title: desc,
+                      priority,
+                      dueDate: dueDate ? dueDate.toISOString() : null,
+                    }));
+                    devLog('[TaskDetection:Early] Emitting task_suggestions:', tasks.length, 'tasks');
+                    ws.send(JSON.stringify({
+                      type: 'task_suggestions',
+                      tasks,
+                      confidence: 0.9,
+                      conversationId: envelope.conversationId,
+                      projectId: validatedProjectId,
+                    }));
+                  }
+                }
+              }
+            } catch (earlyTaskErr) {
+              devLog('[TaskDetection:Early] Error (non-critical):', earlyTaskErr);
+            }
+
             // Start streaming AI response
             devLog('🚀 Starting streaming response...');
 
@@ -844,19 +913,30 @@ export function registerChatRoutes(
             }
 
             try {
-              await handleStreamingColleagueResponse(
-                savedUserMessage,
-                envelope.conversationId,
-                ws,
-                {
-                  mode: validatedMode,
-                  projectId: validatedProjectId,
-                  contextId: validatedContextId || null,
-                  addressedAgentId,
-                }
-              );
+              const hardTimeoutMs = Number(process.env.HARD_RESPONSE_TIMEOUT_MS || 45000) + 15000; // 60s total safety net
+              await Promise.race([
+                handleStreamingColleagueResponse(
+                  savedUserMessage,
+                  envelope.conversationId,
+                  ws,
+                  {
+                    mode: validatedMode,
+                    projectId: validatedProjectId,
+                    contextId: validatedContextId || null,
+                    addressedAgentId,
+                  }
+                ),
+                new Promise<never>((_, reject) =>
+                  setTimeout(() => reject(new Error('STREAMING_HARD_TIMEOUT')), hardTimeoutMs)
+                ),
+              ]);
             } catch (error) {
               console.error('❌ Streaming response error:', error);
+              // Abort LLM stream if still running after timeout
+              const abortCtrl = (ws as any).__currentAbortController as AbortController | undefined;
+              if (abortCtrl && !abortCtrl.signal.aborted) {
+                abortCtrl.abort();
+              }
               const payload = getStreamingErrorPayload(error);
               ws.send(JSON.stringify({
                 type: 'streaming_error',
@@ -865,17 +945,32 @@ export function registerChatRoutes(
                 error: payload.error
               }));
             } finally {
-              // Remove from active streaming
+              // Remove from active streaming — must always clear both locks
               activeStreamingResponses.delete(envelope.conversationId);
+              streamingConversations.delete(envelope.conversationId);
             }
             break;
 
           case 'cancel_streaming':
             // B1.3: Handle streaming cancellation
-            ws.send(JSON.stringify({
-              type: 'streaming_cancelled',
-              messageId: data.messageId
-            }));
+            {
+              const cancelConvId = data.conversationId;
+              // Abort the active LLM stream if running
+              const abortCtrl = (ws as any).__currentAbortController as AbortController | undefined;
+              if (abortCtrl && !abortCtrl.signal.aborted) {
+                devLog('🛑 Aborting LLM stream via cancel_streaming');
+                abortCtrl.abort();
+              }
+              // Release streaming locks so subsequent messages aren't blocked
+              if (cancelConvId) {
+                activeStreamingResponses.delete(cancelConvId);
+                streamingConversations.delete(cancelConvId);
+              }
+              ws.send(JSON.stringify({
+                type: 'streaming_cancelled',
+                messageId: data.messageId
+              }));
+            }
             break;
 
           case 'send_message':
@@ -961,6 +1056,12 @@ export function registerChatRoutes(
     }
 
     ws.on('close', () => {
+      // Abort any in-progress LLM stream to stop wasting tokens
+      const activeAbort = (ws as any).__currentAbortController as AbortController | undefined;
+      if (activeAbort && !activeAbort.signal.aborted) {
+        devLog('🛑 Aborting LLM stream due to WS disconnect');
+        activeAbort.abort();
+      }
       // Remove this connection from all conversation rooms
       activeConnections.forEach((connections, conversationId) => {
         connections.delete(ws);
@@ -1064,12 +1165,12 @@ export function registerChatRoutes(
 
         devLog(`🤖 Getting response from ${agent.name} (${agent.role})`);
 
-        // Notify client which agent is currently thinking
+        // Notify client which agent is currently thinking (separate event, not a chunk)
         ws.send(JSON.stringify({
-          type: 'streaming_chunk',
+          type: 'agent_thinking',
           messageId: responseMessageId,
-          chunk: `[${agent.name} is thinking...]\n`,
-          accumulatedContent: teamResponse + `[${agent.name} is thinking...]\n`
+          agentId: agent.id,
+          agentName: agent.name,
         }));
 
         try {
@@ -1289,6 +1390,11 @@ export function registerChatRoutes(
     const turnStartedAt = Date.now();
     let llmMetadata: any = null;
     let traceId: string | null = null;
+    // Hoisted for persistence rescue: if streaming completes but post-processing throws
+    // (e.g. WS disconnect during peer review), we still need to persist the response.
+    let _lastAccumulatedContent = '';
+    let _responsePersisted = false;
+    let _respondingAgentForRescue: any = null;
     try {
       // Parse conversation ID using shared utility (replaces brittle split logic)
       // Validate conversationId is present and is a string
@@ -1420,34 +1526,31 @@ export function registerChatRoutes(
       // Message persistence must not depend on agent availability or orchestration success
       // If no agents are available, we use PM Maya fallback (not fake "System" agent)
 
-      // Helper: Get PM fallback agent for the project
+      // Helper: Get project lead fallback agent (Maya first, then PM Alex, then any agent)
       const getProjectPmFallback = async (projectId: string): Promise<Agent | null> => {
         const projectAgents = await storage.getAgentsByProject(projectId);
 
-        // Find PM agent by role match (case-insensitive)
+        // Priority 1: Maya (special agent / Idea Partner)
+        const maya = projectAgents.find(agent =>
+          agent.isSpecialAgent || agent.role.toLowerCase() === 'idea partner'
+        );
+        if (maya) {
+          return { id: maya.id, name: maya.name, role: maya.role, teamId: maya.teamId };
+        }
+
+        // Priority 2: Product Manager (Alex)
         const pmAgent = projectAgents.find(agent => {
           const roleLower = agent.role.toLowerCase();
           return roleLower.includes('product manager') || roleLower === 'pm';
         });
-
         if (pmAgent) {
-          return {
-            id: pmAgent.id,
-            name: pmAgent.name,
-            role: pmAgent.role,
-            teamId: pmAgent.teamId
-          };
+          return { id: pmAgent.id, name: pmAgent.name, role: pmAgent.role, teamId: pmAgent.teamId };
         }
 
-        // Fallback to first agent in project (if any)
+        // Priority 3: Any agent in the project
         if (projectAgents.length > 0) {
           const firstAgent = projectAgents[0];
-          return {
-            id: firstAgent.id,
-            name: firstAgent.name,
-            role: firstAgent.role,
-            teamId: firstAgent.teamId
-          };
+          return { id: firstAgent.id, name: firstAgent.name, role: firstAgent.role, teamId: firstAgent.teamId };
         }
 
         // Last resort: no agents at all
@@ -1579,10 +1682,13 @@ export function registerChatRoutes(
       }
 
       // Conductor-directed routing override: choose intent specialist when appropriate
+      // BUT never override if user explicitly @mentioned an agent (envelope or mention-parsed)
       const matches = findBestAgentMatch(userMessage.content, availableAgents);
+      const hasExplicitMention = !!addressedAgentId;
       if (
         !isPmFallback &&
         !isSystemFallback &&
+        !hasExplicitMention &&
         conductorResult.decision.route === "intent_specialist" &&
         conductorResult.primaryMatch
       ) {
@@ -1674,15 +1780,16 @@ export function registerChatRoutes(
       await extractAndStoreMemory(userMessage, { content: 'Processing...' }, conversationId, projectId);
       await extractUserName(userMessage.content, conversationId);
 
-      // Load conversation history for context
+      // Load conversation history for context (with compaction support)
       const recentMessages = await storage.getMessagesByConversation(conversationId);
-      const conversationHistory = recentMessages.slice(-10).map(msg => ({
+      const allMapped = recentMessages.map(msg => ({
         role: msg.messageType === 'user' ? 'user' as const : 'assistant' as const,
         content: msg.content,
         timestamp: msg.createdAt?.toISOString() || new Date().toISOString(),
         senderId: msg.userId || msg.agentId || 'unknown',
         messageType: msg.messageType === 'system' ? 'agent' as const : msg.messageType as 'user' | 'agent'
       }));
+      const { history: conversationHistory } = await getCompactedContext(conversationId, allMapped, storage);
 
       // Create chat context for AI
       const chatContext = {
@@ -1735,15 +1842,20 @@ export function registerChatRoutes(
         createConversationMemory: storage.createConversationMemory.bind(storage),
       };
 
-      // Create AbortController for cancellation
+      // Create AbortController for cancellation + WS disconnect
       const abortController = new AbortController();
+      (ws as any).__currentAbortController = abortController;
 
       // Handle cancellation messages
       const cancelHandler = (message: Buffer) => {
-        const data = JSON.parse(message.toString());
-        if (data.type === 'cancel_streaming' && data.messageId === responseMessageId) {
-          devLog('🛑 Streaming cancelled by user');
-          abortController.abort();
+        try {
+          const data = JSON.parse(message.toString());
+          if (data.type === 'cancel_streaming' && (data.messageId === responseMessageId || !data.messageId)) {
+            devLog('🛑 Streaming cancelled by user');
+            abortController.abort();
+          }
+        } catch {
+          // Ignore malformed WS frames — don't crash the streaming handler
         }
       };
       ws.on('message', cancelHandler);
@@ -1754,17 +1866,17 @@ export function registerChatRoutes(
         ws.send(JSON.stringify({
           type: 'streaming_started',
           messageId: responseMessageId,
-          agentId: respondingAgent ? respondingAgent.id : 'system',
-          agentName: respondingAgent ? respondingAgent.name : 'System'
+          agentId: respondingAgent ? respondingAgent.id : 'maya-fallback',
+          agentName: respondingAgent ? respondingAgent.name : 'Maya'
         }));
         hasStreamingStarted = true;
 
         // Persistence invariant: Handle no agents case with graceful fallback
         // Message persistence must not depend on agent availability or orchestration success
         if (isSystemFallback) {
-          // Last resort: project has zero agents total
-          devLog('📝 Generating system fallback response (no agents in project)');
-          accumulatedContent = "Your AI team hasn't been assembled yet! 🥚\n\nAdd a Hatch to this project so we can start building together.";
+          // Last resort: project has zero agents — Maya speaks on behalf of the empty project
+          devLog('📝 Generating Maya fallback response (no agents in project)');
+          accumulatedContent = "Hey, I'm Maya — your project lead. Looks like I just got here and the rest of the team hasn't arrived yet. Add some Hatches to this project and I'll get everyone coordinated.";
 
           // Send the fallback response as a single chunk
           ws.send(JSON.stringify({
@@ -1774,15 +1886,15 @@ export function registerChatRoutes(
             accumulatedContent
           }));
 
-          // Must persist and signal completion so the client input is unblocked
+          // Persist as agent message from Maya (never expose "System" to users)
           const fallbackSaved = await storage.createMessage({
             id: responseMessageId,
             conversationId,
             agentId: null,
-            senderName: 'System',
+            senderName: 'Maya',
             content: accumulatedContent,
-            messageType: 'system' as const,
-            metadata: { fallback: { type: 'system', reason: 'no_agents_in_project' } },
+            messageType: 'agent' as const,
+            metadata: { fallback: { type: 'pm_voice', reason: 'no_agents_in_project' }, agentRole: 'pm' },
           } as any);
 
           ws.send(JSON.stringify({
@@ -1794,16 +1906,16 @@ export function registerChatRoutes(
           return; // No further processing needed for pure system fallback
 
         } else if (isPmFallback) {
-          // PM Maya fallback - scope-specific messages
+          // PM Maya fallback - scope-specific messages, always in Maya's voice
           devLog('📝 Generating PM Maya fallback response');
 
           if (mode === 'team') {
-            accumulatedContent = "This team has no Hatches yet. Add one and I'll continue as the team lead once assigned.";
+            accumulatedContent = "This team doesn't have any members yet — I'm stepping in from the project level. Add some Hatches here and they'll jump right into the conversation.";
           } else if (mode === 'agent') {
-            accumulatedContent = "That Hatch doesn't exist or isn't available in this project. Add it or switch back to Project chat.";
+            accumulatedContent = "Hmm, that teammate isn't available right now. You can add them to the project, or come chat with me in the main project channel — I'm always around.";
           } else {
             // Project scope (shouldn't happen, but handle gracefully)
-            accumulatedContent = "I'm here to help! Let me know what you'd like to work on.";
+            accumulatedContent = "I'm here! What are we working on?";
           }
 
           // Send the fallback response as a single chunk
@@ -1913,6 +2025,10 @@ export function registerChatRoutes(
           }
         }
 
+        // Sync accumulated content to outer scope for persistence rescue
+        _lastAccumulatedContent = accumulatedContent;
+        _respondingAgentForRescue = respondingAgent;
+
         // ─── 🆕 CHAT ACTION PROCESSING ──────────────────────────────────────────
         // After the full response is accumulated, check if the agent embedded
         // an action block (HATCH_SUGGESTION, TASK_SUGGESTION, BRAIN_UPDATE).
@@ -1983,7 +2099,7 @@ export function registerChatRoutes(
                     // P2: Maya announces the new team in the project conversation
                     try {
                       const allAgents = await storage.getAgentsByProject(projectId);
-                      const mayaAgent = allAgents.find((a: any) => a.isSpecialAgent || a.role === 'AI Idea Partner');
+                      const mayaAgent = allAgents.find((a: any) => a.isSpecialAgent || a.role === 'Idea Partner');
                       if (mayaAgent) {
                         const agentList = createdAgents.slice(0, 3).map((a: any) => `${a.name} (${a.role})`).join(', ');
                         const extra = createdAgents.length > 3 ? `, and ${createdAgents.length - 3} more` : '';
@@ -2073,7 +2189,10 @@ export function registerChatRoutes(
 
 
         // This ensures symmetric persistence: user messages are always saved, agent messages must be too
-        if (!abortController.signal.aborted) {
+        // IMPORTANT: Persist even if abort signal fired AFTER streaming completed.
+        // A WS disconnect after LLM streaming finished should NOT prevent saving the response.
+        // Only skip if we have no content to save (streaming was truly interrupted mid-generation).
+        if (accumulatedContent || !abortController.signal.aborted) {
           const runtimeNow = getCurrentRuntimeConfig();
           const activeProvider = llmMetadata?.provider || runtimeNow.provider;
           const activeMode = llmMetadata?.mode || runtimeNow.mode;
@@ -2129,114 +2248,84 @@ export function registerChatRoutes(
             });
           }
 
-          // Phase 19: Peer-policing protocol with stop-the-line behavior.
-          const reviewers = availableAgents
-            .filter((agent: any) => agent.id !== respondingAgent?.id)
-            .map((agent: any) => ({ id: agent.id, name: agent.name, role: agent.role }));
+          // Phase 19: Peer-policing protocol — run async (fire-and-forget) so it never blocks persistence.
+          // Peer review is a quality gate for autonomy tasks, not a blocker for real-time chat.
+          {
+            const reviewers = availableAgents
+              .filter((agent: any) => agent.id !== respondingAgent?.id)
+              .map((agent: any) => ({ id: agent.id, name: agent.name, role: agent.role }));
 
-          const peerReviewDecision = await runPeerReview({
-            traceId,
-            roundNoBase: 1,
-            projectId,
-            teamId: mode === "team" ? (contextId ?? null) : null,
-            conversationId,
-            primaryHatchId: respondingAgent?.id || "system",
-            primaryHatchRole: respondingAgent?.role || "System",
-            reviewers,
-            provider: activeProvider,
-            mode: activeMode,
-            confidence: conductorResult.decision.confidence,
-            riskScore: aggregateRisk,
-            userMessage: userMessage.content || "",
-            draftResponse: accumulatedContent || "",
-            projectName: project.name,
-            isProposalTurn: decisionForecasts.length > 0,
-            safetySensitive: aggregateRisk >= 0.35,
-            contradictsCanon: false,
-            allowOverrideHighRisk: (process.env.ALLOW_PEER_REVIEW_OVERRIDE ?? "false").toLowerCase() === "true",
-          });
-
-          if (peerReviewDecision.triggered) {
-            const resolution = resolveDecisionConflict({
-              candidates: [
-                {
-                  hatchId: respondingAgent?.id || "system",
-                  authority: "worker",
-                  confidence: conductorResult.decision.confidence,
-                  content: peerReviewDecision.revisedContent,
-                  riskScore: aggregateRisk,
-                },
-              ],
-              guardrailOverride: peerReviewDecision.blockedByHallucination
-                ? peerReviewDecision.revisedContent
-                : undefined,
-              roundCount: Math.min(BUDGETS.maxDeliberationRounds, 2),
-            });
-
-            await logAutonomyEvent({
-              eventType: peerReviewDecision.blockedByHallucination ? "decision_conflict_detected" : "conductor_resolution",
+            // Fire-and-forget: run peer review in background, never block persistence
+            runPeerReview({
+              traceId,
+              roundNoBase: 1,
               projectId,
               teamId: mode === "team" ? (contextId ?? null) : null,
               conversationId,
-              hatchId: respondingAgent?.id || null,
+              primaryHatchId: respondingAgent?.id || "system",
+              primaryHatchRole: respondingAgent?.role || "System",
+              reviewers,
               provider: activeProvider,
               mode: activeMode,
-              latencyMs: Date.now() - turnStartedAt,
               confidence: conductorResult.decision.confidence,
               riskScore: aggregateRisk,
-              payload: resolution as unknown as Record<string, unknown>,
+              userMessage: userMessage.content || "",
+              draftResponse: accumulatedContent || "",
+              projectName: project.name,
+              isProposalTurn: decisionForecasts.length > 0,
+              safetySensitive: aggregateRisk >= 0.35,
+              contradictsCanon: false,
+              allowOverrideHighRisk: (process.env.ALLOW_PEER_REVIEW_OVERRIDE ?? "false").toLowerCase() === "true",
+            }).then((peerReviewDecision) => {
+              if (peerReviewDecision.triggered) {
+                const resolution = resolveDecisionConflict({
+                  candidates: [
+                    {
+                      hatchId: respondingAgent?.id || "system",
+                      authority: "worker",
+                      confidence: conductorResult.decision.confidence,
+                      content: peerReviewDecision.revisedContent,
+                      riskScore: aggregateRisk,
+                    },
+                  ],
+                  guardrailOverride: peerReviewDecision.blockedByHallucination
+                    ? peerReviewDecision.revisedContent
+                    : undefined,
+                  roundCount: Math.min(BUDGETS.maxDeliberationRounds, 2),
+                });
+
+                logAutonomyEvent({
+                  eventType: peerReviewDecision.blockedByHallucination ? "decision_conflict_detected" : "conductor_resolution",
+                  projectId,
+                  teamId: mode === "team" ? (contextId ?? null) : null,
+                  conversationId,
+                  hatchId: respondingAgent?.id || null,
+                  provider: activeProvider,
+                  mode: activeMode,
+                  latencyMs: Date.now() - turnStartedAt,
+                  confidence: conductorResult.decision.confidence,
+                  riskScore: aggregateRisk,
+                  payload: resolution as unknown as Record<string, unknown>,
+                }).catch(() => {});
+
+                if (peerReviewDecision.blockedByHallucination && resolution.overriddenByGuardrail) {
+                  try {
+                    ws.send(JSON.stringify({
+                      type: "peer_review_revision",
+                      messageId: responseMessageId,
+                      conversationId,
+                      content: resolution.finalContent,
+                      blockedByHallucination: true,
+                    }));
+                  } catch (_) {}
+                }
+              }
+            }).catch((err) => {
+              console.warn('[PEER-REVIEW] Background peer review failed:', err.message);
             });
-
-            if (resolution.timeoutTriggered) {
-              await logAutonomyEvent({
-                eventType: "deliberation_timeout",
-                projectId,
-                teamId: mode === "team" ? (contextId ?? null) : null,
-                conversationId,
-                hatchId: respondingAgent?.id || null,
-                provider: activeProvider,
-                mode: activeMode,
-                latencyMs: Date.now() - turnStartedAt,
-                confidence: conductorResult.decision.confidence,
-                riskScore: aggregateRisk,
-                payload: {
-                  roundsUsed: resolution.roundsUsed,
-                },
-              });
-            }
-
-            if (resolution.overriddenByGuardrail) {
-              await logAutonomyEvent({
-                eventType: "policy_override",
-                projectId,
-                teamId: mode === "team" ? (contextId ?? null) : null,
-                conversationId,
-                hatchId: respondingAgent?.id || null,
-                provider: activeProvider,
-                mode: activeMode,
-                latencyMs: Date.now() - turnStartedAt,
-                confidence: conductorResult.decision.confidence,
-                riskScore: aggregateRisk,
-                payload: { reason: resolution.reason },
-              });
-            }
-
-            const previousAccumulated = accumulatedContent || "";
-            accumulatedContent = resolution.finalContent;
-            if (accumulatedContent !== previousAccumulated) {
-              ws.send(JSON.stringify({
-                type: "peer_review_revision",
-                messageId: responseMessageId,
-                conversationId,
-                content: accumulatedContent,
-                blockedByHallucination: peerReviewDecision.blockedByHallucination,
-              }));
-            }
           }
 
-          const toneGuard = (!isSystemFallback && !isPmFallback)
-            ? applyTeammateToneGuard(accumulatedContent || "", userMessage?.content || "")
-            : { changed: false, content: accumulatedContent || "", reasons: [] as string[] };
+          const toneGuard = applyTeammateToneGuard(accumulatedContent || "", userMessage?.content || "");
           if (toneGuard.changed) {
             accumulatedContent = toneGuard.content;
             ws.send(JSON.stringify({
@@ -2299,9 +2388,9 @@ export function registerChatRoutes(
             conversationId,
             // Invariant: Never persist agentId='system'. Use null for system fallback.
             agentId: isSystemFallback ? null : (respondingAgent && respondingAgent.id !== 'system' ? respondingAgent.id : null),
-            senderName: respondingAgent ? respondingAgent.name : 'System',
+            senderName: respondingAgent ? respondingAgent.name : 'Maya',
             content: accumulatedContent || '', // Ensure content exists (empty string if needed)
-            messageType: isSystemFallback ? 'system' as const : 'agent' as const,
+            messageType: 'agent' as const,
             metadata: {
               conductor: conductorResult.decision,
               safetyScore: conductorResult.safetyScore,
@@ -2332,8 +2421,9 @@ export function registerChatRoutes(
             },
           };
 
+          // Fire-and-forget: deliberation trace is audit data, must never block persistence
           if (traceId && respondingAgent) {
-            await appendDeliberationRound(traceId, {
+            appendDeliberationRound(traceId, {
               roundNo: 1,
               hatchId: respondingAgent.id,
               prompt: userMessage.content || "",
@@ -2346,7 +2436,7 @@ export function registerChatRoutes(
               ),
               latencyMs: Date.now() - turnStartedAt,
               timestamp: new Date().toISOString(),
-            });
+            }).catch((err) => console.warn('[TRACE] appendDeliberationRound failed:', err?.message));
           }
 
           // Phase 1.2: Production-safe no fake system agent assertion
@@ -2398,6 +2488,7 @@ export function registerChatRoutes(
           }
 
           const savedResponse = await storage.createMessage(responseMessage);
+          _responsePersisted = true;
           devLog('💾 Saved streaming response:', savedResponse.id, '(persistence invariant enforced)');
 
           await logAutonomyEvent({
@@ -2485,11 +2576,12 @@ export function registerChatRoutes(
                 personalityEngine.seedProfileFromDB(
                   respondingAgent.id, behaviorUserId,
                   persistedPersonality.adaptedTraits[behaviorUserId],
-                  persistedPersonality.adaptationMeta[behaviorUserId]
+                  persistedPersonality.adaptationMeta[behaviorUserId],
+                  respondingAgent.role
                 );
               }
               // Persist any behavior-based adaptation that happened during streaming
-              const behaviorProfile = personalityEngine.getPersonalityProfile(respondingAgent.id, behaviorUserId);
+              const behaviorProfile = personalityEngine.getPersonalityProfile(respondingAgent.id, behaviorUserId, respondingAgent.role);
               if (behaviorProfile.interactionCount > 0) {
                 const existingPersonality = persistedPersonality || {};
                 await storage.updateAgent(respondingAgent.id, {
@@ -2520,6 +2612,7 @@ export function registerChatRoutes(
               availableAgents: agentList,
               conversationDepth: recentMessages.length,
             });
+            devLog('[TaskDetection] Intent:', intent.type, 'msg:', userMessage.content.substring(0, 80), 'depth:', recentMessages.length);
 
             if (intent.type === 'EXPLICIT_TASK_REQUEST') {
               const userId = (ws as any).__userId || 'anonymous';
@@ -2539,18 +2632,24 @@ export function registerChatRoutes(
                     projectId,
                   }));
                 } else {
+                  // Send as suggestion for user approval instead of creating directly
                   const dueDate = extractDueDate(userMessage.content);
                   const priority = extractPriority(userMessage.content) || 'medium';
-                  const newTask = await storage.createTask({
-                    projectId,
-                    title: intent.taskDescription,
-                    status: 'todo',
+                  // Collect all tasks (primary + additional from multi-TODO messages)
+                  const allTaskDescs = [intent.taskDescription, ...(intent.additionalTasks || [])];
+                  const tasks = allTaskDescs.map(desc => ({
+                    title: desc,
                     priority,
                     dueDate: dueDate ? dueDate.toISOString() : null,
-                    metadata: { sourceConversationId: conversationId, createdFromChat: true },
-                  } as any);
-                  devLog('Task created directly:', newTask.title);
-                  ws.send(JSON.stringify({ type: 'task_created_direct', task: newTask, conversationId, projectId }));
+                  }));
+                  devLog('Task suggestions (pending approval):', allTaskDescs.length, 'tasks');
+                  ws.send(JSON.stringify({
+                    type: 'task_suggestions',
+                    tasks,
+                    confidence: 0.9,
+                    conversationId,
+                    projectId,
+                  }));
                 }
               }
             } else if (intent.type === 'USER_DELEGATION') {
@@ -2559,18 +2658,48 @@ export function registerChatRoutes(
               if (rateCheck.allowed) {
                 const dueDate = extractDueDate(userMessage.content);
                 const priority = extractPriority(userMessage.content) || 'medium';
-                const newTask = await storage.createTask({
+                devLog('Delegated task suggestion (pending approval):', intent.taskDescription, 'to', intent.targetAgentName);
+                ws.send(JSON.stringify({
+                  type: 'task_suggestions',
+                  tasks: [{
+                    title: intent.taskDescription,
+                    priority,
+                    dueDate: dueDate ? dueDate.toISOString() : null,
+                    assignee: intent.targetAgentName,
+                  }],
+                  confidence: 0.9,
+                  conversationId,
                   projectId,
-                  title: intent.taskDescription,
-                  status: 'todo',
-                  priority,
-                  assignee: intent.targetAgentName,
-                  dueDate: dueDate ? dueDate.toISOString() : null,
-                  metadata: { sourceConversationId: conversationId, createdFromChat: true, delegatedTo: intent.targetAgentId },
-                } as any);
-                devLog('Delegated task created:', newTask.title, 'to', intent.targetAgentName);
-                ws.send(JSON.stringify({ type: 'task_created_direct', task: newTask, conversationId, projectId }));
+                }));
               }
+            } else if (intent.type === 'ORGANIC_CANDIDATE' && accumulatedContent) {
+              // LLM-powered organic task extraction for natural conversational task mentions
+              const project = await storage.getProject(projectId);
+              const existingTasks = await storage.getTasksByProject(projectId);
+              extractOrganicTasks(userMessage.content, accumulatedContent, {
+                projectName: project?.name || 'Unknown',
+                agentRole: respondingAgent?.role || 'Idea Partner',
+                availableAgents: agentList.map(a => a.role),
+                conversationId,
+                existingTasks: existingTasks.map((t: any) => ({ id: t.id, title: t.title, status: t.status, priority: t.priority })),
+              }).then(result => {
+                if (result.hasTasks && result.tasks.length > 0) {
+                  ws.send(JSON.stringify({
+                    type: 'task_suggestions',
+                    tasks: result.tasks.map(t => ({
+                      title: t.title,
+                      priority: t.priority || 'medium',
+                      assignee: t.suggestedAssignee,
+                    })),
+                    confidence: result.confidence,
+                    conversationId,
+                    projectId,
+                    source: 'organic',
+                  }));
+                }
+              }).catch(err => {
+                devLog('Organic task extraction failed (non-critical):', err);
+              });
             } else if (intent.type === 'TASK_LIFECYCLE_COMMAND') {
               const projectTasks = await storage.getTasksByProject(projectId);
               const lifecycleCtx: LifecycleContext = {
@@ -2601,6 +2730,28 @@ export function registerChatRoutes(
             }
           } catch (taskError) {
             devLog('Smart task detection error (non-critical):', taskError);
+          }
+
+          // ─── Deliverable Detection ─────────────────────────────────────────
+          try {
+            const deliverableDetection = detectDeliverableIntent(
+              userMessage.content,
+              respondingAgent?.role
+            );
+            if (deliverableDetection.detected) {
+              ws.send(JSON.stringify({
+                type: 'deliverable_proposal',
+                proposalType: deliverableDetection.type,
+                title: deliverableDetection.title,
+                agentName: respondingAgent?.name || 'Agent',
+                agentRole: deliverableDetection.agentRole,
+                confidence: deliverableDetection.confidence,
+                conversationId,
+                projectId,
+              }));
+            }
+          } catch (deliverableErr) {
+            devLog('Deliverable detection error (non-critical):', deliverableErr);
           }
 
           if ((analysis.complexity === 'high' || selectedAgents.length > 1) && userMessage.content) {
@@ -2742,12 +2893,30 @@ export function registerChatRoutes(
             console.error("Failed to auto-sync project brain from chat:", autoSyncError);
           }
 
-          // Notify streaming completed
-          ws.send(JSON.stringify({
-            type: 'streaming_completed',
-            messageId: responseMessageId,
-            message: savedResponse
-          }));
+          // Record LLM usage for billing
+          const billingUserId = (ws as any).__userId as string | undefined;
+          if (billingUserId && llmMetadata) {
+            recordUsage(
+              storage,
+              billingUserId,
+              llmMetadata.provider,
+              llmMetadata.model,
+              llmMetadata.modelTier,
+              llmMetadata.tokenUsage,
+              'chat',
+            ).catch(err => console.error('[UsageTracker] chat recording failed:', err));
+          }
+
+          // Notify streaming completed (may fail if WS disconnected — that's OK, persistence already done)
+          try {
+            ws.send(JSON.stringify({
+              type: 'streaming_completed',
+              messageId: responseMessageId,
+              message: savedResponse
+            }));
+          } catch (_wsSendErr) {
+            // WS already closed — response is persisted, client will see it on next load
+          }
 
           // Broadcast final message to other clients
           broadcastToConversation(conversationId, {
@@ -2755,6 +2924,13 @@ export function registerChatRoutes(
             message: savedResponse,
             conversationId
           }, { exclude: ws });
+
+          // 6.1: Fire-and-forget conversation compaction after streaming completes
+          compactConversation(
+            conversationId,
+            allMapped.map(m => ({ role: m.role, content: m.content })),
+            storage,
+          ).catch(() => {});
 
           // Send real-time metrics update for AI agent response
           broadcastToConversation(conversationId, {
@@ -2788,6 +2964,30 @@ export function registerChatRoutes(
 
     } catch (error) {
       console.error('❌ Streaming response error:', error);
+
+      // PERSISTENCE RESCUE: If LLM streaming completed but post-processing threw
+      // (e.g. WS disconnect during peer review/tone guard), persist the response.
+      if (_lastAccumulatedContent && !_responsePersisted && conversationId) {
+        try {
+          const rescueAgent = _respondingAgentForRescue;
+          await storage.createMessage({
+            id: responseMessageId,
+            conversationId,
+            agentId: rescueAgent && rescueAgent.id !== 'system' ? rescueAgent.id : null,
+            senderName: rescueAgent ? rescueAgent.name : 'Maya',
+            content: _lastAccumulatedContent,
+            messageType: 'agent' as const,
+            metadata: {
+              rescuePersistence: true,
+              agentRole: rescueAgent?.role ?? null,
+            },
+          } as any);
+          devLog('🛟 Rescue-persisted streaming response after error:', responseMessageId);
+        } catch (rescueErr) {
+          console.error('❌ Failed to rescue-persist streaming response:', rescueErr);
+        }
+      }
+
       const payload = getStreamingErrorPayload(error);
       try {
         let effectiveAgent = fallbackResponder;
@@ -2835,7 +3035,7 @@ export function registerChatRoutes(
           conversationId,
           agentId: effectiveAgent?.id || null,
           content: fallbackContent,
-          messageType: (effectiveAgent ? 'agent' : 'system') as "agent" | "system",
+          messageType: 'agent' as const,
           metadata: {
             fallback: {
               type: 'service',

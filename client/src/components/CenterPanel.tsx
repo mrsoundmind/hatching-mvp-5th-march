@@ -1,4 +1,4 @@
-import { Send, PauseCircle, PlayCircle, ArrowRightLeft } from "lucide-react";
+import { Send, PauseCircle, PlayCircle, ArrowRightLeft, ArrowUpIcon } from "lucide-react";
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import type { Project, Team, Agent } from "@shared/schema";
@@ -19,6 +19,7 @@ import { AutonomousApprovalCard } from './AutonomousApprovalCard';
 import UpgradeModal from './UpgradeModal';
 import { HandoffCard } from './chat/HandoffCard';
 import { DeliberationCard } from './chat/DeliberationCard';
+import { DeliverableProposalCard } from '@/components/DeliverableChatCard';
 import { dispatchAutonomyEvent, AUTONOMY_EVENTS } from '@/lib/autonomyEvents';
 import type { HandoffAnnouncedPayload } from '@/lib/autonomyEvents';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
@@ -147,6 +148,12 @@ export function CenterPanel({
   } | null>(null);
   const deliberationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Deliverable proposal state (v2.0)
+  const [deliverableProposal, setDeliverableProposal] = useState<{
+    type: string; title: string; agentName: string; agentRole: string;
+    confidence: number; conversationId: string; projectId: string;
+  } | null>(null);
+
   const resizeComposer = (el: HTMLTextAreaElement | null) => {
     if (!el) return;
     el.style.height = '0px';
@@ -204,7 +211,7 @@ export function CenterPanel({
       setStreamingContent('');
       setStreamingAgent(null);
       setStreamingConversationId(null);
-    }, 20000); // 20s watchdog
+    }, 45000); // 45s watchdog — server does post-processing (peer review, AKL, task detection) after last chunk
   };
 
   const clearPendingResponseTimeout = () => {
@@ -729,88 +736,6 @@ export function CenterPanel({
       addMessageToConversation(currentChatContext?.conversationId || '', streamingMessage);
       resetStreamingTimeout();
     }
-    else if (message.type === 'token') {
-      clearPendingResponseTimeout();
-      setIsThinking(false);
-      // Token-by-token streaming for real-time typing effect
-      devLog('🔤 Token received:', message.content);
-
-      // Use streamingConversationId if available, fallback to currentChatContext
-      const conversationId = streamingConversationId || currentChatContext?.conversationId || '';
-
-      if (!conversationId) {
-        console.warn('⚠️ Token received but no conversation context');
-        return;
-      }
-
-      setAllMessages(prev => {
-        const messages = prev[conversationId] || [];
-
-        // Find the streaming message (either by streamingMessageId or last assistant message)
-        let messageIndex = -1;
-
-        if (streamingMessageId.current) {
-          // Prefer the tracked streaming message
-          messageIndex = messages.findIndex(msg => msg.id === streamingMessageId.current);
-        }
-
-        // Fallback: find last assistant message if streaming message not found
-        if (messageIndex === -1) {
-          for (let i = messages.length - 1; i >= 0; i--) {
-            if (messages[i].messageType === 'agent' && (messages[i].isStreaming || messages[i].status === 'streaming')) {
-              messageIndex = i;
-              break;
-            }
-          }
-        }
-
-        if (messageIndex >= 0) {
-          // Append token to existing streaming message (typing effect)
-          const updatedMessages = [...messages];
-          updatedMessages[messageIndex] = {
-            ...updatedMessages[messageIndex],
-            content: updatedMessages[messageIndex].content + (message.content || ''), // APPEND token
-            isStreaming: true,
-            status: 'streaming' as const
-          };
-          devLog('✅ Appended token to streaming message:', updatedMessages[messageIndex].id, 'content length:', updatedMessages[messageIndex].content.length);
-          return { ...prev, [conversationId]: updatedMessages };
-        } else {
-          // Create new streaming message if none exists
-          const getActualAgentName = (agentId: string) => {
-            const agent = activeProjectAgents.find(a => a.id === agentId);
-            return agent ? agent.name : agentId.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase());
-          };
-
-          const newStreamingMessage = {
-            id: message.messageId || `streaming-${Date.now()}`,
-            content: message.content || '',
-            senderId: message.agentId || 'ai-agent',
-            senderName: message.agentName || getActualAgentName(message.agentId || 'ai-agent'),
-            messageType: 'agent' as const,
-            timestamp: new Date().toISOString(),
-            conversationId,
-            status: 'streaming' as const,
-            isStreaming: true,
-            metadata: { isStreaming: true }
-          };
-
-          // Track this as the streaming message
-          if (message.messageId && !streamingMessageId.current) {
-            streamingMessageId.current = message.messageId;
-            setIsStreaming(true);
-            setStreamingConversationId(conversationId);
-          }
-
-          devLog('🆕 Created new streaming message for token:', newStreamingMessage.id);
-          return { ...prev, [conversationId]: [...messages, newStreamingMessage] };
-        }
-      });
-
-      // Update streaming content state
-      setStreamingContent(prev => prev + (message.content || ''));
-      resetStreamingTimeout();
-    }
     else if (message.type === 'streaming_chunk') {
       clearPendingResponseTimeout();
       setIsThinking(false);
@@ -1184,6 +1109,25 @@ export function CenterPanel({
         console.warn('Failed to dispatch task_created_from_chat event');
       }
     }
+    else if (message.type === 'deliverable_proposal') {
+      devLog('📄 [Deliverable] Proposal received:', message);
+      setDeliverableProposal({
+        type: message.proposalType,
+        title: message.title,
+        agentName: message.agentName,
+        agentRole: message.agentRole,
+        confidence: message.confidence,
+        conversationId: message.conversationId,
+        projectId: message.projectId,
+      });
+    }
+    else if (message.type === 'deliverable_created') {
+      devLog('📄 [Deliverable] Created:', message);
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${message.deliverable?.projectId || activeProject?.id}/deliverables`] });
+      // Open the artifact panel
+      window.dispatchEvent(new CustomEvent('open_deliverable', { detail: { deliverableId: message.deliverable?.id } }));
+      setDeliverableProposal(null);
+    }
     else if (message.type === 'background_execution_started') {
       setIsTeamWorking(true);
       if (message.taskCount != null) {
@@ -1196,6 +1140,21 @@ export function CenterPanel({
       // UX-05: Tab notification badge
       if (document.hidden) {
         document.title = '\u2728 Team working... | Hatchin';
+      }
+      // Bridge to sidebar: dispatch TASK_EXECUTING + AGENT_WORKING_STATE
+      dispatchAutonomyEvent(AUTONOMY_EVENTS.TASK_EXECUTING, {
+        agentId: message.agentId ?? '',
+        agentName: message.agentName ?? 'Agent',
+        taskTitle: message.taskTitle ?? '',
+        traceId: message.traceId ?? '',
+        projectId: activeProject?.id ?? '',
+      });
+      if (message.agentId) {
+        dispatchAutonomyEvent(AUTONOMY_EVENTS.AGENT_WORKING_STATE, {
+          agentId: message.agentId,
+          isWorking: true,
+          projectId: activeProject?.id ?? '',
+        });
       }
     }
     else if (message.type === 'background_execution_completed' || message.type === 'task_execution_completed') {
@@ -1213,6 +1172,21 @@ export function CenterPanel({
           : `${count} task${count > 1 ? 's' : ''} completed`;
         fireCompletionNotification(projectName, summary);
       }
+      // Bridge to sidebar: dispatch TASK_COMPLETED + clear AGENT_WORKING_STATE
+      dispatchAutonomyEvent(AUTONOMY_EVENTS.TASK_COMPLETED, {
+        agentId: message.agentId ?? '',
+        agentName: message.agentName ?? 'Agent',
+        taskTitle: message.taskTitle ?? '',
+        traceId: message.traceId ?? '',
+        projectId: activeProject?.id ?? '',
+      });
+      if (message.agentId) {
+        dispatchAutonomyEvent(AUTONOMY_EVENTS.AGENT_WORKING_STATE, {
+          agentId: message.agentId,
+          isWorking: false,
+          projectId: activeProject?.id ?? '',
+        });
+      }
     }
     else if (message.type === 'task_requires_approval') {
       // UX-01: High-risk autonomous task — show inline approval card instead of toast
@@ -1229,14 +1203,15 @@ export function CenterPanel({
           projectId: currentProjectId,
         },
       ]);
-      // Dispatch event so TaskManager can highlight the pending task
-      try {
-        window.dispatchEvent(new CustomEvent('task_requires_approval', {
-          detail: { taskId: message.taskId, agentName: message.agentName, riskReasons: message.riskReasons }
-        }));
-      } catch (e) {
-        console.warn('Failed to dispatch task_requires_approval event');
-      }
+      // Bridge to sidebar: dispatch APPROVAL_REQUIRED for activity feed + approvals tab
+      dispatchAutonomyEvent(AUTONOMY_EVENTS.APPROVAL_REQUIRED, {
+        traceId: message.traceId ?? '',
+        agentId: message.agentId ?? '',
+        agentName: message.agentName ?? 'Agent',
+        taskTitle: message.taskTitle ?? '',
+        riskScore: message.riskScore ?? 0,
+        projectId: activeProject?.id ?? '',
+      });
     }
     else if (message.type === 'task_approval_rejected') {
       // Remove rejected approval card (handles multi-tab sync)
@@ -1259,16 +1234,19 @@ export function CenterPanel({
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${message.projectId}`] });
       toast({ title: 'Project memory updated', description: `Captured: ${message.field || 'new insight'}` });
       try {
-        window.dispatchEvent(new CustomEvent('brain_updated_from_chat', {
+        // Dispatch project_brain_updated so home.tsx cache + useRightSidebarState pick it up
+        window.dispatchEvent(new CustomEvent('project_brain_updated', {
           detail: {
-            field: message.field,
-            value: message.value,
-            updatedBy: message.updatedBy,
             projectId: message.projectId,
+            patch: {
+              coreDirection: message.field === 'coreDirection' ? message.value : undefined,
+              executionRules: message.field === 'executionRules' ? message.value : undefined,
+              teamCulture: message.field === 'teamCulture' ? message.value : undefined,
+            },
           }
         }));
       } catch (e) {
-        console.warn('Failed to dispatch brain_updated_from_chat event');
+        console.warn('Failed to dispatch project_brain_updated event');
       }
     }
     // ─── END Chat Intelligence Events ────────────────────────────────────────
@@ -1681,6 +1659,8 @@ export function CenterPanel({
     }
 
     setCurrentChatContext(newChatContext);
+    // Clear input when switching conversations to prevent state leaking
+    setInputValue('');
 
     // Join new conversation room via WebSocket when connected
     if (connectionStatus === 'connected') {
@@ -2543,11 +2523,7 @@ export function CenterPanel({
       </div>
       {/* Message Display Area */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {isTestMode && (
-          <div className="px-6 py-2 border-b hatchin-border bg-amber-500/10 text-amber-700 dark:text-amber-200 text-xs">
-            Test Mode: Local AI model ({runtimeProviderLabel}). Responses are for system testing only.
-          </div>
-        )}
+
         {getCurrentMessages().length === 0 && !isStreaming && !isThinking ? (
           /* Welcome Screen - Show when no messages */
           (<div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
@@ -2860,6 +2836,41 @@ export function CenterPanel({
           </>)
         )}
       </div>
+      {/* Deliverable Proposal Card */}
+      {deliverableProposal && (
+        <div className="px-6 py-2">
+          <DeliverableProposalCard
+            type={deliverableProposal.type}
+            title={deliverableProposal.title}
+            agentName={deliverableProposal.agentName}
+            agentRole={deliverableProposal.agentRole}
+            onAccept={async () => {
+              try {
+                const res = await fetch('/api/deliverables/generate', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  credentials: 'include',
+                  body: JSON.stringify({
+                    projectId: deliverableProposal.projectId,
+                    type: deliverableProposal.type,
+                    title: deliverableProposal.title,
+                    description: '',
+                  }),
+                });
+                if (res.ok) {
+                  const data = await res.json();
+                  window.dispatchEvent(new CustomEvent('open_deliverable', { detail: { deliverableId: data.deliverable?.id } }));
+                  queryClient.invalidateQueries({ queryKey: [`/api/projects/${deliverableProposal.projectId}/deliverables`] });
+                }
+              } catch (err) {
+                console.error('Failed to generate deliverable:', err);
+              }
+              setDeliverableProposal(null);
+            }}
+            onDismiss={() => setDeliverableProposal(null)}
+          />
+        </div>
+      )}
       {/* Typing Indicator Bar */}
       {typingColleagues.length > 0 && !isStreaming && (
         <div className="flex items-center gap-2 px-6 py-1.5 text-xs text-muted-foreground border-t hatchin-border">
@@ -2897,15 +2908,15 @@ export function CenterPanel({
           </div>
         )}
 
-        <form onSubmit={handleChatSubmit} className="relative rounded-lg">
+        <form onSubmit={handleChatSubmit} className="relative bg-[var(--hatchin-surface)]/60 backdrop-blur-md rounded-xl border border-[var(--hatchin-border)]">
           {/* Hand off to... dropdown — only shown when a project is active and there are eligible agents */}
           {activeProject && handoffableAgents.length > 0 && (
-            <div className="flex items-center px-2 pt-1.5">
+            <div className="flex items-center px-3 pt-2">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button
                     type="button"
-                    className="flex items-center gap-1 px-2 py-1 text-[11px] hatchin-text-muted hover:hatchin-text hover:bg-[var(--hatchin-surface-hover)] rounded-md transition-colors"
+                    className="flex items-center gap-1 px-2 py-1 text-[11px] text-[var(--hatchin-text-muted)] hover:text-[var(--hatchin-text)] hover:bg-[var(--hatchin-surface-elevated)] rounded-md transition-colors"
                   >
                     <ArrowRightLeft className="w-3 h-3" />
                     Hand off to...
@@ -2920,7 +2931,7 @@ export function CenterPanel({
                     >
                       <AgentAvatar agentName={agent.name} role={agent.role} size={20} />
                       <span className="text-sm">{agent.name}</span>
-                      <span className="text-xs hatchin-text-muted">{agent.role}</span>
+                      <span className="text-xs text-[var(--hatchin-text-muted)]">{agent.role}</span>
                     </DropdownMenuItem>
                   ))}
                 </DropdownMenuContent>
@@ -2946,36 +2957,44 @@ export function CenterPanel({
               }
             }}
             aria-label="Message input"
-            className="w-full premium-message-input px-4 pr-14 py-3 text-sm hatchin-text placeholder-hatchin-text-muted focus:outline-none resize-none min-h-[48px] max-h-[180px] overflow-y-auto"
+            className="w-full bg-transparent px-4 py-4 text-sm text-[var(--hatchin-text)] placeholder:text-[var(--hatchin-text-muted)] focus:outline-none focus-visible:ring-0 resize-none min-h-[64px] max-h-[200px] overflow-y-auto border-none"
+            style={{ overflow: 'hidden' }}
           />
-          {/* B1.3: Show stop button during streaming, send button otherwise */}
-          {isStreaming ? (
-            <button
-              type="button"
-              onClick={() => {
-                if (streamingMessageId.current) {
-                  sendWebSocketMessage({
-                    type: 'cancel_streaming',
-                    messageId: streamingMessageId.current
-                  });
-                }
-              }}
-              className="absolute right-3 bottom-2 w-8 h-8 rounded-full bg-red-500/10 hover:bg-red-500/20 text-red-500 flex items-center justify-center transition-colors"
-              aria-label="Stop generating"
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="6" y="6" width="12" height="12" />
-              </svg>
-            </button>
-          ) : (
-            <button
-              type="submit"
-              aria-label="Send message"
-              className="absolute right-3 bottom-2 w-8 h-8 rounded-full btn-primary-glow flex items-center justify-center btn-press"
-            >
-              <Send className="w-4 h-4" />
-            </button>
-          )}
+          {/* Footer with send/stop */}
+          <div className="flex items-center justify-end p-3 pt-0">
+            {isStreaming ? (
+              <button
+                type="button"
+                onClick={() => {
+                  if (streamingMessageId.current) {
+                    sendWebSocketMessage({
+                      type: 'cancel_streaming',
+                      messageId: streamingMessageId.current
+                    });
+                  }
+                }}
+                className="flex items-center gap-1 px-3 py-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-500 transition-colors"
+                aria-label="Stop generating"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="6" y="6" width="12" height="12" />
+                </svg>
+              </button>
+            ) : (
+              <button
+                type="submit"
+                disabled={!inputValue.trim()}
+                aria-label="Send message"
+                className={`flex items-center gap-1 px-3 py-2 rounded-lg transition-colors ${
+                  inputValue.trim()
+                    ? 'bg-[var(--hatchin-surface-elevated)] text-[var(--hatchin-text)] hover:bg-[var(--hatchin-border)]'
+                    : 'bg-[var(--hatchin-surface-elevated)] text-[var(--hatchin-text-muted)] cursor-not-allowed opacity-50'
+                }`}
+              >
+                <ArrowUpIcon className="w-4 h-4" />
+              </button>
+            )}
+          </div>
         </form>
       </div>
       {/* Add Hatch Modal */}

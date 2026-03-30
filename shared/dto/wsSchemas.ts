@@ -234,7 +234,7 @@ const requiredServerSchemas = z.union([
     reason: z.string(),
     currentUsage: z.number(),
     limit: z.number(),
-    upgradeUrl: z.string(),
+    upgradeUrl: z.string().optional(),
   }),
   z.object({
     type: z.literal('usage_warning'),
@@ -242,6 +242,57 @@ const requiredServerSchemas = z.union([
     currentUsage: z.number(),
     limit: z.number(),
     percentUsed: z.number(),
+  }),
+  // Project events
+  z.object({
+    type: z.literal('project_updated'),
+    projectId: z.string(),
+    name: z.string().optional(),
+    updatedBy: z.string().optional(),
+  }),
+  z.object({
+    type: z.literal('project_brain_updated'),
+    projectId: z.string(),
+    field: z.string().optional(),
+    value: z.unknown().optional(),
+    source: z.string().optional(),
+    patch: z.record(z.unknown()).optional(),
+  }),
+  // Safety events
+  z.object({
+    type: z.literal('safety_intervention'),
+    conversationId: z.string().optional(),
+    messageId: z.string().optional(),
+    safetyScore: z.record(z.unknown()).optional(),
+    decision: z.record(z.unknown()).optional(),
+    content: z.string().optional(),
+  }),
+  // v2.0: Deliverable events
+  z.object({
+    type: z.literal('deliverable_created'),
+    deliverable: z.record(z.unknown()),
+    generationTimeMs: z.number().optional(),
+  }),
+  z.object({
+    type: z.literal('deliverable_updated'),
+    deliverableId: z.string(),
+    status: z.string().optional(),
+  }),
+  z.object({
+    type: z.literal('package_complete'),
+    packageId: z.string(),
+    packageName: z.string(),
+    deliverableCount: z.number(),
+    skippedSteps: z.array(z.record(z.unknown())).optional(),
+    totalTimeMs: z.number().optional(),
+  }),
+  z.object({
+    type: z.literal('deliverable_proposal'),
+    proposalType: z.string(),
+    title: z.string(),
+    agentName: z.string(),
+    agentRole: z.string(),
+    confidence: z.number(),
   }),
 ]);
 

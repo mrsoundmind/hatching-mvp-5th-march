@@ -59,6 +59,7 @@ export function OnboardingManager({ onComplete, onStartWithIdeaPromptName }: Onb
   };
 
   const handleClose = () => {
+    completeOnboarding();
     setCurrentStep('completed');
   };
 

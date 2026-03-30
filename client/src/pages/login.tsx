@@ -157,7 +157,7 @@ export default function LoginPage() {
           </a>
 
           <p className="mt-8 text-sm text-muted-foreground font-light">
-            By continuing, you agree to our <a href="#" className="text-muted-foreground hover:text-foreground transition-colors underline decoration-border underline-offset-2">Terms of Service</a> and <a href="#" className="text-muted-foreground hover:text-foreground transition-colors underline decoration-border underline-offset-2">Privacy Policy</a>.
+            By continuing, you agree to our <a href="/legal/terms" className="text-muted-foreground hover:text-foreground transition-colors underline decoration-border underline-offset-2">Terms of Service</a> and <a href="/legal/privacy" className="text-muted-foreground hover:text-foreground transition-colors underline decoration-border underline-offset-2">Privacy Policy</a>.
           </p>
         </motion.div>
       </section>

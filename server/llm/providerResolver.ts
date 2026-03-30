@@ -7,6 +7,7 @@ import type {
   RuntimeConfig,
   RuntimeMode,
   ProviderHealth,
+  ModelTier,
 } from './providerTypes.js';
 import { OpenAIProvider } from './providers/openaiProvider.js';
 import { OllamaTestProvider } from './providers/ollamaProvider.js';
@@ -245,16 +246,13 @@ export async function generateChatWithRuntimeFallback(request: LLMRequest): Prom
     } catch (error: any) {
       attempted.push(providerId);
       lastError = error;
-
-      if (config.mode === 'prod') {
-        throw error;
-      }
+      console.error(`[LLM] Provider ${providerId} failed (generate), trying next:`, error.message || error);
 
       if (providerId === 'openai' && !isOpenAIQuotaError(error) && !isRecoverableOpenAITestError(error)) {
         throw error;
       }
 
-      // Continue fallback chain in test mode.
+      // Continue fallback chain in all modes (prod + test)
       continue;
     }
   }
@@ -284,15 +282,13 @@ export async function streamChatWithRuntimeFallback(request: LLMRequest): Promis
     } catch (error: any) {
       attempted.push(providerId);
       lastError = error;
-
-      if (config.mode === 'prod') {
-        throw error;
-      }
+      console.error(`[LLM] Provider ${providerId} failed (stream), trying next:`, error.message || error);
 
       if (providerId === 'openai' && !isOpenAIQuotaError(error) && !isRecoverableOpenAITestError(error)) {
         throw error;
       }
 
+      // Continue fallback chain in all modes (prod + test)
       continue;
     }
   }
@@ -417,6 +413,72 @@ export async function runRuntimeStartupChecks(): Promise<RuntimeDiagnostics> {
 
 export function getCachedRuntimeDiagnostics(): RuntimeDiagnostics | null {
   return cachedDiagnostics;
+}
+
+/**
+ * Resolve which model to use based on tier.
+ * - standard → Gemini 2.5 Flash (default)
+ * - premium → Gemini 2.5 Pro (for autonomy/peer review — Pro users only)
+ */
+export function resolveModelForTier(tier: ModelTier): { provider: ProviderId; model: string } {
+  if (tier === 'premium' && process.env.GEMINI_API_KEY) {
+    return {
+      provider: 'gemini',
+      model: process.env.GEMINI_PRO_MODEL || 'gemini-2.5-pro',
+    };
+  }
+  // Standard tier — use default config
+  const config = resolveRuntimeConfig();
+  return { provider: config.provider, model: config.model };
+}
+
+/**
+ * Generate with a preferred provider (e.g. Groq for task extraction).
+ * Falls back to default chain silently on failure.
+ */
+export async function generateWithPreferredProvider(
+  request: LLMRequest,
+  preferredProviderId: ProviderId,
+): Promise<LLMGenerationResult> {
+  const provider = providerRegistry[preferredProviderId];
+  if (provider) {
+    try {
+      const config = resolveRuntimeConfig();
+      const result = await provider.generateChat(
+        applyModelDefaults(request, config, preferredProviderId),
+        config.mode,
+      );
+      if (result.content?.trim()) {
+        return result;
+      }
+    } catch {
+      // Silent fallback to default chain
+    }
+  }
+  return generateChatWithRuntimeFallback(request);
+}
+
+/**
+ * Stream with a preferred provider (e.g. Groq for simple messages).
+ * Falls back to default streaming chain silently on failure.
+ */
+export async function streamWithPreferredProvider(
+  request: LLMRequest,
+  preferredProviderId: ProviderId,
+): Promise<LLMStreamResult> {
+  const provider = providerRegistry[preferredProviderId];
+  if (provider) {
+    try {
+      const config = resolveRuntimeConfig();
+      return await provider.streamChat(
+        applyModelDefaults(request, config, preferredProviderId),
+        config.mode,
+      );
+    } catch {
+      // Silent fallback to default chain
+    }
+  }
+  return streamChatWithRuntimeFallback(request);
 }
 
 export async function getProviderHealthSummary(): Promise<Record<ProviderId, ProviderHealth>> {

@@ -19,11 +19,27 @@ interface AutonomySettingsPanelProps {
 
 const DIAL_POSITIONS: AutonomyLevel[] = ['observe', 'propose', 'confirm', 'autonomous'];
 
-const DIAL_DESCRIPTIONS: Record<AutonomyLevel, string> = {
-  observe: 'Hatches suggest actions but never act without you.',
-  propose: 'Hatches draft plans and wait for your sign-off.',
-  confirm: 'Hatches work and ask before anything high-risk.',
-  autonomous: 'Hatches execute fully — you review completed work.',
+const DIAL_CONFIG: Record<AutonomyLevel, { description: string; gradient: string; textColor: string }> = {
+  observe: {
+    description: 'Hatches suggest actions but never act without you.',
+    gradient: 'linear-gradient(135deg, #4b5563, #6b7280)',
+    textColor: '#d1d5db',
+  },
+  propose: {
+    description: 'Hatches draft plans and wait for your sign-off.',
+    gradient: 'linear-gradient(135deg, #1d4ed8, #3b82f6)',
+    textColor: '#93c5fd',
+  },
+  confirm: {
+    description: 'Hatches work and ask before anything high-risk.',
+    gradient: 'linear-gradient(135deg, #4338ca, #6366f1)',
+    textColor: '#a5b4fc',
+  },
+  autonomous: {
+    description: 'Hatches execute fully — you review completed work.',
+    gradient: 'linear-gradient(135deg, #065f46, #10b981)',
+    textColor: '#6ee7b7',
+  },
 };
 
 const INACTIVITY_OPTIONS = [
@@ -48,11 +64,14 @@ export function AutonomySettingsPanel({ projectId, executionRules }: AutonomySet
     String((executionRules?.inactivityTriggerMinutes as number | undefined) ?? 120)
   );
 
-  // Cleanup debounce on unmount
   useEffect(() => {
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-    };
+    setAutonomyEnabled((executionRules?.autonomyEnabled as boolean | undefined) ?? false);
+    setAutonomyLevel((executionRules?.autonomyLevel as AutonomyLevel | undefined) ?? 'confirm');
+    setInactivityTriggerMinutes(String((executionRules?.inactivityTriggerMinutes as number | undefined) ?? 120));
+  }, [executionRules]);
+
+  useEffect(() => {
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, []);
 
   const schedulePatch = (settings: {
@@ -70,71 +89,62 @@ export function AutonomySettingsPanel({ projectId, executionRules }: AutonomySet
           body: JSON.stringify({ executionRules: settings }),
         });
         queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
-
-        // Flash save border
         if (panelRef.current) {
           panelRef.current.classList.add('flash-save');
           setTimeout(() => panelRef.current?.classList.remove('flash-save'), 1000);
         }
-      } catch {
-        // Silent — user will see it on next load
-      }
+      } catch { /* silent */ }
     }, 800);
   };
 
   const handleToggle = (checked: boolean) => {
     setAutonomyEnabled(checked);
-    schedulePatch({
-      autonomyEnabled: checked,
-      autonomyLevel,
-      inactivityTriggerMinutes: Number(inactivityTriggerMinutes),
-    });
+    schedulePatch({ autonomyEnabled: checked, autonomyLevel, inactivityTriggerMinutes: Number(inactivityTriggerMinutes) });
   };
 
   const handleDialChange = (level: AutonomyLevel) => {
     setAutonomyLevel(level);
-    schedulePatch({
-      autonomyEnabled,
-      autonomyLevel: level,
-      inactivityTriggerMinutes: Number(inactivityTriggerMinutes),
-    });
+    schedulePatch({ autonomyEnabled, autonomyLevel: level, inactivityTriggerMinutes: Number(inactivityTriggerMinutes) });
   };
 
   const handleInactivityChange = (value: string) => {
     setInactivityTriggerMinutes(value);
-    schedulePatch({
-      autonomyEnabled,
-      autonomyLevel,
-      inactivityTriggerMinutes: Number(value),
-      inactivityAutonomyEnabled: true,
-    });
+    schedulePatch({ autonomyEnabled, autonomyLevel, inactivityTriggerMinutes: Number(value), inactivityAutonomyEnabled: true });
   };
 
+  const config = DIAL_CONFIG[autonomyLevel];
+  const levelIndex = DIAL_POSITIONS.indexOf(autonomyLevel);
+
   return (
-    <div ref={panelRef} className="rounded-xl border border-[var(--hatchin-border-subtle)] p-4">
-      {/* Section header */}
-      <h3 className="text-[11px] font-semibold text-[var(--hatchin-text-muted)] uppercase tracking-wider mb-3">
-        Autonomy Settings
-      </h3>
+    <div ref={panelRef} className="premium-card p-4 space-y-4">
+      {/* Section header with gradient divider */}
+      <div className="flex items-center gap-2">
+        <span className="text-[11px] font-semibold text-[var(--hatchin-text-muted)] uppercase tracking-wider">
+          Autonomy Settings
+        </span>
+        <div className="flex-1 h-px bg-gradient-to-r from-[var(--hatchin-border-subtle)] to-transparent" />
+      </div>
 
       {/* Toggle row */}
-      <div className="flex items-start gap-3 mb-4">
-        <Switch
-          checked={autonomyEnabled}
-          onCheckedChange={handleToggle}
-          aria-label="Autonomous execution toggle"
-        />
+      <div className="flex items-start gap-3">
+        <div className="min-h-[44px] lg:min-h-auto flex items-center">
+          <Switch
+            checked={autonomyEnabled}
+            onCheckedChange={handleToggle}
+            aria-label="Autonomous execution toggle"
+          />
+        </div>
         <div className="flex-1 min-w-0">
           <p className="text-[13px] font-semibold text-[var(--hatchin-text)]">
             Autonomous execution
           </p>
-          <p className="text-[11px] text-[var(--hatchin-text-muted)]">
-            Hatches can work in the background
+          <p className="text-[11px] text-[var(--hatchin-text-muted)] mt-0.5">
+            {autonomyEnabled ? 'Hatches are working independently' : 'Hatches wait for your input'}
           </p>
         </div>
       </div>
 
-      {/* Inactivity trigger — only when enabled */}
+      {/* Auto-start timer (only when enabled) */}
       <AnimatePresence initial={false}>
         {autonomyEnabled && (
           <motion.div
@@ -144,15 +154,10 @@ export function AutonomySettingsPanel({ projectId, executionRules }: AutonomySet
             transition={{ duration: 0.2, ease: 'easeOut' }}
             className="overflow-hidden"
           >
-            <div className="flex items-center justify-between mb-4">
-              <span className="text-[12px] text-[var(--hatchin-text-muted)]">
-                Auto-start after
-              </span>
-              <Select
-                value={inactivityTriggerMinutes}
-                onValueChange={handleInactivityChange}
-              >
-                <SelectTrigger className="h-8 w-[130px] text-xs">
+            <div className="flex items-center justify-between">
+              <span className="text-[12px] text-[var(--hatchin-text-muted)]">Auto-start after</span>
+              <Select value={inactivityTriggerMinutes} onValueChange={handleInactivityChange}>
+                <SelectTrigger className="h-8 w-[120px] text-xs">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -168,41 +173,66 @@ export function AutonomySettingsPanel({ projectId, executionRules }: AutonomySet
         )}
       </AnimatePresence>
 
-      {/* Autonomy Dial */}
-      <div
-        role="radiogroup"
-        aria-label="Autonomy level"
-        className={`grid grid-cols-4 gap-0.5 rounded-lg border border-[var(--hatchin-border-subtle)] bg-[var(--hatchin-surface)] p-0.5 mb-2 ${!autonomyEnabled ? 'opacity-50 pointer-events-none' : ''}`}
-      >
-        {DIAL_POSITIONS.map(level => {
-          const isActive = autonomyLevel === level;
-          let activeClass = '';
-          if (isActive) {
-            activeClass = level === 'autonomous'
-              ? 'bg-[var(--hatchin-green)] text-white'
-              : 'bg-[var(--hatchin-blue)] text-white';
-          }
-          return (
-            <button
-              key={level}
-              type="button"
-              role="radio"
-              aria-checked={isActive}
-              onClick={() => handleDialChange(level)}
-              className={`h-8 text-xs font-medium capitalize rounded transition-colors duration-150 ${isActive ? activeClass : 'text-[var(--hatchin-text-muted)] hover:text-[var(--hatchin-text)]'}`}
-            >
-              {level}
-            </button>
-          );
-        })}
-      </div>
+      {/* Power level indicator dots */}
+      <div className={`space-y-2 ${!autonomyEnabled ? 'opacity-[0.65] grayscale-[50%] pointer-events-none' : ''}`}>
+        {/* 4 dot power meter */}
+        <div className="flex items-center gap-1.5">
+          {DIAL_POSITIONS.map((_, i) => (
+            <div
+              key={i}
+              className="flex-1 h-1 rounded-full transition-all duration-300"
+              style={{
+                background: i <= levelIndex ? config.gradient : 'var(--hatchin-surface)',
+              }}
+            />
+          ))}
+        </div>
 
-      {/* Dial description */}
-      <p
-        className={`text-[12px] text-[var(--hatchin-text-muted)] italic ${!autonomyEnabled ? 'opacity-50' : ''}`}
-      >
-        {DIAL_DESCRIPTIONS[autonomyLevel]}
-      </p>
+        {/* Level selector — 2x2 grid to prevent text truncation */}
+        <div
+          role="radiogroup"
+          aria-label="Autonomy level"
+          className="grid grid-cols-2 gap-1"
+        >
+          {DIAL_POSITIONS.map(level => {
+            const isActive = autonomyLevel === level;
+            const lvlConfig = DIAL_CONFIG[level];
+            return (
+              <button
+                key={level}
+                type="button"
+                role="radio"
+                aria-checked={isActive}
+                onClick={() => handleDialChange(level)}
+                className="flex items-center justify-center min-h-[44px] lg:min-h-[32px] text-[11px] font-medium capitalize rounded-md transition-all duration-200 border"
+                style={
+                  isActive
+                    ? {
+                        borderLeft: `3px solid ${lvlConfig.textColor}`,
+                        borderTop: '1px solid var(--hatchin-border-subtle)',
+                        borderRight: '1px solid var(--hatchin-border-subtle)',
+                        borderBottom: '1px solid var(--hatchin-border-subtle)',
+                        background: 'var(--glass-hover-bg)',
+                        color: 'var(--hatchin-text)',
+                      }
+                    : {
+                        borderColor: 'transparent',
+                        background: 'var(--hatchin-surface)',
+                        color: 'var(--hatchin-text-muted)',
+                      }
+                }
+              >
+                {level}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Active level description */}
+        <p className="text-[11px] leading-relaxed" style={{ color: config.textColor }}>
+          {config.description}
+        </p>
+      </div>
     </div>
   );
 }

@@ -24,6 +24,7 @@ async function main(): Promise<void> {
   let stored: any = null;
 
   const mockStorage: Partial<IStorage> = {
+    getProject: async (_id: string) => project,
     updateProject: async (_id: string, updates: any) => {
       stored = updates.executionRules;
       return { ...project, executionRules: updates.executionRules };

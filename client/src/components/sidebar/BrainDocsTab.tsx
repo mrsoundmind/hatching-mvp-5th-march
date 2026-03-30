@@ -1,13 +1,12 @@
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { useQueryClient } from '@tanstack/react-query';
-import { BookOpen } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { EmptyState } from '@/components/ui/EmptyState';
 import { DocumentUploadZone } from './DocumentUploadZone';
 import { DocumentCard } from './DocumentCard';
 import { AutonomySettingsPanel } from './AutonomySettingsPanel';
-import { WorkOutputSection } from './WorkOutputSection';
+import { DeliverableList } from '@/components/ArtifactPanel';
+import { PackageProgress } from '@/components/PackageProgress';
 import type { Project } from '@shared/schema';
 
 interface BrainDocsTabProps {
@@ -15,23 +14,26 @@ interface BrainDocsTabProps {
   project: Project | undefined;
 }
 
+/** Section divider with gradient line */
+function SectionDivider({ label }: { label: string }) {
+  return (
+    <div className="flex items-center gap-2 mb-3 mt-4">
+      <span className="text-[11px] font-semibold text-[var(--hatchin-text-muted)] uppercase tracking-wider shrink-0">
+        {label}
+      </span>
+      <div className="flex-1 h-px bg-gradient-to-r from-[var(--hatchin-border-subtle)] to-transparent" />
+    </div>
+  );
+}
+
 export function BrainDocsTab({ projectId, project }: BrainDocsTabProps) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
-
-  // Local optimistic removal state
   const [removingIds, setRemovingIds] = useState<Set<string>>(new Set());
 
-  const uploadZoneRef = useRef<HTMLButtonElement>(null);
-
-  if (!projectId) {
-    return null;
-  }
+  if (!projectId) return null;
 
   const documents = project?.brain?.documents ?? [];
-  const executionRules = project?.executionRules;
-
-  // Filter out optimistically removed docs
   const visibleDocs = documents.filter(doc => !removingIds.has(doc.id));
 
   const handleUploadComplete = () => {
@@ -40,56 +42,99 @@ export function BrainDocsTab({ projectId, project }: BrainDocsTabProps) {
   };
 
   const handleDelete = async (docId: string) => {
-    // Optimistic removal
     setRemovingIds(prev => new Set(prev).add(docId));
-
     try {
-      const res = await fetch(`/api/projects/${projectId}/brain/documents/${docId}`, {
-        method: 'DELETE',
-      });
+      const res = await fetch(`/api/projects/${projectId}/brain/documents/${docId}`, { method: 'DELETE' });
       if (!res.ok) throw new Error('delete failed');
       queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
       toast({ description: 'Document removed' });
     } catch {
-      // Restore on error
       setRemovingIds(prev => {
         const next = new Set(prev);
         next.delete(docId);
         return next;
       });
-      toast({
-        description: "Couldn't remove document. Try again.",
-        variant: 'destructive',
-      });
+      toast({ description: "Couldn't remove document. Try again.", variant: 'destructive' });
     }
   };
 
-  return (
-    <div className="px-4 py-4 flex flex-col gap-0">
-      {/* Upload zone */}
-      <DocumentUploadZone
-        projectId={projectId}
-        onUploadComplete={handleUploadComplete}
-      />
+  const coreDirection = (project?.coreDirection as Record<string, string> | undefined) || {};
+  const hasContext = !!(coreDirection.whatBuilding || coreDirection.whyMatters || coreDirection.whoFor);
 
-      {/* Document list or empty state */}
-      <div className="mt-3">
-        {visibleDocs.length === 0 ? (
-          <EmptyState
-            icon={BookOpen}
-            title="Your team's knowledge base"
-            description="Upload documents your Hatches can reference when working — briefs, specs, research, anything that gives them context."
-            action={{
-              label: 'Upload your first document',
-              onClick: () => {
-                // Trigger the hidden file input in DocumentUploadZone
-                // The upload zone's root div handles click internally
-                const zone = document.querySelector<HTMLElement>('[aria-label="Upload document — drag and drop or click to browse"]');
-                zone?.click();
-              },
-            }}
-          />
-        ) : (
+  return (
+    <div className="flex flex-col py-2">
+      <div className="mb-2 px-1 shrink-0">
+        <p className="text-[12px] font-medium hatchin-text mb-0.5">The Brain</p>
+        <p className="text-[10px] hatchin-text-muted">Project context, autonomy rules, and shared knowledge.</p>
+      </div>
+
+      {/* ——— Project Context ——— */}
+      {hasContext && (
+        <>
+          <SectionDivider label="Core Direction" />
+          <div className="px-2 space-y-3 mb-2">
+            {coreDirection.whatBuilding && (
+              <div>
+                <span className="text-[10px] font-semibold text-[var(--hatchin-blue)] uppercase">What we're building</span>
+                <p className="text-[12px] hatchin-text-muted mt-0.5 leading-relaxed">{coreDirection.whatBuilding}</p>
+              </div>
+            )}
+            {coreDirection.whoFor && (
+              <div>
+                <span className="text-[10px] font-semibold text-[var(--hatchin-orange)] uppercase">Who it's for</span>
+                <p className="text-[12px] hatchin-text-muted mt-0.5 leading-relaxed">{coreDirection.whoFor}</p>
+              </div>
+            )}
+            {coreDirection.whyMatters && (
+              <div>
+                <span className="text-[10px] font-semibold text-[#4ade80] uppercase">Why it matters</span>
+                <p className="text-[12px] hatchin-text-muted mt-0.5 leading-relaxed">{coreDirection.whyMatters}</p>
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
+      {/* ——— Autonomy ——— */}
+      <SectionDivider label="Autonomy" />
+      <div className="px-1">
+        <AutonomySettingsPanel
+          projectId={projectId}
+          executionRules={project?.executionRules as Record<string, unknown> | null | undefined}
+        />
+      </div>
+
+      {/* ——— Packages ——— */}
+      <SectionDivider label="Packages" />
+      <div className="px-2 mb-2">
+        <p className="text-[10px] hatchin-text-muted leading-relaxed">Milestones automatically tracked as Hatches complete related tasks.</p>
+      </div>
+      <div className="px-1">
+        <PackageProgress projectId={projectId} />
+      </div>
+
+      {/* ——— Deliverables ——— */}
+      <SectionDivider label="Deliverables" />
+      <div className="px-2 mb-2">
+        <p className="text-[10px] hatchin-text-muted leading-relaxed">Final output documents generated by Hatches for review.</p>
+      </div>
+      <div className="px-1">
+        <DeliverableList
+          projectId={projectId}
+          onSelect={(id) => {
+            window.dispatchEvent(new CustomEvent('open_deliverable', { detail: { deliverableId: id } }));
+          }}
+        />
+      </div>
+
+      {/* ——— Knowledge Base ——— */}
+      <SectionDivider label="Knowledge Base" />
+      <div className="px-1 flex flex-col gap-3">
+        <DocumentUploadZone
+          projectId={projectId}
+          onUploadComplete={handleUploadComplete}
+        />
+        {visibleDocs.length > 0 && (
           <div className="space-y-1.5">
             <AnimatePresence mode="popLayout">
               {visibleDocs.map(doc => (
@@ -103,21 +148,6 @@ export function BrainDocsTab({ projectId, project }: BrainDocsTabProps) {
           </div>
         )}
       </div>
-
-      {/* Spacer */}
-      <div className="my-6" />
-
-      {/* Autonomy settings */}
-      <AutonomySettingsPanel
-        projectId={projectId}
-        executionRules={executionRules as Record<string, unknown> | null | undefined}
-      />
-
-      {/* Spacer */}
-      <div className="my-6" />
-
-      {/* Work outputs */}
-      <WorkOutputSection projectId={projectId} />
     </div>
   );
 }

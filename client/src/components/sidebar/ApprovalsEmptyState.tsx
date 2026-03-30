@@ -1,5 +1,5 @@
 import { ShieldCheck } from 'lucide-react';
-import { EmptyState } from '@/components/ui/EmptyState';
+import { motion } from 'framer-motion';
 
 /**
  * Empty state for the Approvals tab.
@@ -10,11 +10,31 @@ import { EmptyState } from '@/components/ui/EmptyState';
 export function ApprovalsEmptyState() {
   return (
     <div aria-live="polite">
-      <EmptyState
-        icon={ShieldCheck}
-        title="Nothing needs your approval"
-        description="When a Hatch starts something that needs a sign-off, it'll show up here. You're in control of what gets acted on."
-      />
+      <div className="flex flex-col items-center justify-center py-12 px-6 text-center">
+        <motion.div
+          className="w-16 h-16 rounded-2xl bg-[var(--hatchin-surface)] flex items-center justify-center mb-4"
+          animate={{ y: [0, -4, 0] }}
+          transition={{ repeat: Infinity, duration: 3, ease: 'easeInOut' }}
+        >
+          <ShieldCheck className="w-8 h-8 hatchin-text-muted" />
+        </motion.div>
+        <motion.h3
+          className="text-sm font-semibold hatchin-text mb-2"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.15 }}
+        >
+          Nothing needs your approval
+        </motion.h3>
+        <motion.p
+          className="text-xs hatchin-text-muted max-w-[220px] leading-relaxed"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.3 }}
+        >
+          When a Hatch starts something that needs a sign-off, it'll show up here. You're in control of what gets acted on.
+        </motion.p>
+      </div>
     </div>
   );
 }

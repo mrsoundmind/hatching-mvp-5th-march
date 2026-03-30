@@ -1,4 +1,5 @@
 import { evaluateSafetyScore } from '../../ai/safety.js';
+import { getRoleIntelligence } from '@shared/roleIntelligence';
 
 export type HallucinationRiskLevel = 'low' | 'medium' | 'high';
 export type PassFail = 'pass' | 'fail';
@@ -11,9 +12,86 @@ export interface PeerReviewRubric {
   contradictions: string[];
   missingQuestions: string[];
   fixSuggestions: string[];
+  reviewLens?: string;
 }
 
 const FACTUAL_CLAIM_PATTERN = /\b(according to|research shows|always|never|guaranteed|proven|statistically|exactly \d+%|forecast)\b/i;
+
+/**
+ * Role-specific review keywords derived from each role's peerReviewLens.
+ * If the draft doesn't address concerns this reviewer cares about, they flag it.
+ */
+function generateRoleSpecificChecks(
+  reviewerRole: string,
+  lowerDraft: string,
+  lowerUser: string,
+  peerReviewLens: string | undefined,
+): { missingQuestions: string[]; fixSuggestions: string[] } {
+  const missingQuestions: string[] = [];
+  const fixSuggestions: string[] = [];
+
+  if (!peerReviewLens) return { missingQuestions, fixSuggestions };
+
+  const lensLower = peerReviewLens.toLowerCase();
+
+  // Engineering roles check for technical rigour
+  if (/edge case|failure mode|error handling|scalability/i.test(lensLower)) {
+    if (/build|implement|create|deploy|architecture/i.test(lowerUser) && !/error|fail|edge|rollback|scale/i.test(lowerDraft)) {
+      missingQuestions.push(`${reviewerRole} review: What happens when this fails? Edge cases and error handling not addressed.`);
+      fixSuggestions.push('Address failure modes and edge cases before committing to implementation.');
+    }
+  }
+
+  // Design roles check for user impact
+  if (/user experience|accessibility|cognitive load|usability/i.test(lensLower)) {
+    if (/design|ui|ux|interface|flow|screen/i.test(lowerUser) && !/user|accessible|wcag|intuitive|friction/i.test(lowerDraft)) {
+      missingQuestions.push(`${reviewerRole} review: How does this impact the user experience? Accessibility and usability not addressed.`);
+      fixSuggestions.push('Evaluate user impact, accessibility compliance, and cognitive load.');
+    }
+  }
+
+  // Data roles check for evidence and methodology
+  if (/statistical|bias|sample size|methodology|metric/i.test(lensLower)) {
+    if (/data|metric|analysis|trend|number|percent/i.test(lowerUser + ' ' + lowerDraft) && !/sample|confidence|bias|methodology|assumption/i.test(lowerDraft)) {
+      missingQuestions.push(`${reviewerRole} review: What's the methodology? Statistical validity and potential biases not addressed.`);
+      fixSuggestions.push('State sample size, confidence level, and potential biases in any data claims.');
+    }
+  }
+
+  // Strategy/PM roles check for alignment and trade-offs
+  if (/trade-off|priority|stakeholder|outcome|alignment/i.test(lensLower)) {
+    if (/strategy|plan|decision|priority|roadmap/i.test(lowerUser) && !/trade-off|risk|assumption|stakeholder|outcome/i.test(lowerDraft)) {
+      missingQuestions.push(`${reviewerRole} review: What are the trade-offs? Assumptions and stakeholder alignment not addressed.`);
+      fixSuggestions.push('Explicitly state trade-offs, key assumptions, and who needs to align.');
+    }
+  }
+
+  // Marketing/content roles check for audience fit
+  if (/audience|brand|tone|conversion|messaging/i.test(lensLower)) {
+    if (/content|copy|campaign|message|brand|marketing/i.test(lowerUser) && !/audience|tone|brand|target|persona/i.test(lowerDraft)) {
+      missingQuestions.push(`${reviewerRole} review: Who is this for? Audience targeting and brand alignment not addressed.`);
+      fixSuggestions.push('Clarify target audience and ensure messaging aligns with brand voice.');
+    }
+  }
+
+  // QA roles check for testability
+  if (/test|coverage|regression|acceptance criteria/i.test(lensLower)) {
+    if (/implement|build|feature|change|fix/i.test(lowerUser) && !/test|verify|acceptance|criteria|regression/i.test(lowerDraft)) {
+      missingQuestions.push(`${reviewerRole} review: How do we verify this works? No testing strategy or acceptance criteria mentioned.`);
+      fixSuggestions.push('Define acceptance criteria and testing strategy before implementation.');
+    }
+  }
+
+  // Ops roles check for process impact
+  if (/process|bottleneck|handoff|dependency|operational/i.test(lensLower)) {
+    if (/process|workflow|team|operation|handoff/i.test(lowerUser) && !/bottleneck|dependency|handoff|timeline|owner/i.test(lowerDraft)) {
+      missingQuestions.push(`${reviewerRole} review: What's the operational impact? Dependencies and bottlenecks not addressed.`);
+      fixSuggestions.push('Map dependencies, identify bottleneck risks, and assign owners.');
+    }
+  }
+
+  return { missingQuestions: missingQuestions.slice(0, 2), fixSuggestions: fixSuggestions.slice(0, 2) };
+}
 
 export function evaluatePeerReviewRubric(input: {
   reviewerHatchId: string;
@@ -22,6 +100,7 @@ export function evaluatePeerReviewRubric(input: {
   draftResponse: string;
   projectName?: string;
   canonHints?: string[];
+  peerReviewLens?: string;
 }): PeerReviewRubric {
   const safety = evaluateSafetyScore({
     userMessage: input.userMessage,
@@ -67,8 +146,15 @@ export function evaluatePeerReviewRubric(input: {
     fixSuggestions.push('Add concrete next actions with owner and timeline.');
   }
 
-  if (fixSuggestions.length > 5) {
-    fixSuggestions.splice(5);
+  // Role-specific checks using peerReviewLens from roleIntelligence
+  const reviewerIntelligence = getRoleIntelligence(input.reviewerRole);
+  const lens = input.peerReviewLens ?? reviewerIntelligence?.peerReviewLens;
+  const roleChecks = generateRoleSpecificChecks(input.reviewerRole, lowerDraft, lowerUser, lens);
+  missingQuestions.push(...roleChecks.missingQuestions);
+  fixSuggestions.push(...roleChecks.fixSuggestions);
+
+  if (fixSuggestions.length > 7) {
+    fixSuggestions.splice(7);
   }
 
   let hallucinationRisk: HallucinationRiskLevel = 'low';
@@ -79,11 +165,13 @@ export function evaluatePeerReviewRubric(input: {
     hallucinationRisk = 'medium';
   }
 
-  const roleFit: PassFail =
+  // Role fit: pass if the reviewer has relevant intelligence for this domain, not just "manager"
+  const roleFit: PassFail = reviewerIntelligence ? 'pass' : (
     input.reviewerRole.toLowerCase().includes('manager') ||
     /strategy|plan|task|execution|owner/i.test(input.draftResponse)
       ? 'pass'
-      : 'fail';
+      : 'fail'
+  );
 
   const usefulness: PassFail = fixSuggestions.length > 0 ? 'pass' : 'fail';
 
@@ -95,5 +183,6 @@ export function evaluatePeerReviewRubric(input: {
     contradictions,
     missingQuestions,
     fixSuggestions,
+    reviewLens: lens,
   };
 }

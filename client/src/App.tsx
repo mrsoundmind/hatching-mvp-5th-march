@@ -10,8 +10,11 @@ import LoginPage from "@/pages/login";
 import LandingPage from "@/pages/LandingPage";
 import { useAuth } from "@/hooks/useAuth";
 import { useEffect } from "react";
+import { ErrorBoundary } from "react-error-boundary";
 import AutonomyDashboard from "@/devtools/autonomyDashboard";
+import AccountPage from "@/pages/AccountPage";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import { AppErrorFallback } from "@/components/ErrorFallbacks";
 
 function AuthGuard({ children }: { children: React.ReactNode }) {
   const { isSignedIn, isLoading } = useAuth();
@@ -94,6 +97,11 @@ function Router() {
           </AuthGuard>
         )}
       </Route>
+      <Route path="/account">
+        <AuthGuard>
+          <AccountPage />
+        </AuthGuard>
+      </Route>
       <Route path="/dev/autonomy">
         <AuthGuard>
           <AutonomyDashboard />
@@ -106,14 +114,16 @@ function Router() {
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <ThemeProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Router />
-        </TooltipProvider>
-      </ThemeProvider>
-    </QueryClientProvider>
+    <ErrorBoundary FallbackComponent={AppErrorFallback}>
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Router />
+          </TooltipProvider>
+        </ThemeProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 }
 

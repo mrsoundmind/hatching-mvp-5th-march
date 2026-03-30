@@ -1,80 +1,116 @@
 {
   "testModules": [
     {
-      "moduleId": "scripts/test-storage-cost-cap.ts",
+      "moduleId": "/Users/shashankrai/Documents/hatching-mvp-5th-march/scripts/test-document-upload.test.ts",
       "tests": [
         {
-          "name": "countAutonomyEventsForProjectToday returns a number",
-          "fullName": "countAutonomyEventsForProjectToday returns a number",
+          "name": "accepts valid autonomyLevel: observe",
+          "fullName": "updateProjectSchema - executionRules autonomyLevel > accepts valid autonomyLevel: observe",
+          "state": "passed"
+        },
+        {
+          "name": "accepts valid autonomyLevel: propose",
+          "fullName": "updateProjectSchema - executionRules autonomyLevel > accepts valid autonomyLevel: propose",
+          "state": "passed"
+        },
+        {
+          "name": "accepts valid autonomyLevel: confirm",
+          "fullName": "updateProjectSchema - executionRules autonomyLevel > accepts valid autonomyLevel: confirm",
+          "state": "passed"
+        },
+        {
+          "name": "accepts valid autonomyLevel: autonomous",
+          "fullName": "updateProjectSchema - executionRules autonomyLevel > accepts valid autonomyLevel: autonomous",
+          "state": "passed"
+        },
+        {
+          "name": "rejects invalid autonomyLevel: \"invalid\"",
+          "fullName": "updateProjectSchema - executionRules autonomyLevel > rejects invalid autonomyLevel: \"invalid\"",
+          "state": "passed"
+        },
+        {
+          "name": "accepts minimum boundary: 30",
+          "fullName": "updateProjectSchema - executionRules inactivityTriggerMinutes > accepts minimum boundary: 30",
+          "state": "passed"
+        },
+        {
+          "name": "accepts maximum boundary: 480",
+          "fullName": "updateProjectSchema - executionRules inactivityTriggerMinutes > accepts maximum boundary: 480",
+          "state": "passed"
+        },
+        {
+          "name": "rejects below minimum: 29",
+          "fullName": "updateProjectSchema - executionRules inactivityTriggerMinutes > rejects below minimum: 29",
+          "state": "passed"
+        },
+        {
+          "name": "rejects above maximum: 481",
+          "fullName": "updateProjectSchema - executionRules inactivityTriggerMinutes > rejects above maximum: 481",
+          "state": "passed"
+        },
+        {
+          "name": "rejects non-integer: 30.5",
+          "fullName": "updateProjectSchema - executionRules inactivityTriggerMinutes > rejects non-integer: 30.5",
+          "state": "passed"
+        },
+        {
+          "name": "accepts uploaded-pdf type",
+          "fullName": "updateProjectSchema - brain document types (uploaded-*) > accepts uploaded-pdf type",
+          "state": "passed"
+        },
+        {
+          "name": "accepts uploaded-docx type",
+          "fullName": "updateProjectSchema - brain document types (uploaded-*) > accepts uploaded-docx type",
+          "state": "passed"
+        },
+        {
+          "name": "accepts uploaded-txt type",
+          "fullName": "updateProjectSchema - brain document types (uploaded-*) > accepts uploaded-txt type",
+          "state": "passed"
+        },
+        {
+          "name": "accepts uploaded-md type",
+          "fullName": "updateProjectSchema - brain document types (uploaded-*) > accepts uploaded-md type",
+          "state": "passed"
+        },
+        {
+          "name": "rejects unknown type: uploaded-xls",
+          "fullName": "updateProjectSchema - brain document types (uploaded-*) > rejects unknown type: uploaded-xls",
           "state": "passed"
         }
       ]
     },
     {
-      "moduleId": "scripts/test-task-graph-persistence.ts",
+      "moduleId": "/Users/shashankrai/Documents/hatching-mvp-5th-march/scripts/test-extract-document-text.test.ts",
       "tests": [
         {
-          "name": "persistTaskGraph stores graph in project executionRules",
-          "fullName": "persistTaskGraph stores graph in project executionRules",
+          "name": "Test 1: extracts plain text from .txt buffer",
+          "fullName": "extractDocumentText > Test 1: extracts plain text from .txt buffer",
           "state": "passed"
         },
         {
-          "name": "loadTaskGraph retrieves stored graph from project",
-          "fullName": "loadTaskGraph retrieves stored graph from project",
-          "state": "passed"
-        }
-      ]
-    },
-    {
-      "moduleId": "scripts/test-execution-pipeline.ts",
-      "tests": [
-        {
-          "name": "Low-risk auto-execute: status is completed with isAutonomous message",
-          "fullName": "Low-risk auto-execute: status is completed with isAutonomous message",
+          "name": "Test 2: extracts markdown content from .md buffer",
+          "fullName": "extractDocumentText > Test 2: extracts markdown content from .md buffer",
           "state": "passed"
         },
         {
-          "name": "High-risk block: task blocked with task_requires_approval event",
-          "fullName": "High-risk block: task blocked with task_requires_approval event",
+          "name": "Test 3: truncates content longer than 50,000 chars",
+          "fullName": "extractDocumentText > Test 3: truncates content longer than 50,000 chars",
           "state": "passed"
         },
         {
-          "name": "Backward check: taskExecutionPipeline has no runTurn or graph.invoke",
-          "fullName": "Backward check: taskExecutionPipeline has no runTurn or graph.invoke",
+          "name": "Test 4: returns empty string for unknown extension",
+          "fullName": "extractDocumentText > Test 4: returns empty string for unknown extension",
           "state": "passed"
         },
         {
-          "name": "Cost cap: handleTaskJob skips executeTask when daily cap reached",
-          "fullName": "Cost cap: handleTaskJob skips executeTask when daily cap reached",
-          "state": "passed"
-        },
-        {
-          "name": "WS event: background_execution_started broadcast before executeTask",
-          "fullName": "WS event: background_execution_started broadcast before executeTask",
-          "state": "passed"
-        },
-        {
-          "name": "WS event: task_execution_completed broadcast after low-risk completion",
-          "fullName": "WS event: task_execution_completed broadcast after low-risk completion",
-          "state": "passed"
-        },
-        {
-          "name": "handleTaskJob calls executeTask when cap not reached — task completes",
-          "fullName": "handleTaskJob calls executeTask when cap not reached — task completes",
-          "state": "passed"
-        },
-        {
-          "name": "startTaskWorker is exported from taskExecutionPipeline",
-          "fullName": "startTaskWorker is exported from taskExecutionPipeline",
-          "state": "passed"
-        },
-        {
-          "name": "startTaskWorker registers boss.work for autonomous_task_execution queue",
-          "fullName": "startTaskWorker registers boss.work for autonomous_task_execution queue",
+          "name": "Test 5: returns empty string for invalid PDF buffer (error handling)",
+          "fullName": "extractDocumentText > Test 5: returns empty string for invalid PDF buffer (error handling)",
           "state": "passed"
         }
       ]
     }
   ],
+  "unhandledErrors": [],
   "reason": "passed"
 }

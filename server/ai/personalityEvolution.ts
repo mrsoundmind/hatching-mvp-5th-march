@@ -2,6 +2,7 @@
 // Adapts AI agent personalities based on user interaction patterns and feedback
 
 import { UserBehaviorProfile, MessageAnalysis } from './userBehaviorAnalyzer.js';
+import { getRoleIntelligence } from '@shared/roleIntelligence';
 
 export interface PersonalityTraits {
   formality: number;        // 0-1 (casual to formal)
@@ -83,13 +84,25 @@ export class PersonalityEvolutionEngine {
   /**
    * Get or create personality profile for an agent-user pair
    */
-  getPersonalityProfile(agentId: string, userId: string): PersonalityProfile {
+  /**
+   * Resolve base traits from roleIntelligence (covers all 30+ roles) with hardcoded fallback.
+   */
+  private static resolveBaseTraits(role?: string | null): PersonalityTraits {
+    if (role) {
+      const intelligence = getRoleIntelligence(role);
+      if (intelligence) return { ...intelligence.baseTraitDefaults };
+    }
+    // Hardcoded fallback for unknown roles
+    return PersonalityEvolutionEngine.DEFAULT_TRAITS['Product Manager'];
+  }
+
+  getPersonalityProfile(agentId: string, userId: string, role?: string | null): PersonalityProfile {
     // Bug 5: normalise to bare agentId — strip composite "projectId:agentId" format
     const bareAgentId = agentId.includes(':') ? agentId.split(':').pop()! : agentId;
     const key = `${bareAgentId}-${userId}`;
 
     if (!this.personalityProfiles.has(key)) {
-      const baseTraits = PersonalityEvolutionEngine.DEFAULT_TRAITS[bareAgentId] ||
+      const baseTraits = PersonalityEvolutionEngine.resolveBaseTraits(role) ||
                         PersonalityEvolutionEngine.DEFAULT_TRAITS['Product Manager'];
 
       const profile: PersonalityProfile = {
@@ -117,13 +130,13 @@ export class PersonalityEvolutionEngine {
     agentId: string,
     userId: string,
     adaptedTraits: PersonalityTraits,
-    meta: { interactionCount: number; adaptationConfidence: number; lastUpdated: string }
+    meta: { interactionCount: number; adaptationConfidence: number; lastUpdated: string },
+    role?: string | null
   ): void {
     const bareAgentId = agentId.includes(':') ? agentId.split(':').pop()! : agentId;
     const key = `${bareAgentId}-${userId}`;
     if (this.personalityProfiles.has(key)) return;
-    const baseTraits = PersonalityEvolutionEngine.DEFAULT_TRAITS[bareAgentId] ||
-                       PersonalityEvolutionEngine.DEFAULT_TRAITS['Product Manager'];
+    const baseTraits = PersonalityEvolutionEngine.resolveBaseTraits(role);
     this.personalityProfiles.set(key, {
       agentId: bareAgentId,
       userId,

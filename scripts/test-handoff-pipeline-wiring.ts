@@ -55,6 +55,9 @@ console.log('\nTest 1: handleTaskJob completes task and no announcement on no_ne
         metadata: {}, createdAt: new Date(), updatedAt: new Date(),
         parentMessageId: null, replyCount: 0, isArchived: false },
     ],
+    getTasksByProject: async () => [],
+    getAgent: async () => null,
+    updateAgent: async () => undefined,
   };
 
   const broadcastToConversation = (_convId: string, payload: unknown) => {
@@ -115,6 +118,9 @@ console.log('\nTest 2: getMessagesByConversation called after task completes (ha
           parentMessageId: null, replyCount: 0, isArchived: false },
       ];
     },
+    getTasksByProject: async () => [],
+    getAgent: async () => null,
+    updateAgent: async () => undefined,
   };
 
   const broadcastToConversation = (_convId: string, payload: unknown) => {

@@ -10,7 +10,11 @@ interface ThemeContextValue {
 
 const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
 
+// Light mode disabled for now — force dark mode until light theme is fully polished
+const FORCE_DARK_MODE = true;
+
 function getInitialTheme(): Theme {
+  if (FORCE_DARK_MODE) return "dark";
   const stored = localStorage.getItem("hatchin-theme");
   if (stored === "light" || stored === "dark") return stored;
   return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
@@ -29,12 +33,14 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<Theme>(getInitialTheme);
 
   const setTheme = useCallback((newTheme: Theme) => {
+    if (FORCE_DARK_MODE) return; // light mode disabled
     setThemeState(newTheme);
     localStorage.setItem("hatchin-theme", newTheme);
     applyTheme(newTheme);
   }, []);
 
   const toggleTheme = useCallback(() => {
+    if (FORCE_DARK_MODE) return; // light mode disabled
     setTheme(theme === "dark" ? "light" : "dark");
   }, [theme, setTheme]);
 

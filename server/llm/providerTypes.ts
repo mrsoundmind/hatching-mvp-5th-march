@@ -7,9 +7,18 @@ export interface ChatMessage {
   content: string;
 }
 
+export type ModelTier = 'standard' | 'premium';
+
+export interface TokenUsage {
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+}
+
 export interface LLMRequest {
   messages: ChatMessage[];
   model?: string;
+  modelTier?: ModelTier;
   temperature?: number;
   maxTokens?: number;
   timeoutMs?: number;
@@ -24,6 +33,8 @@ export interface LLMResponseMetadata {
   temperature?: number;
   maxTokens?: number;
   fallbackChain?: ProviderId[];
+  tokenUsage?: TokenUsage;
+  modelTier?: ModelTier;
 }
 
 export interface LLMGenerationResult {

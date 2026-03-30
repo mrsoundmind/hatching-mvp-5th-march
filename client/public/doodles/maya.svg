@@ -1,0 +1,99 @@
+<svg viewBox="0 0 120 130" xmlns="http://www.w3.org/2000/svg">
+  <!-- Warm friendly Maya PM -->
+  <g>
+    <animateTransform attributeName="transform" type="translate" values="0,0;0,-2;0,0" dur="4s" repeatCount="indefinite"/>
+
+    <!-- Neck -->
+    <rect x="52" y="90" width="16" height="14" rx="6" fill="#e8b89d"/>
+
+    <!-- Hair back (dark brown bob) -->
+    <ellipse cx="60" cy="52" rx="34" ry="36" fill="#3d2314"/>
+
+    <!-- Face (warm skin) -->
+    <ellipse cx="60" cy="64" rx="26" ry="30" fill="#f0c8a8"/>
+
+    <!-- Hair front -->
+    <path d="M28 52c2-26 14-38 32-38 18 0 30 14 32 38" fill="#3d2314"/>
+    <path d="M28 52c-2 8-2 16-1 22l4-2c-1-8 0-14 2-18z" fill="#3d2314"/>
+    <path d="M92 52c2 8 2 16 1 22l-4-2c1-8 0-14-2-18z" fill="#3d2314"/>
+    <!-- Side bangs -->
+    <path d="M34 42c4-16 14-26 26-28 12-2 22 8 28 24l-3 4c-4-14-12-22-24-22-12 0-22 10-25 24z" fill="#4a2c1a"/>
+
+    <!-- Ears -->
+    <ellipse cx="34" cy="64" rx="5" ry="7" fill="#e8b89d"/>
+    <ellipse cx="86" cy="64" rx="5" ry="7" fill="#e8b89d"/>
+
+    <!-- Earrings -->
+    <g>
+      <animateTransform attributeName="transform" type="rotate" values="0 34 72;4 34 72;0 34 72;-4 34 72;0 34 72" dur="3s" repeatCount="indefinite"/>
+      <circle cx="34" cy="76" r="3.5" fill="#d946ef" opacity="0.9"/>
+    </g>
+    <g>
+      <animateTransform attributeName="transform" type="rotate" values="0 86 72;-4 86 72;0 86 72;4 86 72;0 86 72" dur="3s" begin="0.3s" repeatCount="indefinite"/>
+      <circle cx="86" cy="76" r="3.5" fill="#d946ef" opacity="0.9"/>
+    </g>
+
+    <!-- Eyebrows -->
+    <path d="M42 52c3-3 8-4 12-2" stroke="#3d2314" stroke-width="2" fill="none" stroke-linecap="round">
+      <animateTransform attributeName="transform" type="translate" values="0,0;0,-1.5;0,0" dur="5s" repeatCount="indefinite"/>
+    </path>
+    <path d="M66 50c4-2 9-1 12 2" stroke="#3d2314" stroke-width="2" fill="none" stroke-linecap="round">
+      <animateTransform attributeName="transform" type="translate" values="0,0;0,-1.5;0,0" dur="5s" begin="0.2s" repeatCount="indefinite"/>
+    </path>
+
+    <!-- Eyes (big, friendly) -->
+    <g>
+      <!-- Left eye white -->
+      <ellipse cx="48" cy="62" rx="7" ry="6.5" fill="white">
+        <animate attributeName="ry" values="6.5;0.5;6.5" dur="4s" begin="2s" repeatCount="indefinite" keyTimes="0;0.04;0.1" keySplines="0.4 0 0.2 1;0.4 0 0.2 1" calcMode="spline"/>
+      </ellipse>
+      <!-- Left iris -->
+      <ellipse cx="49" cy="63" rx="4" ry="4.2" fill="#6b3fa0">
+        <animate attributeName="ry" values="4.2;0.3;4.2" dur="4s" begin="2s" repeatCount="indefinite" keyTimes="0;0.04;0.1" keySplines="0.4 0 0.2 1;0.4 0 0.2 1" calcMode="spline"/>
+        <animate attributeName="cx" values="49;50;49;48;49" dur="6s" repeatCount="indefinite"/>
+      </ellipse>
+      <!-- Left pupil -->
+      <circle cx="49" cy="63" r="2" fill="#1a0a2e">
+        <animate attributeName="r" values="2;0.2;2" dur="4s" begin="2s" repeatCount="indefinite" keyTimes="0;0.04;0.1" keySplines="0.4 0 0.2 1;0.4 0 0.2 1" calcMode="spline"/>
+      </circle>
+      <!-- Left eye sparkle -->
+      <circle cx="46.5" cy="60.5" r="1.8" fill="white" opacity="0.9">
+        <animate attributeName="r" values="1.8;0;1.8" dur="4s" begin="2s" repeatCount="indefinite" keyTimes="0;0.04;0.1" keySplines="0.4 0 0.2 1;0.4 0 0.2 1" calcMode="spline"/>
+      </circle>
+
+      <!-- Right eye white -->
+      <ellipse cx="72" cy="62" rx="7" ry="6.5" fill="white">
+        <animate attributeName="ry" values="6.5;0.5;6.5" dur="4s" begin="2s" repeatCount="indefinite" keyTimes="0;0.04;0.1" keySplines="0.4 0 0.2 1;0.4 0 0.2 1" calcMode="spline"/>
+      </ellipse>
+      <!-- Right iris -->
+      <ellipse cx="71" cy="63" rx="4" ry="4.2" fill="#6b3fa0">
+        <animate attributeName="ry" values="4.2;0.3;4.2" dur="4s" begin="2s" repeatCount="indefinite" keyTimes="0;0.04;0.1" keySplines="0.4 0 0.2 1;0.4 0 0.2 1" calcMode="spline"/>
+        <animate attributeName="cx" values="71;72;71;70;71" dur="6s" repeatCount="indefinite"/>
+      </ellipse>
+      <!-- Right pupil -->
+      <circle cx="71" cy="63" r="2" fill="#1a0a2e">
+        <animate attributeName="r" values="2;0.2;2" dur="4s" begin="2s" repeatCount="indefinite" keyTimes="0;0.04;0.1" keySplines="0.4 0 0.2 1;0.4 0 0.2 1" calcMode="spline"/>
+      </circle>
+      <!-- Right eye sparkle -->
+      <circle cx="69" cy="60.5" r="1.8" fill="white" opacity="0.9">
+        <animate attributeName="r" values="1.8;0;1.8" dur="4s" begin="2s" repeatCount="indefinite" keyTimes="0;0.04;0.1" keySplines="0.4 0 0.2 1;0.4 0 0.2 1" calcMode="spline"/>
+      </circle>
+    </g>
+
+    <!-- Nose -->
+    <path d="M58 70c1 3 3 4 5 3" stroke="#d4a088" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+
+    <!-- Rosy cheeks -->
+    <ellipse cx="40" cy="72" rx="6" ry="3.5" fill="#e8878f" opacity="0.3">
+      <animate attributeName="opacity" values="0.25;0.4;0.25" dur="3s" repeatCount="indefinite"/>
+    </ellipse>
+    <ellipse cx="80" cy="72" rx="6" ry="3.5" fill="#e8878f" opacity="0.3">
+      <animate attributeName="opacity" values="0.25;0.4;0.25" dur="3s" begin="0.5s" repeatCount="indefinite"/>
+    </ellipse>
+
+    <!-- Big warm smile -->
+    <path d="M46 78c4 6 12 8 20 5 2-1 3-2 4-4" stroke="#c47062" stroke-width="2.2" fill="none" stroke-linecap="round">
+      <animate attributeName="d" values="M46 78c4 6 12 8 20 5 2-1 3-2 4-4;M46 77c4 7 12 9 20 6 2-1 3-2 4-4;M46 78c4 6 12 8 20 5 2-1 3-2 4-4" dur="3s" repeatCount="indefinite"/>
+    </path>
+  </g>
+</svg>

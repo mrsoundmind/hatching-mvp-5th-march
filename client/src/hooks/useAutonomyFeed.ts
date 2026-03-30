@@ -74,25 +74,77 @@ function mapEventTypeToCategory(eventType: string): FeedEvent['category'] {
 }
 
 function buildLabel(eventType: string, agentName: string | null, payload: Record<string, unknown>): string {
-  const name = agentName || 'Agent';
-  const taskTitle = typeof payload?.taskTitle === 'string' ? payload.taskTitle : 'task';
+  const name = agentName || 'An agent';
+  const taskTitle = typeof payload?.taskTitle === 'string' ? payload.taskTitle : '';
+  const suffix = taskTitle ? `: ${taskTitle}` : '';
 
   switch (eventType) {
+    // Task lifecycle
     case 'task_completed':
-      return `${name} completed: ${taskTitle}`;
+      return `${name} completed a task${suffix}`;
     case 'task_executing':
     case 'task_started':
-      return `${name} started: ${taskTitle}`;
-    case 'handoff_announced':
-      return `${name} handed off: ${taskTitle}`;
-    case 'handoff_chain_completed':
-      return `Handoff chain completed (${typeof payload?.hops === 'number' ? payload.hops : '?'} hops)`;
+      return `${name} started working${suffix}`;
+    case 'background_execution_started':
+      return `${name} began working in the background${suffix}`;
+    case 'background_execution_completed':
+      return `${name} finished background work${suffix}`;
+
+    // Handoffs
+    case 'handoff_announced': {
+      const toAgent = typeof payload?.toAgentName === 'string' ? payload.toAgentName : null;
+      return toAgent ? `${name} handed off to ${toAgent}${suffix}` : `${name} handed off work${suffix}`;
+    }
+    case 'handoff_chain_completed': {
+      const hops = typeof payload?.hops === 'number' ? payload.hops : null;
+      return hops ? `Handoff chain completed (${hops} steps)` : 'Handoff chain completed';
+    }
+
+    // Approvals
     case 'approval_required':
-      return `${name} needs approval: ${taskTitle}`;
+      return `${name} needs your approval${suffix}`;
+    case 'approval_granted':
+      return `Approval granted${suffix}`;
+    case 'approval_rejected':
+      return `Approval rejected${suffix}`;
+
+    // Peer review
+    case 'peer_review_started':
+      return `Peer review started for ${name}`;
     case 'peer_review_completed':
       return `Peer review completed for ${name}`;
-    default:
-      return `${eventType.replace(/_/g, ' ')}`;
+    case 'peer_review_feedback':
+      return `${name} received peer feedback`;
+
+    // AI pipeline internals — translate to plain English
+    case 'agent_synthesis_completed':
+    case 'agent_synthesis':
+      return `${name} synthesised a response`;
+    case 'agent_revision_completed':
+    case 'agent_revision':
+      return `${name} revised their output`;
+    case 'agent_hatch_selected':
+    case 'hatch_selected':
+      return `${name} was selected for this task`;
+    case 'agent_deliberation_completed':
+    case 'deliberation_completed':
+      return `${name} reached a decision`;
+    case 'agent_planning_completed':
+    case 'planning_completed':
+      return `${name} finished planning`;
+    case 'provider_fallback_resolved':
+      return `AI provider fallback resolved`;
+    case 'context_compacted':
+      return `${name}'s context was compacted`;
+
+    default: {
+      // Convert snake_case to readable words — strip leading "agent_" prefix
+      let readable = eventType
+        .replace(/^agent_/, '')
+        .replace(/_/g, ' ')
+        .replace(/\b\w/g, c => c.toUpperCase());
+      return agentName ? `${agentName}: ${readable}` : readable;
+    }
   }
 }
 
@@ -113,7 +165,7 @@ interface RawApiEvent {
 
 function mapAutonomyEventToFeedEvent(raw: RawApiEvent): FeedEvent {
   const agentId = raw.agentId || raw.hatchId || null;
-  const agentName = raw.agentName || (raw.payload?.agentName as string) || null;
+  const agentName = raw.agentName || (raw.payload?.agentName as string) || (raw.payload?.hatchName as string) || null;
   const category = mapEventTypeToCategory(raw.eventType);
   const payload = raw.expandableData || raw.payload || {};
 
@@ -170,7 +222,7 @@ export function useAutonomyFeed(projectId: string | undefined) {
   const [unreadCount, setUnreadCount] = useState(0);
   const [activeFilter, setActiveFilter] = useState<FilterCategory>('all');
   const [agentFilter, setAgentFilter] = useState<string | null>(null);
-  const [timeFilter, setTimeFilter] = useState<TimeFilter>('all');
+  const [timeFilter] = useState<TimeFilter>('today');
 
   // Debounce batching refs
   const pendingBatch = useRef<FeedEvent[]>([]);
@@ -319,7 +371,5 @@ export function useAutonomyFeed(projectId: string | undefined) {
     setActiveFilter,
     agentFilter,
     setAgentFilter,
-    timeFilter,
-    setTimeFilter,
   };
 }

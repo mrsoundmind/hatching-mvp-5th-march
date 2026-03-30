@@ -20,6 +20,8 @@ export interface CharacterProfile {
   };
   neverSays: string[];
   thinkingPhrase: string;
+  negativeHandling?: string;
+  collaborationStyle?: string;
 }
 
 function toCharacterProfile(def: NonNullable<ReturnType<typeof getRoleDefinition>>): CharacterProfile {
@@ -31,6 +33,8 @@ function toCharacterProfile(def: NonNullable<ReturnType<typeof getRoleDefinition
     emotionalSignature: def.emotionalSignature,
     neverSays: def.neverSays,
     thinkingPhrase: def.thinkingPhrase,
+    negativeHandling: def.negativeHandling,
+    collaborationStyle: def.collaborationStyle,
   };
 }
 
@@ -40,10 +44,10 @@ export const characterProfiles: Record<string, CharacterProfile> = Object.fromEn
 
 // Maya convenience export (kept for backward compatibility with existing callers)
 export const mayaCharacterProfile: CharacterProfile =
-  characterProfiles["AI Idea Partner"] ?? toCharacterProfile(ROLE_DEFINITIONS[ROLE_DEFINITIONS.length - 1]);
+  characterProfiles["Idea Partner"] ?? toCharacterProfile(ROLE_DEFINITIONS[ROLE_DEFINITIONS.length - 1]);
 
 export function getCharacterProfile(role: string): CharacterProfile | null {
-  if (role === "Maya" || role === "AI Idea Partner") return mayaCharacterProfile;
+  if (role === "Maya" || role === "Idea Partner") return mayaCharacterProfile;
   const def = getRoleDefinition(role);
   return def ? toCharacterProfile(def) : null;
 }

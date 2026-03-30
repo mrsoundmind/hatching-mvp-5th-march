@@ -46,8 +46,8 @@ const TEAM_TEMPLATES: TeamTemplate[] = [
     suggested: true,
     agents: [
       { name: 'Alex', role: 'Product Manager', color: 'blue', initials: 'PM' },
-      { name: 'Sarah', role: 'UI Designer', color: 'green', initials: 'UD' },
-      { name: 'Mike', role: 'Developer', color: 'purple', initials: 'DV' }
+      { name: 'Arlo', role: 'UI Designer', color: 'green', initials: 'UD' },
+      { name: 'Coda', role: 'Software Engineer', color: 'purple', initials: 'SE' }
     ]
   },
   {
@@ -56,9 +56,9 @@ const TEAM_TEMPLATES: TeamTemplate[] = [
     description: 'Grow your audience and revenue',
     icon: '📈',
     agents: [
-      { name: 'Emma', role: 'Growth Expert', color: 'orange', initials: 'GE' },
-      { name: 'Jake', role: 'Copywriter', color: 'pink', initials: 'CW' },
-      { name: 'Lisa', role: 'Content Creator', color: 'yellow', initials: 'CC' }
+      { name: 'Kai', role: 'Growth Marketer', color: 'orange', initials: 'GM' },
+      { name: 'Wren', role: 'Copywriter', color: 'pink', initials: 'CW' },
+      { name: 'Mira', role: 'Content Writer', color: 'yellow', initials: 'CW' }
     ]
   },
   {
@@ -67,9 +67,9 @@ const TEAM_TEMPLATES: TeamTemplate[] = [
     description: 'Create beautiful experiences',
     icon: '🎨',
     agents: [
-      { name: 'Sarah', role: 'UI Designer', color: 'green', initials: 'UD' },
-      { name: 'Tom', role: 'Brand Strategist', color: 'indigo', initials: 'BS' },
-      { name: 'Jake', role: 'Copywriter', color: 'pink', initials: 'CW' }
+      { name: 'Arlo', role: 'UI Designer', color: 'green', initials: 'UD' },
+      { name: 'Cass', role: 'Brand Strategist', color: 'indigo', initials: 'BS' },
+      { name: 'Wren', role: 'Copywriter', color: 'pink', initials: 'CW' }
     ]
   },
   {
@@ -78,9 +78,9 @@ const TEAM_TEMPLATES: TeamTemplate[] = [
     description: 'Build robust and scalable systems',
     icon: '⚙️',
     agents: [
-      { name: 'Mike', role: 'Developer', color: 'purple', initials: 'DV' },
+      { name: 'Coda', role: 'Software Engineer', color: 'purple', initials: 'SE' },
       { name: 'Alex', role: 'Product Manager', color: 'blue', initials: 'PM' },
-      { name: 'Emma', role: 'Growth Expert', color: 'orange', initials: 'GE' }
+      { name: 'Kai', role: 'Growth Marketer', color: 'orange', initials: 'GM' }
     ]
   },
   {
@@ -90,9 +90,9 @@ const TEAM_TEMPLATES: TeamTemplate[] = [
     icon: '🚀',
     agents: [
       { name: 'Alex', role: 'Product Manager', color: 'blue', initials: 'PM' },
-      { name: 'Emma', role: 'Growth Expert', color: 'orange', initials: 'GE' },
-      { name: 'Jake', role: 'Copywriter', color: 'pink', initials: 'CW' },
-      { name: 'Nina', role: 'PR Specialist', color: 'cyan', initials: 'PR' }
+      { name: 'Kai', role: 'Growth Marketer', color: 'orange', initials: 'GM' },
+      { name: 'Wren', role: 'Copywriter', color: 'pink', initials: 'CW' },
+      { name: 'Nova', role: 'Marketing Specialist', color: 'cyan', initials: 'MS' }
     ]
   },
   {
@@ -101,8 +101,8 @@ const TEAM_TEMPLATES: TeamTemplate[] = [
     description: 'Make data-driven decisions',
     icon: '📊',
     agents: [
-      { name: 'David', role: 'Data Analyst', color: 'teal', initials: 'DA' },
-      { name: 'Emma', role: 'Growth Expert', color: 'orange', initials: 'GE' },
+      { name: 'Rio', role: 'Data Analyst', color: 'teal', initials: 'DA' },
+      { name: 'Kai', role: 'Growth Marketer', color: 'orange', initials: 'GM' },
       { name: 'Alex', role: 'Product Manager', color: 'blue', initials: 'PM' }
     ]
   },
@@ -112,10 +112,10 @@ const TEAM_TEMPLATES: TeamTemplate[] = [
     description: 'Create engaging content and storytelling',
     icon: '✍️',
     agents: [
-      { name: 'Lisa', role: 'Content Creator', color: 'yellow', initials: 'CC' },
-      { name: 'Jake', role: 'Copywriter', color: 'pink', initials: 'CW' },
-      { name: 'Tom', role: 'Brand Strategist', color: 'indigo', initials: 'BS' },
-      { name: 'Nina', role: 'PR Specialist', color: 'cyan', initials: 'PR' }
+      { name: 'Mira', role: 'Content Writer', color: 'yellow', initials: 'CW' },
+      { name: 'Wren', role: 'Copywriter', color: 'pink', initials: 'CW' },
+      { name: 'Cass', role: 'Brand Strategist', color: 'indigo', initials: 'BS' },
+      { name: 'Nova', role: 'Marketing Specialist', color: 'cyan', initials: 'MS' }
     ]
   },
   {
@@ -124,16 +124,16 @@ const TEAM_TEMPLATES: TeamTemplate[] = [
     description: 'Ensure customer satisfaction and retention',
     icon: '🤝',
     agents: [
-      { name: 'Amy', role: 'Customer Success', color: 'emerald', initials: 'CS' },
-      { name: 'Jake', role: 'Copywriter', color: 'pink', initials: 'CW' },
-      { name: 'Emma', role: 'Growth Expert', color: 'orange', initials: 'GE' }
+      { name: 'Quinn', role: 'Operations Manager', color: 'emerald', initials: 'OM' },
+      { name: 'Wren', role: 'Copywriter', color: 'pink', initials: 'CW' },
+      { name: 'Kai', role: 'Growth Marketer', color: 'orange', initials: 'GM' }
     ]
   }
 ];
 
 const INDIVIDUAL_AGENTS: IndividualAgent[] = [
   {
-    name: 'Product Manager',
+    name: 'Alex',
     role: 'Product Manager',
     color: 'blue',
     initials: 'PM',
@@ -141,7 +141,7 @@ const INDIVIDUAL_AGENTS: IndividualAgent[] = [
     expertise: ['Product Strategy', 'User Research', 'Roadmap Planning']
   },
   {
-    name: 'Product Designer',
+    name: 'Cleo',
     role: 'Product Designer',
     color: 'green',
     initials: 'PD',
@@ -149,7 +149,7 @@ const INDIVIDUAL_AGENTS: IndividualAgent[] = [
     expertise: ['UI/UX Design', 'Prototyping', 'User Testing']
   },
   {
-    name: 'UI Engineer',
+    name: 'Finn',
     role: 'UI Engineer',
     color: 'purple',
     initials: 'UE',
@@ -157,7 +157,7 @@ const INDIVIDUAL_AGENTS: IndividualAgent[] = [
     expertise: ['React', 'TypeScript', 'Frontend Architecture']
   },
   {
-    name: 'Backend Developer',
+    name: 'Dev',
     role: 'Backend Developer',
     color: 'red',
     initials: 'BD',
@@ -165,15 +165,15 @@ const INDIVIDUAL_AGENTS: IndividualAgent[] = [
     expertise: ['Node.js', 'Databases', 'API Design']
   },
   {
-    name: 'Growth Expert',
-    role: 'Growth Expert',
+    name: 'Kai',
+    role: 'Growth Marketer',
     color: 'orange',
     initials: 'GE',
     description: 'Drives user acquisition, retention, and revenue growth through data-driven strategies.',
     expertise: ['Growth Hacking', 'Analytics', 'User Acquisition']
   },
   {
-    name: 'Copywriter',
+    name: 'Wren',
     role: 'Copywriter',
     color: 'pink',
     initials: 'CW',
@@ -181,15 +181,15 @@ const INDIVIDUAL_AGENTS: IndividualAgent[] = [
     expertise: ['Copywriting', 'Brand Voice', 'Conversion Optimization']
   },
   {
-    name: 'Content Creator',
-    role: 'Content Creator',
+    name: 'Mira',
+    role: 'Content Writer',
     color: 'yellow',
     initials: 'CC',
     description: 'Develops engaging content strategies and creates multimedia content that resonates with audiences.',
     expertise: ['Content Strategy', 'Video Production', 'Social Media']
   },
   {
-    name: 'Brand Strategist',
+    name: 'Cass',
     role: 'Brand Strategist',
     color: 'indigo',
     initials: 'BS',
@@ -197,23 +197,23 @@ const INDIVIDUAL_AGENTS: IndividualAgent[] = [
     expertise: ['Brand Strategy', 'Market Positioning', 'Brand Identity']
   },
   {
-    name: 'Customer Success',
-    role: 'Customer Success',
+    name: 'Quinn',
+    role: 'Operations Manager',
     color: 'emerald',
     initials: 'CS',
-    description: 'Ensures customer satisfaction, drives adoption, and builds long-term relationships.',
-    expertise: ['Customer Onboarding', 'Retention', 'Support Strategy']
+    description: 'Ensures operational excellence, process optimization, and builds efficient team workflows.',
+    expertise: ['Operations', 'Process Design', 'Team Coordination']
   },
   {
-    name: 'PR Specialist',
-    role: 'PR Specialist',
+    name: 'Nova',
+    role: 'Marketing Specialist',
     color: 'cyan',
     initials: 'PR',
-    description: 'Manages public relations, media outreach, and builds brand awareness through strategic communications.',
-    expertise: ['Media Relations', 'Press Releases', 'Crisis Communication']
+    description: 'Manages marketing campaigns, outreach, and builds brand awareness through strategic communications.',
+    expertise: ['Marketing Strategy', 'Campaigns', 'Brand Awareness']
   },
   {
-    name: 'Data Analyst',
+    name: 'Rio',
     role: 'Data Analyst',
     color: 'teal',
     initials: 'DA',
@@ -221,15 +221,15 @@ const INDIVIDUAL_AGENTS: IndividualAgent[] = [
     expertise: ['Data Analysis', 'Business Intelligence', 'Reporting']
   },
   {
-    name: 'Sales Expert',
-    role: 'Sales Expert',
+    name: 'Blake',
+    role: 'Business Strategist',
     color: 'rose',
     initials: 'SE',
-    description: 'Drives revenue growth through strategic sales processes, lead qualification, and relationship building.',
-    expertise: ['Sales Strategy', 'Lead Generation', 'Conversion Optimization']
+    description: 'Drives business growth through strategic planning, market analysis, and relationship building.',
+    expertise: ['Business Strategy', 'Market Analysis', 'Growth Planning']
   },
   {
-    name: 'DevOps Engineer',
+    name: 'Remy',
     role: 'DevOps Engineer',
     color: 'slate',
     initials: 'DO',
@@ -237,12 +237,132 @@ const INDIVIDUAL_AGENTS: IndividualAgent[] = [
     expertise: ['CI/CD', 'Cloud Infrastructure', 'Monitoring']
   },
   {
-    name: 'QA Lead',
+    name: 'Sam',
     role: 'QA Lead',
     color: 'amber',
     initials: 'QA',
     description: 'Ensures product quality through comprehensive testing strategies and quality assurance processes.',
     expertise: ['Test Automation', 'Quality Processes', 'Bug Tracking']
+  },
+  {
+    name: 'Morgan',
+    role: 'Business Analyst',
+    color: 'sky',
+    initials: 'BA',
+    description: 'Bridges business needs and technical solutions through requirements analysis and process modeling.',
+    expertise: ['Requirements Analysis', 'Process Modeling', 'Stakeholder Management']
+  },
+  {
+    name: 'Coda',
+    role: 'Software Engineer',
+    color: 'violet',
+    initials: 'SE',
+    description: 'Builds reliable, maintainable software systems with a focus on clean architecture and code quality.',
+    expertise: ['Software Architecture', 'Code Quality', 'System Design']
+  },
+  {
+    name: 'Jordan',
+    role: 'Technical Lead',
+    color: 'zinc',
+    initials: 'TL',
+    description: 'Guides technical direction, mentors engineers, and ensures architectural consistency across the stack.',
+    expertise: ['Tech Strategy', 'Code Review', 'Architecture']
+  },
+  {
+    name: 'Nyx',
+    role: 'AI Developer',
+    color: 'fuchsia',
+    initials: 'AI',
+    description: 'Designs and implements machine learning models, AI pipelines, and intelligent automation systems.',
+    expertise: ['Machine Learning', 'NLP', 'AI Systems']
+  },
+  {
+    name: 'Lumi',
+    role: 'UX Designer',
+    color: 'lime',
+    initials: 'UX',
+    description: 'Champions user-centered design through research, testing, and intuitive interaction patterns.',
+    expertise: ['UX Research', 'Interaction Design', 'Usability Testing']
+  },
+  {
+    name: 'Arlo',
+    role: 'UI Designer',
+    color: 'green',
+    initials: 'UD',
+    description: 'Creates visually stunning interfaces with meticulous attention to typography, color, and layout.',
+    expertise: ['Visual Design', 'Design Systems', 'Typography']
+  },
+  {
+    name: 'Roux',
+    role: 'Designer',
+    color: 'orange',
+    initials: 'DS',
+    description: 'Versatile designer covering visual, product, and graphic design with a creative eye.',
+    expertise: ['Graphic Design', 'Visual Identity', 'Creative Direction']
+  },
+  {
+    name: 'Zara',
+    role: 'Creative Director',
+    color: 'rose',
+    initials: 'CD',
+    description: 'Sets creative vision and ensures brand consistency across all touchpoints and campaigns.',
+    expertise: ['Creative Strategy', 'Art Direction', 'Brand Storytelling']
+  },
+  {
+    name: 'Robin',
+    role: 'SEO Specialist',
+    color: 'emerald',
+    initials: 'SS',
+    description: 'Optimizes search visibility through technical SEO, content strategy, and performance analytics.',
+    expertise: ['Technical SEO', 'Keyword Research', 'Search Analytics']
+  },
+  {
+    name: 'Pixel',
+    role: 'Social Media Manager',
+    color: 'cyan',
+    initials: 'SM',
+    description: 'Builds engaged communities and manages social presence across platforms with creative content.',
+    expertise: ['Social Strategy', 'Community Management', 'Content Calendar']
+  },
+  {
+    name: 'Drew',
+    role: 'Email Specialist',
+    color: 'amber',
+    initials: 'ES',
+    description: 'Designs high-converting email campaigns, automation flows, and subscriber growth strategies.',
+    expertise: ['Email Marketing', 'Automation', 'A/B Testing']
+  },
+  {
+    name: 'Sage',
+    role: 'Data Scientist',
+    color: 'teal',
+    initials: 'DS',
+    description: 'Extracts insights from complex datasets using statistical modeling and machine learning techniques.',
+    expertise: ['Statistical Modeling', 'Data Visualization', 'Predictive Analytics']
+  },
+  {
+    name: 'Taylor',
+    role: 'HR Specialist',
+    color: 'pink',
+    initials: 'HR',
+    description: 'Manages talent acquisition, team culture, and organizational development for growing teams.',
+    expertise: ['Talent Management', 'Culture Building', 'Organizational Design']
+  },
+  {
+    name: 'Lee',
+    role: 'Instructional Designer',
+    color: 'indigo',
+    initials: 'ID',
+    description: 'Creates effective learning experiences, training materials, and educational content.',
+    expertise: ['Learning Design', 'Curriculum Development', 'E-Learning']
+  },
+  {
+    name: 'Vince',
+    role: 'Audio Editor',
+    color: 'slate',
+    initials: 'AE',
+    description: 'Produces professional audio content including podcasts, music, and sound design.',
+    expertise: ['Audio Production', 'Sound Design', 'Podcast Editing']
   }
 ];
 
@@ -334,7 +454,7 @@ export function AddHatchModal({ isOpen, onClose, onAddAgent, activeProject, exis
         if (existingAgent) continue; // Skip if already exists
 
         const agentData: Omit<Agent, 'id'> = {
-          name: templateAgent.role, // Use role as default name
+          name: templateAgent.name, // Use character name from template
           role: templateAgent.role,
           color: templateAgent.color,
           userId: 'current-user',
@@ -344,7 +464,7 @@ export function AddHatchModal({ isOpen, onClose, onAddAgent, activeProject, exis
             traits: [],
             communicationStyle: 'professional',
             expertise: [],
-            welcomeMessage: `Hi! I'm your ${templateAgent.role}. Ready to help ${template.name}!`
+            welcomeMessage: `Hi! I'm ${templateAgent.name}, your ${templateAgent.role}. Ready to help ${template.name}!`
           },
           isSpecialAgent: false
         };
@@ -403,7 +523,7 @@ export function AddHatchModal({ isOpen, onClose, onAddAgent, activeProject, exis
       }
 
       const agentData: Omit<Agent, 'id'> = {
-        name: agent.role, // Use role as default name
+        name: agent.name, // Use character name (e.g., "Alex" not "Product Manager")
         role: agent.role,
         color: agent.color,
         userId: 'current-user',

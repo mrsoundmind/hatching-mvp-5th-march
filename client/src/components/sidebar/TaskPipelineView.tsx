@@ -6,38 +6,85 @@ interface TaskPipelineViewProps {
   tasks: Task[];
 }
 
+const STAGE_COLORS: Record<string, string> = {
+  queued:     'var(--hatchin-text-muted)',
+  assigned:   'var(--hatchin-blue)',
+  inprogress: 'var(--hatchin-blue)',
+  review:     'var(--hatchin-orange)',
+  done:       'var(--hatchin-green)',
+};
+
 /**
- * Read-only pipeline stage view showing task counts per stage.
- *
- * Renders 5 stages (Queued, Assigned, In Progress, Review, Done) as a compact
- * vertical list. The parent component (ApprovalsTab) is responsible for
- * not rendering this component when tasks is empty — show nothing rather than
- * 5 zero-count rows.
+ * Horizontal segmented progress bar showing task counts per pipeline stage.
+ * No icons. Color-coded segments. Hover tooltip shows stage name + count.
  */
 export function TaskPipelineView({ tasks }: TaskPipelineViewProps) {
+  const total = tasks.length;
+  if (total === 0) return null;
+
+  const stageCounts = PIPELINE_STAGES.map(stage => ({
+    ...stage,
+    count: tasks.filter(stage.filter).length,
+    color: STAGE_COLORS[stage.id] ?? 'var(--hatchin-text-muted)',
+  }));
+
   return (
-    <div className="mt-4 pt-4 border-t border-[var(--hatchin-border-subtle)]">
-      <p className="text-xs font-semibold hatchin-text-muted mb-2 px-1">Task pipeline</p>
-      <div role="list" className="space-y-1">
-        {PIPELINE_STAGES.map((stage, i) => {
-          const count = tasks.filter(stage.filter).length;
+    <div className="mb-4 px-1">
+      {/* Section label */}
+      <div className="flex items-center gap-2 mb-3">
+        <span className="text-[11px] font-semibold text-[var(--hatchin-text-muted)] uppercase tracking-wider">
+          Pipeline
+        </span>
+        <div className="flex-1 h-px bg-gradient-to-r from-[var(--hatchin-border-subtle)] to-transparent" />
+        <span className="text-[10px] font-semibold hatchin-text">{total} total</span>
+      </div>
+      <p className="text-[10px] text-[var(--hatchin-text-muted)] leading-relaxed mb-3">
+        The overall flow of work across all tasks from queue to completion.
+      </p>
+
+      {/* Segmented horizontal bar */}
+      <div className="flex h-1.5 rounded-full overflow-hidden gap-px bg-[var(--hatchin-surface)]">
+        {stageCounts.map((stage) => {
+          const pct = total > 0 ? (stage.count / total) * 100 : 0;
+          if (pct === 0) return null;
           return (
             <motion.div
               key={stage.id}
-              role="listitem"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: i * 0.03, duration: 0.12, ease: 'easeOut' }}
-              className="flex items-center justify-between px-2 py-1.5 rounded-md"
-            >
-              <div className="flex items-center gap-2">
-                <span className={`w-2 h-2 rounded-full shrink-0 ${stage.dot}`} />
-                <span className="text-xs hatchin-text-muted">{stage.label}</span>
-              </div>
-              <span className="text-xs font-semibold hatchin-text">{count}</span>
-            </motion.div>
+              style={{ width: `${pct}%`, backgroundColor: stage.color }}
+              initial={{ scaleX: 0, originX: 0 }}
+              animate={{ scaleX: 1 }}
+              transition={{ duration: 0.4, ease: 'easeOut' }}
+              className="rounded-full"
+              title={`${stage.label}: ${stage.count}`}
+            />
           );
         })}
+      </div>
+
+      {/* Stage labels row */}
+      <div className="flex mt-2 gap-x-1 flex-wrap gap-y-1">
+        {stageCounts.map((stage) => (
+          <motion.div
+            key={stage.id}
+            whileHover={{ backgroundColor: 'var(--hatchin-surface-elevated)' }}
+            transition={{ duration: 0.15 }}
+            className="flex items-center gap-1.5 rounded-lg px-2 py-1"
+          >
+            <span
+              className="w-1.5 h-1.5 rounded-full shrink-0"
+              style={{ backgroundColor: stage.color, opacity: stage.count === 0 ? 0.3 : 1 }}
+            />
+            <span
+              className="text-[10px]"
+              style={{
+                color: stage.count > 0 ? 'var(--hatchin-text)' : 'var(--hatchin-text-muted)',
+                fontWeight: stage.count > 0 ? 600 : 400,
+              }}
+            >
+              {stage.count} {stage.label}
+            </span>
+          </motion.div>
+        ))}
       </div>
     </div>
   );

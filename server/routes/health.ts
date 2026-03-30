@@ -1,21 +1,23 @@
-import type { Express } from 'express';
+import type { Express, Request, Response } from 'express';
 import {
   getCachedRuntimeDiagnostics,
   getCurrentRuntimeConfig,
   getProviderHealthSummary,
 } from '../llm/providerResolver.js';
 import { BUDGETS, FEATURE_FLAGS, resolveRuntimeModeFromEnv } from '../autonomy/config/policies.js';
-import { getStorageModeInfo } from '../storage.js';
+import { getStorageModeInfo, type IStorage } from '../storage.js';
 
 interface RegisterHealthDeps {
   getWsHealth: () => {
     status: 'ok' | 'degraded' | 'down';
     connections: number;
   };
+  storage: IStorage;
 }
 
 export function registerHealthRoute(app: Express, deps: RegisterHealthDeps): void {
-  app.get('/health', async (req, res) => {
+  // Health check handler — registered at both /health and /api/health
+  const healthHandler = async (req: Request, res: Response) => {
     try {
       const runtime = getCurrentRuntimeConfig();
       const diagnostics = getCachedRuntimeDiagnostics();
@@ -78,5 +80,8 @@ export function registerHealthRoute(app: Express, deps: RegisterHealthDeps): voi
         error: error?.message || 'Health check failed',
       });
     }
-  });
+  };
+
+  app.get('/health', healthHandler);
+  app.get('/api/health', healthHandler);
 }

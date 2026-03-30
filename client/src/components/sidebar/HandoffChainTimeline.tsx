@@ -47,7 +47,7 @@ export function HandoffChainTimeline({ events }: HandoffChainTimelineProps) {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       {Array.from(groups.entries()).map(([traceId, chain]) => (
         <HandoffChain key={traceId} chain={chain} />
       ))}
@@ -64,10 +64,16 @@ function HandoffChain({ chain }: HandoffChainProps) {
     <div className="mb-4 last:mb-0">
       {chain.map((event, index) => (
         <div key={event.id}>
-          {/* Node row */}
-          <div className="flex items-center gap-2">
+          {/* Node row — staggered entry */}
+          <motion.div
+            className="premium-card p-2 flex items-center gap-2"
+            initial={{ opacity: 0, x: -8 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: index * 0.06, duration: 0.18, ease: 'easeOut' }}
+          >
             <AgentAvatar
               agentName={event.agentName}
+              role={undefined}
               size={24}
               className="shrink-0"
             />
@@ -80,15 +86,16 @@ function HandoffChain({ chain }: HandoffChainProps) {
             <span className="text-[10px] hatchin-text-muted shrink-0">
               {formatRelativeTime(event.timestamp)}
             </span>
-          </div>
+          </motion.div>
 
-          {/* Animated connector between nodes */}
+          {/* Gradient connector between nodes */}
           {index < chain.length - 1 && (
             <motion.div
-              className="ml-3 w-0.5 bg-[var(--hatchin-blue)]/30"
-              initial={{ height: 0 }}
-              animate={{ height: 24 }}
-              transition={{ duration: 0.3, ease: 'easeOut' }}
+              className="ml-3 w-0.5 bg-gradient-to-b from-[var(--hatchin-blue)] to-[var(--hatchin-blue)]/30 origin-top"
+              initial={{ scaleY: 0 }}
+              animate={{ scaleY: 1 }}
+              transition={{ duration: 0.3, delay: index * 0.06 }}
+              style={{ height: 24 }}
             />
           )}
         </div>

@@ -10,24 +10,30 @@ Hatchin solves the prompting problem. Most people can't use AI effectively becau
 
 No one should ever feel alone with their idea, have to start from scratch, or need to know how to prompt AI — just have a conversation and your team takes it from there.
 
-## Current Milestone: v1.3 Autonomy Visibility & Right Sidebar Revamp
+## Current Milestone: v2.0 Hatches That Deliver
 
-**Goal:** Make the autonomy backend visible and controllable from the frontend — tabbed sidebar with activity feed, handoff visualization, approvals hub, brain redesign with file upload, autonomy settings.
+**Goal:** Transform Hatchin from "AI chatroom" to "AI team that ships coordinated work" — linked deliverable packages, visible team coordination, async production, professional export.
 
-**Target features:**
-- Right sidebar revamp (Activity / Brain & Docs / Approvals tabs)
-- Live autonomy progress feed with stats card and filters
-- Handoff visualization (chat cards + sidebar timeline + user-initiated)
-- Agent "working" avatar state for background execution
-- Pending approvals hub + task pipeline view
-- Project brain redesign with PDF/doc upload
-- Autonomy settings UI (toggles, cost cap, autonomy level)
-- Work output viewer + deliberation visibility
+**Status:** Core infrastructure shipped (DB, API, generation, chains, detection, UI). Remaining: PDF export, zero-friction onboarding.
 
-**Details:** See `.planning/v1.3-autonomy-visibility-sidebar-revamp.md`
+**What's shipped:**
+- Deliverable system — artifact-style panel with markdown rendering, version history, agent attribution
+- Cross-agent deliverable chains — 3 templates (launch, content-sprint, research) with handoff context injection
+- Project packages — grouped deliverables with progress tracking and WS streaming
+- Organic detection — pattern-based intent detection wired into chat flow
+- Iteration UX — inline refine input in ArtifactPanel, calls iterate endpoint
+- 15 deliverable types with role mapping and section schemas
+- Full API (12 endpoints) + 4 WS event types
+
+**Remaining:**
+- Professional PDF export (branded with TOC and attribution)
+- Zero-friction onboarding (auto-suggest package on project creation)
+
+**Details:** See plan at `.claude/plans/splendid-munching-flask.md`
 
 ## Current State
 
+**Shipped:** v1.3 — Autonomy Visibility & Right Sidebar Revamp (2026-03-30, Phase 15 polish in progress)
 **Shipped:** v1.2 — Billing + LLM Intelligence (2026-03-23)
 **Previous:** v1.1 — Autonomous Execution Loop (2026-03-23)
 **Previous:** v1.0 — Text-Perfect, Human-First (2026-03-19)
@@ -71,9 +77,7 @@ The project brain is singular. No re-adding context. No onboarding every new pro
 ### Collaboration
 Future: multiple real humans working alongside their Hatch team in the same project. Real teammates and AI teammates in the same conversation — the Hatches serve the whole team, not just one person.
 
-## Next Milestone: v2.0 Hatches That Deliver
-
-**Goal:** Transform Hatchin from "AI chatroom" to "AI team that ships coordinated work" — linked deliverable packages, visible team coordination, async production, professional export.
+## v2.0 Details: Hatches That Deliver
 
 **The problem v2.0 solves:** Individual deliverables are table stakes (ChatGPT can write a PRD). The differentiator is **cross-agent coordination** — PM writes PRD → Engineer writes tech spec referencing it → Designer creates brief based on both → Marketing drafts GTM from the PRD. Five linked documents from a coordinated team. Can't do that in any single-chat AI.
 
@@ -93,7 +97,7 @@ Future: multiple real humans working alongside their Hatch team in the same proj
 2. Marketing Content — Copywriter → blog posts, Social → calendar, SEO → keyword strategy, Email → sequences
 3. Planning & Research — PM → project plan, Analyst → competitive analysis, Ops → SOPs
 
-**Details:** See `.planning/v2.0-hatches-that-deliver.md` (to be created)
+**Details:** See plan at `.claude/plans/splendid-munching-flask.md`
 
 ## Use Cases (What "Initiating Dreams" Looks Like)
 
@@ -214,4 +218,4 @@ Hatchin: user just talks. The Hatches:
 | Trust scoring via successRate * maturityFactor (bounded 0–1) | Simple, predictable, needs 10+ completions to reach full trust | ✓ Good |
 
 ---
-*Last updated: 2026-03-25 after v2.0 milestone definition*
+*Last updated: 2026-03-30 — v1.3 shipping, v2.0 core infrastructure complete*

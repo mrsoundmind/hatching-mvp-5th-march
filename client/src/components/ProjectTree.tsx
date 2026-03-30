@@ -8,6 +8,20 @@ import { getRoleDefinition } from '@shared/roleRegistry';
 import AgentAvatar from '@/components/avatars/AgentAvatar';
 import { useAgentWorkingState } from '@/hooks/useAgentWorkingState';
 
+/** Returns the best display name for an agent:
+ *  - If user renamed the agent (name differs from default characterName), use agent.name
+ *  - Otherwise, use characterName from roleRegistry
+ */
+function getAgentDisplayName(agent: Agent): string {
+  const roleDef = getRoleDefinition(agent.role);
+  const characterName = roleDef?.characterName;
+  // If agent.name was customized (differs from characterName), prefer it
+  if (characterName && agent.name !== characterName) {
+    return agent.name;
+  }
+  return characterName ?? agent.name;
+}
+
 interface ProjectTreeProps {
   projects: Project[];
   teams: Team[];
@@ -56,10 +70,11 @@ export function ProjectTree({
   const workingAgents = useAgentWorkingState();
 
   // Helper function to highlight search matches
+  const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const highlightMatch = (text: string, query: string) => {
     if (!query.trim()) return text;
 
-    const regex = new RegExp(`(${query})`, 'gi');
+    const regex = new RegExp(`(${escapeRegex(query)})`, 'gi');
     const parts = text.split(regex);
 
     return parts.map((part, index) =>
@@ -147,11 +162,16 @@ export function ProjectTree({
     setEditValue(currentName);
   };
 
-  // Handle edit submission
+  // Handle edit submission (guarded against double-submit from blur+Enter race)
+  const editSubmittingRef = useRef(false);
   const handleEditSubmit = async () => {
+    if (editSubmittingRef.current) return;
     const trimmedValue = editValue.trim();
     if (!trimmedValue) return;
+    // Guard: nothing is being edited
+    if (!editingProject && !editingTeam && !editingAgent) return;
 
+    editSubmittingRef.current = true;
     try {
       if (editingProject && onUpdateProject) {
         await onUpdateProject(editingProject, { name: trimmedValue });
@@ -167,6 +187,7 @@ export function ProjectTree({
       setEditingTeam(null);
       setEditingAgent(null);
       setEditValue("");
+      editSubmittingRef.current = false;
     }
   };
 
@@ -350,6 +371,7 @@ export function ProjectTree({
                   <button
                     className="opacity-0 group-hover:opacity-100 hatchin-text-muted hover:hatchin-text transition-opacity duration-200"
                     onClick={(e) => handleContextMenuToggle(project.id, e)}
+                    aria-label="Project options"
                   >
                     <MoreHorizontal className="w-3.5 h-3.5" />
                   </button>
@@ -601,9 +623,9 @@ export function ProjectTree({
                                     ) : (
                                       <span
                                         className="hatchin-text text-xs font-medium truncate cursor-pointer hover:bg-[var(--glass-hover-bg)] px-1 py-0.5 rounded transition-colors duration-150"
-                                        onDoubleClick={() => handleDoubleClick('agent', agent.id, agent.role || agent.name)}
+                                        onDoubleClick={() => handleDoubleClick('agent', agent.id, getAgentDisplayName(agent))}
                                       >
-                                        {highlightMatch(getRoleDefinition(agent.role)?.characterName ?? agent.name, searchQuery)}
+                                        {highlightMatch(getAgentDisplayName(agent), searchQuery)}
                                       </span>
                                     )}
                                   </div>
@@ -616,6 +638,7 @@ export function ProjectTree({
                                       }}
                                       data-testid={`button-delete-agent-${agent.id}`}
                                       title="Delete agent"
+                                      aria-label="Delete agent"
                                     >
                                       <Trash2 className="w-3 h-3" />
                                     </button>
@@ -711,9 +734,9 @@ export function ProjectTree({
                             ) : (
                               <span
                                 className="hatchin-text text-xs font-medium truncate cursor-pointer hover:bg-[var(--glass-hover-bg)] px-1 py-0.5 rounded transition-colors duration-150"
-                                onDoubleClick={() => handleDoubleClick('agent', agent.id, agent.name)}
+                                onDoubleClick={() => handleDoubleClick('agent', agent.id, getAgentDisplayName(agent))}
                               >
-                                {highlightMatch(getRoleDefinition(agent.role)?.characterName ?? agent.name, searchQuery)}
+                                {highlightMatch(getAgentDisplayName(agent), searchQuery)}
                               </span>
                             )}
                           </div>

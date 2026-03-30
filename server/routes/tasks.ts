@@ -105,23 +105,36 @@ export function registerTaskRoutes(app: Express, deps: RegisterTaskDeps): void {
   });
 
   // Auto task extraction endpoint
+  const extractSchema = z.object({
+    userMessage: z.string().min(1).max(10000),
+    agentResponse: z.string().min(1).max(10000),
+    projectContext: z.object({
+      projectName: z.string().optional(),
+      availableAgents: z.array(z.string()).optional(),
+    }).passthrough().optional(),
+  });
+
   app.post("/api/tasks/extract", async (req, res) => {
     try {
-      const { userMessage, agentResponse, projectContext } = req.body;
+      const userId = getSessionUserId(req);
+      if (!userId) return res.status(401).json({ error: 'Not authenticated' });
 
-      if (!userMessage || !agentResponse) {
-        return res.status(400).json({ error: "User message and agent response are required" });
+      const parsed = extractSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: 'Invalid request body', details: parsed.error });
       }
+      const { userMessage, agentResponse, projectContext } = parsed.data;
+      const ctx = projectContext ?? {};
 
       // Import task extractor
       const { extractTasksFromMessage, extractTasksFallback } = await import('../ai/taskExtractor.js');
 
       // Try AI extraction first
-      let result = await extractTasksFromMessage(userMessage, agentResponse, projectContext);
+      let result = await extractTasksFromMessage(userMessage, agentResponse, ctx as any);
 
       // Fallback to keyword matching if AI extraction fails
       if (!result.hasTasks && result.confidence < 0.5) {
-        result = extractTasksFallback(userMessage, agentResponse, projectContext.availableAgents);
+        result = extractTasksFallback(userMessage, agentResponse, ctx.availableAgents ?? []);
       }
 
       res.json(result);
@@ -345,6 +358,11 @@ export function registerTaskRoutes(app: Express, deps: RegisterTaskDeps): void {
         return res.status(400).json({ error: 'Task is not awaiting approval' });
       }
 
+      // Clear awaitingApproval immediately to prevent concurrent double-approve
+      await storage.updateTask(req.params.id, {
+        metadata: { ...meta, awaitingApproval: false } as any,
+      });
+
       // Resolve the assigned agent
       const allAgents = await storage.getAgentsByProject(task.projectId);
       const agent = allAgents.find(
@@ -386,7 +404,8 @@ export function registerTaskRoutes(app: Express, deps: RegisterTaskDeps): void {
       deps.broadcastToConversation(convId, {
         type: 'task_execution_completed',
         taskId: task.id,
-        approvedByUser: true,
+        agentId: agent?.id ?? '',
+        agentName: agent?.name ?? task.assignee ?? 'Unknown',
       });
 
       devLog('[approve] Task approved:', task.id);

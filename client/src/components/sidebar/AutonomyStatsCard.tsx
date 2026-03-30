@@ -1,4 +1,4 @@
-import { CheckCircle, ArrowRightLeft, DollarSign } from 'lucide-react';
+import { motion } from 'framer-motion';
 import type { FeedStats } from '@/hooks/useAutonomyFeed';
 
 interface AutonomyStatsCardProps {
@@ -7,41 +7,47 @@ interface AutonomyStatsCardProps {
 }
 
 export function AutonomyStatsCard({ stats, isLoading }: AutonomyStatsCardProps) {
+  const values = [
+    { value: stats?.tasksCompleted ?? 0, label: 'tasks done', color: 'var(--hatchin-green)' },
+    { value: stats?.handoffs ?? 0, label: 'handoffs', color: 'var(--hatchin-blue)' },
+  ];
+
   if (isLoading) {
     return (
-      <div className="rounded-xl border border-[var(--hatchin-border-subtle)] bg-[var(--hatchin-surface)] p-3 mb-3">
-        <div className="flex items-center gap-3">
-          <div className="h-4 w-16 rounded bg-[var(--hatchin-surface-hover)] animate-shimmer" />
-          <div className="h-4 w-16 rounded bg-[var(--hatchin-surface-hover)] animate-shimmer" />
-          <div className="h-4 w-16 rounded bg-[var(--hatchin-surface-hover)] animate-shimmer" />
-        </div>
+      <div className="grid grid-cols-2 gap-2 mb-4">
+        {[0, 1].map(i => (
+          <div key={i} className="premium-card p-3 flex flex-col gap-1">
+            <div className="h-5 w-8 rounded skeleton-shimmer" />
+            <div className="h-3 w-12 rounded skeleton-shimmer" />
+          </div>
+        ))}
       </div>
     );
   }
 
-  const tasksCompleted = stats?.tasksCompleted ?? 0;
-  const handoffs = stats?.handoffs ?? 0;
-  const costToday = stats?.costToday ?? '$0.00';
-
   return (
-    <div className="rounded-xl border border-[var(--hatchin-border-subtle)] bg-[var(--hatchin-surface)] p-3 mb-3">
-      <div className="flex items-center gap-3">
-        <div className="flex items-center gap-1.5 text-xs">
-          <CheckCircle className="w-3.5 h-3.5 text-[var(--hatchin-green)]" />
-          <span className="font-semibold hatchin-text">{tasksCompleted}</span>
-          <span className="hatchin-text-muted">tasks</span>
-        </div>
-        <div className="flex items-center gap-1.5 text-xs">
-          <ArrowRightLeft className="w-3.5 h-3.5 text-[var(--hatchin-blue)]" />
-          <span className="font-semibold hatchin-text">{handoffs}</span>
-          <span className="hatchin-text-muted">handoffs</span>
-        </div>
-        <div className="flex items-center gap-1.5 text-xs">
-          <DollarSign className="w-3.5 h-3.5 hatchin-text-muted" />
-          <span className="font-semibold hatchin-text">{costToday}</span>
-          <span className="hatchin-text-muted">spent</span>
-        </div>
-      </div>
+    <div className="grid grid-cols-2 gap-2 mb-4">
+      {values.map((stat, i) => (
+        <motion.div
+          key={stat.label}
+          className="premium-card p-3 flex flex-col gap-1 cursor-default"
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.2, delay: i * 0.06, ease: 'easeOut' }}
+          whileHover={{ y: -1 }}
+        >
+          <motion.span
+            className="text-xl font-bold leading-none"
+            style={{ color: stat.color }}
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.3, delay: i * 0.08 + 0.1 }}
+          >
+            {stat.value}
+          </motion.span>
+          <span className="text-[10px] hatchin-text-muted leading-none mt-1">{stat.label}</span>
+        </motion.div>
+      ))}
     </div>
   );
 }

@@ -41,9 +41,12 @@ export function WorkOutputSection({ projectId }: WorkOutputSectionProps) {
 
   return (
     <div>
-      <h3 className="text-[11px] font-semibold text-[var(--hatchin-text-muted)] uppercase tracking-wider mb-3">
-        Work Outputs
-      </h3>
+      <div className="flex items-center gap-2 mb-3">
+        <span className="text-[11px] font-semibold text-[var(--hatchin-text-muted)] uppercase tracking-wider">
+          Work Outputs
+        </span>
+        <div className="flex-1 h-px bg-gradient-to-r from-[var(--hatchin-border-subtle)] to-transparent" />
+      </div>
 
       <div className="space-y-1.5">
         {completedTasks.map(task => {
@@ -57,14 +60,14 @@ export function WorkOutputSection({ projectId }: WorkOutputSectionProps) {
 
           return (
             <Collapsible key={task.id} open={isOpen} onOpenChange={() => handleToggle(task.id)}>
-              <div className="rounded-lg border border-[var(--hatchin-border-subtle)] bg-[var(--hatchin-surface)] overflow-hidden">
+              <div className="premium-card overflow-hidden">
                 <CollapsibleTrigger asChild>
                   <button
                     type="button"
-                    className="w-full flex items-center gap-2 px-3 py-2.5 text-left hover:bg-[var(--hatchin-surface-elevated)] transition-colors"
+                    className="w-full flex items-center gap-2 px-3 py-3 min-h-[44px] lg:min-h-auto text-left hover:bg-[var(--hatchin-surface-elevated)] transition-colors"
                   >
                     {/* Agent avatar */}
-                    <div className="w-6 h-6 rounded-full bg-[var(--hatchin-surface-elevated)] border border-[var(--hatchin-border-subtle)] flex items-center justify-center text-[10px] font-semibold text-[var(--hatchin-text)] shrink-0">
+                    <div className="w-6 h-6 rounded-full bg-[var(--hatchin-blue)] flex items-center justify-center text-[10px] font-semibold text-white shrink-0">
                       {agentName.charAt(0).toUpperCase()}
                     </div>
 
@@ -90,9 +93,9 @@ export function WorkOutputSection({ projectId }: WorkOutputSectionProps) {
 
                 <CollapsibleContent>
                   <div className="px-3 pb-3 pt-1">
-                    <pre className="text-xs font-mono whitespace-pre-wrap max-h-[200px] overflow-y-auto text-[var(--hatchin-text-muted)]">
+                    <div className="prose prose-sm max-w-none max-h-[200px] overflow-y-auto text-[var(--hatchin-text-muted)] text-xs whitespace-pre-wrap">
                       {outputContent || '(No output content)'}
-                    </pre>
+                    </div>
                   </div>
                 </CollapsibleContent>
               </div>

@@ -9,27 +9,25 @@ type DbPool = {
   query: (text: string, values?: unknown[]) => Promise<{ rows: any[] }>;
 };
 
-let dbPoolPromise: Promise<DbPool | null> | null = null;
+let cachedPool: DbPool | null = null;
 
 async function getDbPool(): Promise<DbPool | null> {
   if (!process.env.DATABASE_URL) {
     return null;
   }
 
-  if (!dbPoolPromise) {
-    dbPoolPromise = (async () => {
-      try {
-        const mod = await import('../../db.js');
-        const pool = mod.pool as DbPool;
-        await pool.query('select 1');
-        return pool;
-      } catch {
-        return null;
-      }
-    })();
-  }
+  if (cachedPool) return cachedPool;
 
-  return dbPoolPromise;
+  try {
+    const mod = await import('../../db.js');
+    const pool = mod.pool as DbPool;
+    await pool.query('select 1');
+    cachedPool = pool;
+    return pool;
+  } catch {
+    // Don't cache failed connections — allow retry on next call
+    return null;
+  }
 }
 
 function normalizeFinalSynthesis(value: unknown): Record<string, unknown> {
@@ -113,7 +111,8 @@ async function createTraceInDb(trace: DeliberationTrace): Promise<boolean> {
       ],
     );
     return true;
-  } catch {
+  } catch (err) {
+    console.error('[TraceStore] createTraceInDb failed:', err);
     return false;
   }
 }
@@ -147,7 +146,8 @@ async function readTraceFromDb(traceId: string): Promise<DeliberationTrace | nul
       return null;
     }
     return mapDbRowToTrace(result.rows[0]);
-  } catch {
+  } catch (err) {
+    console.error('[TraceStore] readTraceFromDb failed:', err);
     return null;
   }
 }
@@ -187,11 +187,45 @@ async function upsertTraceDbMutation(
   traceId: string,
   mutator: (trace: DeliberationTrace) => DeliberationTrace
 ): Promise<DeliberationTrace | null> {
-  const current = await readTraceFromDb(traceId);
-  if (!current) return null;
-  const next = mutator(current);
-  const wrote = await createTraceInDb(next);
-  return wrote ? next : null;
+  try {
+    // Use a transaction to prevent read-modify-write race conditions
+    const { pool } = await import('../../db.js');
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      // Lock the row for update to prevent concurrent modifications
+      const lockResult = await client.query(
+        'SELECT * FROM deliberation_traces WHERE trace_id = $1 FOR UPDATE',
+        [traceId]
+      );
+      if (lockResult.rows.length === 0) {
+        await client.query('ROLLBACK');
+        return null;
+      }
+      const current = await readTraceFromDb(traceId);
+      if (!current) {
+        await client.query('ROLLBACK');
+        return null;
+      }
+      const next = mutator(current);
+      const wrote = await createTraceInDb(next);
+      await client.query('COMMIT');
+      return wrote ? next : null;
+    } catch (err) {
+      await client.query('ROLLBACK');
+      console.error('[TraceStore] upsert transaction failed:', err);
+      return null;
+    } finally {
+      client.release();
+    }
+  } catch {
+    // Fallback to non-transactional if pool unavailable
+    const current = await readTraceFromDb(traceId);
+    if (!current) return null;
+    const next = mutator(current);
+    const wrote = await createTraceInDb(next);
+    return wrote ? next : null;
+  }
 }
 
 async function ensureStorage(): Promise<void> {

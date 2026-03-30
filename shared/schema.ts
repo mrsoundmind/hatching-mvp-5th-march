@@ -273,6 +273,76 @@ export const deliberationTraces = pgTable("deliberation_traces", {
   conversationIdIdx: index("deliberation_traces_conversation_id_idx").on(table.conversationId),
 }));
 
+// v2.0: Deliverables System
+
+export const deliverables = pgTable("deliverables", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").references(() => projects.id).notNull(),
+  conversationId: varchar("conversation_id"),
+  agentId: varchar("agent_id").references(() => agents.id),
+  parentDeliverableId: varchar("parent_deliverable_id"), // chain link to upstream deliverable
+  packageId: varchar("package_id"), // belongs to a package
+  title: text("title").notNull(),
+  description: text("description"),
+  type: text("type").notNull().$type<
+    "prd" | "tech-spec" | "design-brief" | "gtm-plan" | "user-stories" |
+    "blog-post" | "landing-copy" | "content-calendar" | "email-sequence" |
+    "seo-brief" | "project-plan" | "competitive-analysis" | "market-research" |
+    "process-doc" | "data-report" | "custom"
+  >(),
+  status: text("status").notNull().$type<"draft" | "in_review" | "complete">().default("draft"),
+  content: text("content").notNull().default(""),
+  currentVersion: integer("current_version").notNull().default(1),
+  agentName: text("agent_name"),
+  agentRole: text("agent_role"),
+  handoffNotes: text("handoff_notes"),
+  metadata: jsonb("metadata").$type<{
+    wordCount?: number;
+    sections?: string[];
+    references?: string[];
+    generationTimeMs?: number;
+    chainPosition?: number;
+  }>().default({}),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  projectIdIdx: index("deliverables_project_id_idx").on(table.projectId),
+  agentIdIdx: index("deliverables_agent_id_idx").on(table.agentId),
+  packageIdIdx: index("deliverables_package_id_idx").on(table.packageId),
+  statusIdx: index("deliverables_status_idx").on(table.status),
+}));
+
+export const deliverableVersions = pgTable("deliverable_versions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  deliverableId: varchar("deliverable_id").references(() => deliverables.id).notNull(),
+  versionNumber: integer("version_number").notNull(),
+  content: text("content").notNull(),
+  changeDescription: text("change_description"),
+  createdByAgentId: varchar("created_by_agent_id").references(() => agents.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  deliverableIdIdx: index("deliverable_versions_deliverable_id_idx").on(table.deliverableId),
+  versionIdx: index("deliverable_versions_version_idx").on(table.deliverableId, table.versionNumber),
+}));
+
+export const deliverablePackages = pgTable("deliverable_packages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").references(() => projects.id).notNull(),
+  name: text("name").notNull(),
+  template: text("template").notNull().$type<"launch" | "content-sprint" | "research" | "custom">(),
+  status: text("status").notNull().$type<"not_started" | "in_progress" | "complete">().default("not_started"),
+  description: text("description"),
+  metadata: jsonb("metadata").$type<{
+    expectedDeliverables?: number;
+    completedDeliverables?: number;
+    agentIds?: string[];
+  }>().default({}),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  projectIdIdx: index("deliverable_packages_project_id_idx").on(table.projectId),
+}));
+
 // Billing & Usage Tracking
 export const usageDailySummary = pgTable("usage_daily_summary", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -388,6 +458,24 @@ export const insertDeliberationTraceSchema = createInsertSchema(deliberationTrac
   updatedAt: true,
 });
 
+// v2.0: Deliverable schemas
+export const insertDeliverableSchema = createInsertSchema(deliverables).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertDeliverableVersionSchema = createInsertSchema(deliverableVersions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertDeliverablePackageSchema = createInsertSchema(deliverablePackages).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const insertUsageDailySummarySchema = createInsertSchema(usageDailySummary).omit({
   id: true,
   createdAt: true,
@@ -425,6 +513,14 @@ export type AutonomyEventRow = typeof autonomyEvents.$inferSelect;
 export type InsertDeliberationTrace = z.infer<typeof insertDeliberationTraceSchema>;
 export type DeliberationTraceRow = typeof deliberationTraces.$inferSelect;
 
+// v2.0 Deliverable Type Exports
+export type InsertDeliverable = z.infer<typeof insertDeliverableSchema>;
+export type Deliverable = typeof deliverables.$inferSelect;
+export type InsertDeliverableVersion = z.infer<typeof insertDeliverableVersionSchema>;
+export type DeliverableVersion = typeof deliverableVersions.$inferSelect;
+export type InsertDeliverablePackage = z.infer<typeof insertDeliverablePackageSchema>;
+export type DeliverablePackage = typeof deliverablePackages.$inferSelect;
+
 // Billing Type Exports
 export type InsertUsageDailySummary = z.infer<typeof insertUsageDailySummarySchema>;
 export type UsageDailySummary = typeof usageDailySummary.$inferSelect;
@@ -454,7 +550,7 @@ export interface RightSidebarUserPreferences {
   autoSaveDelay: number; // milliseconds
   showTimestamps: boolean;
   compactMode: boolean;
-  activeTab?: 'activity' | 'brain' | 'approvals';
+  activeTab?: 'activity' | 'brain' | 'tasks';
 }
 
 export interface RightSidebarState {
@@ -473,7 +569,7 @@ export interface RightSidebarState {
   activeView: 'project' | 'team' | 'agent' | 'none';
 
   // Active sidebar tab
-  activeTab: 'activity' | 'brain' | 'approvals';
+  activeTab: 'activity' | 'brain' | 'tasks';
 
   // User preferences
   preferences: RightSidebarUserPreferences;

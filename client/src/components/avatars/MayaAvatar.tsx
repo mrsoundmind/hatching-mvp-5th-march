@@ -1,4 +1,4 @@
-// MayaAvatar — Maya (AI Idea Partner) — Abstract ethereal AI, not a human face
+// MayaAvatar — Maya (Idea Partner) — Abstract ethereal AI, not a human face
 import { motion } from "framer-motion";
 import { AvatarWrapper, AvatarProps } from "./BaseAvatar.js";
 

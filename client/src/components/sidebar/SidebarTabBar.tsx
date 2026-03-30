@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
-import { Activity, BookOpen, ShieldCheck } from 'lucide-react';
+import { Activity, BookOpen, CheckSquare } from 'lucide-react';
 
-export type SidebarTab = 'activity' | 'brain' | 'approvals';
+export type SidebarTab = 'activity' | 'brain' | 'tasks';
 
 interface SidebarTabBarProps {
   activeTab: SidebarTab;
@@ -12,8 +12,8 @@ interface SidebarTabBarProps {
 
 const TABS: Array<{ id: SidebarTab; label: string; icon: typeof Activity }> = [
   { id: 'activity', label: 'Activity', icon: Activity },
-  { id: 'brain', label: 'Brain & Docs', icon: BookOpen },
-  { id: 'approvals', label: 'Approvals', icon: ShieldCheck },
+  { id: 'tasks', label: 'Tasks', icon: CheckSquare },
+  { id: 'brain', label: 'Brain', icon: BookOpen },
 ];
 
 export function SidebarTabBar({
@@ -32,7 +32,7 @@ export function SidebarTabBar({
           <button
             key={tab.id}
             onClick={() => onTabChange(tab.id)}
-            className={`relative z-10 flex items-center justify-center gap-1.5 rounded-lg px-2 py-2 text-xs font-medium transition-colors duration-200 ${
+            className={`relative z-10 flex items-center justify-center gap-2 rounded-lg px-2 py-2 min-h-[44px] lg:min-h-auto text-xs font-medium transition-colors duration-200 ${
               isActive
                 ? 'text-[var(--hatchin-blue)]'
                 : 'hatchin-text-muted hover:hatchin-text'
@@ -50,11 +50,11 @@ export function SidebarTabBar({
             <span className="relative">
               <Icon className="w-3.5 h-3.5" />
               {tab.id === 'activity' && unreadActivityCount > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 bg-[var(--hatchin-orange)] text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-2 py-0.5 bg-[var(--hatchin-orange)] text-white text-[10px] font-semibold rounded-full flex items-center justify-center">
                   {unreadActivityCount > 99 ? '99+' : unreadActivityCount}
                 </span>
               )}
-              {tab.id === 'approvals' && hasPendingApprovals && (
+              {tab.id === 'tasks' && hasPendingApprovals && (
                 <span
                   className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-amber-400 rounded-full animate-pulse"
                   aria-label="Pending approvals"

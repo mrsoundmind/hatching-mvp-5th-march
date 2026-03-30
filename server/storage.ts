@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type Project, type InsertProject, type Team, type InsertTeam, type Agent, type InsertAgent, type Conversation, type InsertConversation, type Message, type InsertMessage, type MessageReaction, type InsertMessageReaction, type TypingIndicator, type InsertTypingIndicator, type Task, type InsertTask } from "@shared/schema";
+import { type User, type InsertUser, type Project, type InsertProject, type Team, type InsertTeam, type Agent, type InsertAgent, type Conversation, type InsertConversation, type Message, type InsertMessage, type MessageReaction, type InsertMessageReaction, type TypingIndicator, type InsertTypingIndicator, type Task, type InsertTask, type UsageDailySummary, type Deliverable, type InsertDeliverable, type DeliverableVersion, type InsertDeliverableVersion, type DeliverablePackage, type InsertDeliverablePackage } from "@shared/schema";
 import { starterPacksByCategory, allHatchTemplates } from "@shared/templates";
 import { parseConversationId } from "@shared/conversationId";
 import { randomUUID } from "crypto";
@@ -60,6 +60,7 @@ export interface IStorage {
 
   // Projects
   getProjects(): Promise<Project[]>;
+  getProjectsByUserId(userId: string): Promise<Project[]>;
   getProject(id: string): Promise<Project | undefined>;
   createProject(project: InsertProject): Promise<Project>;
   updateProject(id: string, updates: Partial<Project>): Promise<Project | undefined>;
@@ -164,6 +165,46 @@ export interface IStorage {
   setProjectLastSeenAt(projectId: string, timestamp: Date): Promise<void>;
   setProjectLastBriefedAt(projectId: string, timestamp: Date): Promise<void>;
   getAutonomyEventsSince(projectId: string, since: Date): Promise<Array<{ eventType: string; agentId: string | null; payload: unknown; createdAt: Date }>>;
+
+  // Billing & Usage Tracking
+  upsertDailyUsage(userId: string, date: string, increments: {
+    messages?: number;
+    promptTokens?: number;
+    completionTokens?: number;
+    totalTokens?: number;
+    costCents?: number;
+    standardMessages?: number;
+    premiumMessages?: number;
+    autonomyExecutions?: number;
+  }): Promise<void>;
+  getDailyUsage(userId: string, date: string): Promise<UsageDailySummary | undefined>;
+  getMonthlyUsage(userId: string, yearMonth: string): Promise<UsageDailySummary[]>;
+  updateUserTier(userId: string, tier: 'free' | 'pro', stripeData?: {
+    customerId?: string;
+    subscriptionId?: string;
+    subscriptionStatus?: string;
+    periodEnd?: Date;
+    graceExpiresAt?: Date | null;
+  }): Promise<void>;
+  getUserTier(userId: string): Promise<{ tier: string; subscriptionStatus: string; graceExpiresAt: Date | null } | undefined>;
+  checkWebhookProcessed(stripeEventId: string): Promise<boolean>;
+  markWebhookProcessed(stripeEventId: string, eventType: string): Promise<void>;
+
+  // v2.0: Deliverables
+  getDeliverablesByProject(projectId: string): Promise<Deliverable[]>;
+  getDeliverable(id: string): Promise<Deliverable | undefined>;
+  createDeliverable(deliverable: InsertDeliverable): Promise<Deliverable>;
+  updateDeliverable(id: string, updates: Partial<Deliverable>): Promise<Deliverable | undefined>;
+  deleteDeliverable(id: string): Promise<boolean>;
+  getDeliverableVersions(deliverableId: string): Promise<DeliverableVersion[]>;
+  createDeliverableVersion(version: InsertDeliverableVersion): Promise<DeliverableVersion>;
+  restoreDeliverableVersion(deliverableId: string, versionNumber: number): Promise<Deliverable | undefined>;
+
+  // v2.0: Packages
+  getPackagesByProject(projectId: string): Promise<DeliverablePackage[]>;
+  getPackage(id: string): Promise<DeliverablePackage | undefined>;
+  createPackage(pkg: InsertDeliverablePackage): Promise<DeliverablePackage>;
+  updatePackage(id: string, updates: Partial<DeliverablePackage>): Promise<DeliverablePackage | undefined>;
 }
 
 
@@ -203,6 +244,12 @@ export class MemStorage implements IStorage {
       avatarUrl: null,
       provider: "legacy",
       providerSub: "seed-user",
+      tier: "free",
+      stripeCustomerId: null,
+      stripeSubscriptionId: null,
+      subscriptionStatus: "none",
+      subscriptionPeriodEnd: null,
+      graceExpiresAt: null,
       username: "seed",
       password: "seed",
       createdAt: new Date(),
@@ -392,6 +439,12 @@ export class MemStorage implements IStorage {
       avatarUrl: insertUser.avatarUrl || null,
       provider: insertUser.provider || "google",
       providerSub: insertUser.providerSub,
+      tier: "free",
+      stripeCustomerId: null,
+      stripeSubscriptionId: null,
+      subscriptionStatus: "none",
+      subscriptionPeriodEnd: null,
+      graceExpiresAt: null,
       username: insertUser.username || null,
       password: insertUser.password || null,
       createdAt: now,
@@ -433,6 +486,10 @@ export class MemStorage implements IStorage {
   // Project methods
   async getProjects(): Promise<Project[]> {
     return Array.from(this.projects.values());
+  }
+
+  async getProjectsByUserId(userId: string): Promise<Project[]> {
+    return Array.from(this.projects.values()).filter(p => p.userId === userId);
   }
 
   async getProject(id: string): Promise<Project | undefined> {
@@ -610,6 +667,19 @@ export class MemStorage implements IStorage {
   }
 
   async deleteAgent(id: string): Promise<boolean> {
+    // Cascade: clean up conversations, messages, and related data for this agent
+    for (const [convId, conv] of this.conversations) {
+      if ((conv as any).agentId === id) {
+        // Delete messages and reactions in this conversation
+        for (const [msgId, msg] of this.messages) {
+          if (msg.conversationId === convId) {
+            this.messageReactions.delete(msgId);
+            this.messages.delete(msgId);
+          }
+        }
+        this.conversations.delete(convId);
+      }
+    }
     return this.agents.delete(id);
   }
 
@@ -639,33 +709,21 @@ export class MemStorage implements IStorage {
         id: randomUUID(),
         userId: project.userId,
         name: "Maya",
-        role: "Product Manager",
+        role: "Idea Partner",
         color: "teal",
         teamId: null,
         projectId: projectId,
         personality: {
           traits: ["strategic", "supportive", "analytical"],
           communicationStyle: "Warm, direct, and structured",
-          expertise: ["Product Strategy", "Requirements Gathering", "Idea Development"],
-          welcomeMessage: "Hi! I'm Maya. Tell me about your idea and I'll help you shape it into something real."
+          expertise: ["Idea Development", "Synthesis", "Reframing", "Cross-domain Connection"],
+          welcomeMessage: "Hey, I'm Maya. Tell me what you're thinking and I'll help you shape it into something real."
         },
         isSpecialAgent: true,
       };
       this.agents.set(mayaAgent.id, mayaAgent);
 
-      try {
-        await this.createConversation({
-          id: `agent:${projectId}:${mayaAgent.id}`,
-          userId: project.userId,
-          projectId: projectId,
-          teamId: null,
-          agentId: mayaAgent.id,
-          type: 'agent',
-          title: null
-        } as any);
-      } catch (e) {
-        console.error("Failed to auto-create Maya agent conversation:", e);
-      }
+      // Maya speaks at project level only — no 1-on-1 conversation needed
     }
   }
 
@@ -1308,6 +1366,91 @@ export class MemStorage implements IStorage {
   async getAutonomyEventsSince(_projectId: string, _since: Date): Promise<Array<{ eventType: string; agentId: string | null; payload: unknown; createdAt: Date }>> {
     return [];
   }
+
+  // Billing stubs (MemStorage — dev only)
+  async upsertDailyUsage(): Promise<void> {}
+  async getDailyUsage(): Promise<UsageDailySummary | undefined> { return undefined; }
+  async getMonthlyUsage(): Promise<UsageDailySummary[]> { return []; }
+  async updateUserTier(): Promise<void> {}
+  async getUserTier(userId: string): Promise<{ tier: string; subscriptionStatus: string; graceExpiresAt: Date | null } | undefined> {
+    const user = this.users.get(userId);
+    if (!user) return undefined;
+    return { tier: 'pro', subscriptionStatus: 'none', graceExpiresAt: null };
+  }
+  async checkWebhookProcessed(): Promise<boolean> { return false; }
+  async markWebhookProcessed(): Promise<void> {}
+
+  // v2.0: Deliverables (MemStorage — in-memory Maps)
+  private deliverables = new Map<string, Deliverable>();
+  private deliverableVersions = new Map<string, DeliverableVersion>();
+  private deliverablePackages = new Map<string, DeliverablePackage>();
+
+  async getDeliverablesByProject(projectId: string): Promise<Deliverable[]> {
+    return Array.from(this.deliverables.values()).filter(d => d.projectId === projectId);
+  }
+  async getDeliverable(id: string): Promise<Deliverable | undefined> {
+    return this.deliverables.get(id);
+  }
+  async createDeliverable(data: InsertDeliverable): Promise<Deliverable> {
+    const id = randomUUID();
+    const now = new Date();
+    const deliverable: Deliverable = { id, ...data, content: data.content ?? '', currentVersion: 1, status: data.status ?? 'draft', metadata: data.metadata ?? {}, createdAt: now, updatedAt: now } as Deliverable;
+    this.deliverables.set(id, deliverable);
+    // Auto-create v1
+    const vId = randomUUID();
+    const version: DeliverableVersion = { id: vId, deliverableId: id, versionNumber: 1, content: deliverable.content, changeDescription: 'Initial version', createdByAgentId: data.agentId ?? null, createdAt: now };
+    this.deliverableVersions.set(vId, version);
+    return deliverable;
+  }
+  async updateDeliverable(id: string, updates: Partial<Deliverable>): Promise<Deliverable | undefined> {
+    const existing = this.deliverables.get(id);
+    if (!existing) return undefined;
+    const updated = { ...existing, ...updates, updatedAt: new Date() };
+    this.deliverables.set(id, updated);
+    return updated;
+  }
+  async deleteDeliverable(id: string): Promise<boolean> {
+    return this.deliverables.delete(id);
+  }
+  async getDeliverableVersions(deliverableId: string): Promise<DeliverableVersion[]> {
+    return Array.from(this.deliverableVersions.values())
+      .filter(v => v.deliverableId === deliverableId)
+      .sort((a, b) => a.versionNumber - b.versionNumber);
+  }
+  async createDeliverableVersion(data: InsertDeliverableVersion): Promise<DeliverableVersion> {
+    const id = randomUUID();
+    const version: DeliverableVersion = { id, ...data, createdAt: new Date() } as DeliverableVersion;
+    this.deliverableVersions.set(id, version);
+    return version;
+  }
+  async restoreDeliverableVersion(deliverableId: string, versionNumber: number): Promise<Deliverable | undefined> {
+    const versions = await this.getDeliverableVersions(deliverableId);
+    const target = versions.find(v => v.versionNumber === versionNumber);
+    if (!target) return undefined;
+    return this.updateDeliverable(deliverableId, { content: target.content, currentVersion: versionNumber });
+  }
+
+  // v2.0: Packages (MemStorage)
+  async getPackagesByProject(projectId: string): Promise<DeliverablePackage[]> {
+    return Array.from(this.deliverablePackages.values()).filter(p => p.projectId === projectId);
+  }
+  async getPackage(id: string): Promise<DeliverablePackage | undefined> {
+    return this.deliverablePackages.get(id);
+  }
+  async createPackage(data: InsertDeliverablePackage): Promise<DeliverablePackage> {
+    const id = randomUUID();
+    const now = new Date();
+    const pkg: DeliverablePackage = { id, ...data, status: data.status ?? 'not_started', metadata: data.metadata ?? {}, createdAt: now, updatedAt: now } as DeliverablePackage;
+    this.deliverablePackages.set(id, pkg);
+    return pkg;
+  }
+  async updatePackage(id: string, updates: Partial<DeliverablePackage>): Promise<DeliverablePackage | undefined> {
+    const existing = this.deliverablePackages.get(id);
+    if (!existing) return undefined;
+    const updated = { ...existing, ...updates, updatedAt: new Date() };
+    this.deliverablePackages.set(id, updated);
+    return updated;
+  }
 }
 
 // ============================================================
@@ -1339,7 +1482,7 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
   async createUser(insertUser: InsertUser): Promise<User> {
-    const [user] = await db.insert(schema.users).values(insertUser).returning();
+    const [user] = await db.insert(schema.users).values(insertUser as any).returning();
     return user;
   }
   async upsertOAuthUser(input: OAuthUserInput): Promise<User> {
@@ -1381,6 +1524,9 @@ export class DatabaseStorage implements IStorage {
   async getProjects(): Promise<Project[]> {
     return db.select().from(schema.projects);
   }
+  async getProjectsByUserId(userId: string): Promise<Project[]> {
+    return db.select().from(schema.projects).where(eq(schema.projects.userId, userId));
+  }
   async getProject(id: string): Promise<Project | undefined> {
     const [proj] = await db.select().from(schema.projects).where(eq(schema.projects.id, id));
     return proj;
@@ -1396,13 +1542,22 @@ export class DatabaseStorage implements IStorage {
     return proj;
   }
   async deleteProject(id: string): Promise<boolean> {
-    // Cascade: tasks → conversation memories → messages → conversations → agents → teams → project
-    await db.delete(schema.tasks).where(eq(schema.tasks.projectId, id));
+    // Cascade delete respecting all FK constraints:
+    // autonomy_events/deliberation_traces → typing_indicators → message_reactions →
+    // tasks → conversation_memory → messages → conversations → agents → teams → project
+    await db.delete(schema.autonomyEvents).where(eq(schema.autonomyEvents.projectId, id));
+    await db.delete(schema.deliberationTraces).where(eq(schema.deliberationTraces.projectId, id));
     const convs = await db.select({ id: schema.conversations.id }).from(schema.conversations).where(eq(schema.conversations.projectId, id));
     for (const conv of convs) {
+      await db.delete(schema.typingIndicators).where(eq(schema.typingIndicators.conversationId, conv.id));
+      const msgs = await db.select({ id: schema.messages.id }).from(schema.messages).where(eq(schema.messages.conversationId, conv.id));
+      for (const msg of msgs) {
+        await db.delete(schema.messageReactions).where(eq(schema.messageReactions.messageId, msg.id));
+      }
       await db.delete(schema.messages).where(eq(schema.messages.conversationId, conv.id));
       await db.delete(schema.conversationMemory).where(eq(schema.conversationMemory.conversationId, conv.id));
     }
+    await db.delete(schema.tasks).where(eq(schema.tasks.projectId, id));
     await db.delete(schema.conversations).where(eq(schema.conversations.projectId, id));
     await db.delete(schema.agents).where(eq(schema.agents.projectId, id));
     await db.delete(schema.teams).where(eq(schema.teams.projectId, id));
@@ -1434,9 +1589,22 @@ export class DatabaseStorage implements IStorage {
     return team;
   }
   async deleteTeam(id: string): Promise<boolean> {
+    // Clean up autonomy_events and deliberation_traces referencing this team
+    await db.delete(schema.autonomyEvents).where(eq(schema.autonomyEvents.teamId, id));
+    await db.delete(schema.deliberationTraces).where(eq(schema.deliberationTraces.teamId, id));
+    // Clean up agents (and their autonomy_events references)
+    const teamAgents = await db.select({ id: schema.agents.id }).from(schema.agents).where(eq(schema.agents.teamId, id));
+    for (const agent of teamAgents) {
+      await db.delete(schema.autonomyEvents).where(eq(schema.autonomyEvents.hatchId, agent.id));
+    }
     await db.delete(schema.agents).where(eq(schema.agents.teamId, id));
     const convs = await db.select({ id: schema.conversations.id }).from(schema.conversations).where(eq(schema.conversations.teamId, id));
     for (const conv of convs) {
+      await db.delete(schema.typingIndicators).where(eq(schema.typingIndicators.conversationId, conv.id));
+      const msgs = await db.select({ id: schema.messages.id }).from(schema.messages).where(eq(schema.messages.conversationId, conv.id));
+      for (const msg of msgs) {
+        await db.delete(schema.messageReactions).where(eq(schema.messageReactions.messageId, msg.id));
+      }
       await db.delete(schema.messages).where(eq(schema.messages.conversationId, conv.id));
       await db.delete(schema.conversationMemory).where(eq(schema.conversationMemory.conversationId, conv.id));
     }
@@ -1472,6 +1640,26 @@ export class DatabaseStorage implements IStorage {
     return agent;
   }
   async deleteAgent(id: string): Promise<boolean> {
+    // Cascade: clean up conversations, messages, reactions, typing indicators for this agent
+    const agentConvs = await db.select({ id: schema.conversations.id })
+      .from(schema.conversations)
+      .where(eq(schema.conversations.agentId, id));
+    for (const conv of agentConvs) {
+      await db.delete(schema.typingIndicators).where(eq(schema.typingIndicators.conversationId, conv.id));
+      const msgs = await db.select({ id: schema.messages.id })
+        .from(schema.messages)
+        .where(eq(schema.messages.conversationId, conv.id));
+      for (const msg of msgs) {
+        await db.delete(schema.messageReactions).where(eq(schema.messageReactions.messageId, msg.id));
+      }
+      await db.delete(schema.messages).where(eq(schema.messages.conversationId, conv.id));
+      await db.delete(schema.conversationMemory).where(eq(schema.conversationMemory.conversationId, conv.id));
+    }
+    await db.delete(schema.conversations).where(eq(schema.conversations.agentId, id));
+    // Clean up typing indicators where this agent was typing
+    await db.delete(schema.typingIndicators).where(eq(schema.typingIndicators.agentId, id));
+    // Clean up message reactions from this agent
+    await db.delete(schema.messageReactions).where(eq(schema.messageReactions.agentId, id));
     const result = await db.delete(schema.agents).where(eq(schema.agents.id, id)).returning();
     return result.length > 0;
   }
@@ -1495,7 +1683,7 @@ export class DatabaseStorage implements IStorage {
       id: randomUUID(),
       userId: project.userId,
       name: 'Maya',
-      role: 'Product Manager',
+      role: 'Idea Partner',
       color: 'teal',
       teamId: null,
       projectId,
@@ -1503,8 +1691,8 @@ export class DatabaseStorage implements IStorage {
       personality: {
         traits: ['strategic', 'supportive', 'analytical'],
         communicationStyle: 'Warm, direct, and structured',
-        expertise: ['Product Strategy', 'Requirements Gathering', 'Idea Development'],
-        welcomeMessage: "Hi! I'm Maya. Tell me about your idea and I'll help you shape it into something real."
+        expertise: ['Idea Development', 'Synthesis', 'Reframing', 'Cross-domain Connection'],
+        welcomeMessage: "Hey, I'm Maya. Tell me what you're thinking and I'll help you shape it into something real."
       }
     });
   }
@@ -1811,6 +1999,161 @@ export class DatabaseStorage implements IStorage {
       payload: row.payload,
       createdAt: new Date(row.timestamp),
     }));
+  }
+
+  // Billing & Usage Tracking
+  async upsertDailyUsage(userId: string, date: string, increments: {
+    messages?: number;
+    promptTokens?: number;
+    completionTokens?: number;
+    totalTokens?: number;
+    costCents?: number;
+    standardMessages?: number;
+    premiumMessages?: number;
+    autonomyExecutions?: number;
+  }): Promise<void> {
+    const { pool: dbPool } = await import('./db.js');
+    await dbPool.query(
+      `INSERT INTO usage_daily_summary (id, user_id, date, total_messages, total_prompt_tokens, total_completion_tokens, total_tokens, estimated_cost_cents, standard_model_messages, premium_model_messages, autonomy_executions)
+       VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+       ON CONFLICT (user_id, date) DO UPDATE SET
+         total_messages = usage_daily_summary.total_messages + EXCLUDED.total_messages,
+         total_prompt_tokens = usage_daily_summary.total_prompt_tokens + EXCLUDED.total_prompt_tokens,
+         total_completion_tokens = usage_daily_summary.total_completion_tokens + EXCLUDED.total_completion_tokens,
+         total_tokens = usage_daily_summary.total_tokens + EXCLUDED.total_tokens,
+         estimated_cost_cents = usage_daily_summary.estimated_cost_cents + EXCLUDED.estimated_cost_cents,
+         standard_model_messages = usage_daily_summary.standard_model_messages + EXCLUDED.standard_model_messages,
+         premium_model_messages = usage_daily_summary.premium_model_messages + EXCLUDED.premium_model_messages,
+         autonomy_executions = usage_daily_summary.autonomy_executions + EXCLUDED.autonomy_executions,
+         updated_at = NOW()`,
+      [
+        userId, date,
+        increments.messages ?? 0,
+        increments.promptTokens ?? 0,
+        increments.completionTokens ?? 0,
+        increments.totalTokens ?? 0,
+        increments.costCents ?? 0,
+        increments.standardMessages ?? 0,
+        increments.premiumMessages ?? 0,
+        increments.autonomyExecutions ?? 0,
+      ],
+    );
+  }
+
+  async getDailyUsage(userId: string, date: string): Promise<UsageDailySummary | undefined> {
+    const rows = await db.select().from(schema.usageDailySummary)
+      .where(and(eq(schema.usageDailySummary.userId, userId), eq(schema.usageDailySummary.date, date)));
+    return rows[0];
+  }
+
+  async getMonthlyUsage(userId: string, yearMonth: string): Promise<UsageDailySummary[]> {
+    const { pool: dbPool } = await import('./db.js');
+    const result = await dbPool.query(
+      `SELECT * FROM usage_daily_summary WHERE user_id = $1 AND date LIKE $2 ORDER BY date ASC`,
+      [userId, `${yearMonth}%`],
+    );
+    return result.rows;
+  }
+
+  async updateUserTier(userId: string, tier: 'free' | 'pro', stripeData?: {
+    customerId?: string;
+    subscriptionId?: string;
+    subscriptionStatus?: string;
+    periodEnd?: Date;
+    graceExpiresAt?: Date | null;
+  }): Promise<void> {
+    const updates: Record<string, unknown> = { tier };
+    if (stripeData?.customerId) updates.stripeCustomerId = stripeData.customerId;
+    if (stripeData?.subscriptionId) updates.stripeSubscriptionId = stripeData.subscriptionId;
+    if (stripeData?.subscriptionStatus) updates.subscriptionStatus = stripeData.subscriptionStatus;
+    if (stripeData?.periodEnd) updates.subscriptionPeriodEnd = stripeData.periodEnd;
+    if (stripeData?.graceExpiresAt !== undefined) updates.graceExpiresAt = stripeData.graceExpiresAt;
+    await db.update(schema.users).set(updates).where(eq(schema.users.id, userId));
+  }
+
+  async getUserTier(userId: string): Promise<{ tier: string; subscriptionStatus: string; graceExpiresAt: Date | null } | undefined> {
+    const rows = await db.select({
+      tier: schema.users.tier,
+      subscriptionStatus: schema.users.subscriptionStatus,
+      graceExpiresAt: schema.users.graceExpiresAt,
+    }).from(schema.users).where(eq(schema.users.id, userId));
+    if (!rows[0]) return undefined;
+    return {
+      tier: rows[0].tier,
+      subscriptionStatus: rows[0].subscriptionStatus,
+      graceExpiresAt: rows[0].graceExpiresAt,
+    };
+  }
+
+  async checkWebhookProcessed(stripeEventId: string): Promise<boolean> {
+    const rows = await db.select().from(schema.processedWebhooks)
+      .where(eq(schema.processedWebhooks.stripeEventId, stripeEventId));
+    return rows.length > 0;
+  }
+
+  async markWebhookProcessed(stripeEventId: string, eventType: string): Promise<void> {
+    await db.insert(schema.processedWebhooks).values({ stripeEventId, eventType });
+  }
+
+  // v2.0: Deliverables (DatabaseStorage)
+  async getDeliverablesByProject(projectId: string): Promise<Deliverable[]> {
+    return db.select().from(schema.deliverables).where(eq(schema.deliverables.projectId, projectId));
+  }
+  async getDeliverable(id: string): Promise<Deliverable | undefined> {
+    const [row] = await db.select().from(schema.deliverables).where(eq(schema.deliverables.id, id));
+    return row;
+  }
+  async createDeliverable(data: InsertDeliverable): Promise<Deliverable> {
+    const [row] = await db.insert(schema.deliverables).values(data as any).returning();
+    // Auto-create v1
+    await db.insert(schema.deliverableVersions).values({
+      deliverableId: row.id,
+      versionNumber: 1,
+      content: row.content,
+      changeDescription: 'Initial version',
+      createdByAgentId: data.agentId ?? null,
+    });
+    return row;
+  }
+  async updateDeliverable(id: string, updates: Partial<Deliverable>): Promise<Deliverable | undefined> {
+    const [row] = await db.update(schema.deliverables).set({ ...updates, updatedAt: new Date() }).where(eq(schema.deliverables.id, id)).returning();
+    return row;
+  }
+  async deleteDeliverable(id: string): Promise<boolean> {
+    const result = await db.delete(schema.deliverables).where(eq(schema.deliverables.id, id));
+    return (result.rowCount ?? 0) > 0;
+  }
+  async getDeliverableVersions(deliverableId: string): Promise<DeliverableVersion[]> {
+    return db.select().from(schema.deliverableVersions)
+      .where(eq(schema.deliverableVersions.deliverableId, deliverableId))
+      .orderBy(schema.deliverableVersions.versionNumber);
+  }
+  async createDeliverableVersion(data: InsertDeliverableVersion): Promise<DeliverableVersion> {
+    const [row] = await db.insert(schema.deliverableVersions).values(data).returning();
+    return row;
+  }
+  async restoreDeliverableVersion(deliverableId: string, versionNumber: number): Promise<Deliverable | undefined> {
+    const [target] = await db.select().from(schema.deliverableVersions)
+      .where(and(eq(schema.deliverableVersions.deliverableId, deliverableId), eq(schema.deliverableVersions.versionNumber, versionNumber)));
+    if (!target) return undefined;
+    return this.updateDeliverable(deliverableId, { content: target.content, currentVersion: versionNumber });
+  }
+
+  // v2.0: Packages (DatabaseStorage)
+  async getPackagesByProject(projectId: string): Promise<DeliverablePackage[]> {
+    return db.select().from(schema.deliverablePackages).where(eq(schema.deliverablePackages.projectId, projectId));
+  }
+  async getPackage(id: string): Promise<DeliverablePackage | undefined> {
+    const [row] = await db.select().from(schema.deliverablePackages).where(eq(schema.deliverablePackages.id, id));
+    return row;
+  }
+  async createPackage(data: InsertDeliverablePackage): Promise<DeliverablePackage> {
+    const [row] = await db.insert(schema.deliverablePackages).values(data as any).returning();
+    return row;
+  }
+  async updatePackage(id: string, updates: Partial<DeliverablePackage>): Promise<DeliverablePackage | undefined> {
+    const [row] = await db.update(schema.deliverablePackages).set({ ...updates, updatedAt: new Date() }).where(eq(schema.deliverablePackages.id, id)).returning();
+    return row;
   }
 }
 

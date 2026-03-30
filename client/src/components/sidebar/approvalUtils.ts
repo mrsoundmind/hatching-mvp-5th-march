@@ -58,7 +58,7 @@ export const PIPELINE_STAGES = [
   {
     id: 'queued' as const,
     label: 'Queued',
-    dot: 'bg-gray-400',
+    dot: 'bg-[var(--hatchin-text-muted)]',
     filter: (t: { status: string; assignee: string | null | undefined }) =>
       t.status === 'todo' && !t.assignee,
   },
@@ -72,14 +72,14 @@ export const PIPELINE_STAGES = [
   {
     id: 'inprogress' as const,
     label: 'In Progress',
-    dot: 'bg-[var(--hatchin-orange)] animate-pulse',
+    dot: 'bg-[var(--hatchin-blue)] animate-pulse',
     filter: (t: { status: string; assignee: string | null | undefined }) =>
       t.status === 'in_progress',
   },
   {
     id: 'review' as const,
     label: 'Review', // "blocked" status maps to "Review" — intentional rename
-    dot: 'bg-amber-400',
+    dot: 'bg-[var(--hatchin-orange)]',
     filter: (t: { status: string; assignee: string | null | undefined }) =>
       t.status === 'blocked',
   },

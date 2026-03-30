@@ -30,6 +30,12 @@ const BlakeAvatar = React.lazy(() => import("./BlakeAvatar.js"));
 const TaylorAvatar = React.lazy(() => import("./TaylorAvatar.js"));
 const LeeAvatar = React.lazy(() => import("./LeeAvatar.js"));
 const VinceAvatar = React.lazy(() => import("./VinceAvatar.js"));
+const CodaAvatar = React.lazy(() => import("./CodaAvatar.js"));
+const LumiAvatar = React.lazy(() => import("./LumiAvatar.js"));
+const ArloAvatar = React.lazy(() => import("./ArloAvatar.js"));
+const WrenAvatar = React.lazy(() => import("./WrenAvatar.js"));
+const NovaAvatar = React.lazy(() => import("./NovaAvatar.js"));
+const CassAvatar = React.lazy(() => import("./CassAvatar.js"));
 
 interface AgentAvatarProps extends AvatarProps {
   characterName?: string | null;  // "Alex", "Dev", "Cleo", etc.
@@ -87,6 +93,12 @@ const CHARACTER_AVATAR_MAP: Record<string, React.LazyExoticComponent<React.FC<Av
   Taylor: TaylorAvatar,
   Lee: LeeAvatar,
   Vince: VinceAvatar,
+  Coda: CodaAvatar,
+  Lumi: LumiAvatar,
+  Arlo: ArloAvatar,
+  Wren: WrenAvatar,
+  Nova: NovaAvatar,
+  Cass: CassAvatar,
 };
 
 function resolveCharacterName(

@@ -52,10 +52,11 @@ export function analyzeQuestion(userMessage: string): QuestionAnalysis {
     domainScores[domain] = score;
   });
   
-  // Determine primary domain
-  const primaryDomain = Object.entries(domainScores).reduce((a, b) => 
-    domainScores[a[0]] > domainScores[b[0]] ? a : b
-  )[0];
+  // Determine primary domain — default to 'general' if all scores are zero
+  const maxScore = Math.max(...Object.values(domainScores));
+  const primaryDomain = maxScore > 0
+    ? Object.entries(domainScores).reduce((a, b) => domainScores[a[0]] > domainScores[b[0]] ? a : b)[0]
+    : 'general';
   
   // Determine complexity based on question length and technical terms
   const technicalTerms = ['architecture', 'scalability', 'performance', 'optimization', 'integration', 'deployment'];
@@ -84,13 +85,36 @@ export function findBestAgentMatch(
   
   // Define role-to-domain mapping
   const roleDomainMapping: Record<string, string[]> = {
-    'Product Designer': ['design'],
-    'UI Engineer': ['development', 'design'],
     'Product Manager': ['product', 'design', 'development'],
+    'Business Analyst': ['product', 'data'],
     'Backend Developer': ['development'],
+    'Software Engineer': ['development'],
+    'Technical Lead': ['development', 'quality'],
+    'AI Developer': ['development', 'data'],
+    'DevOps Engineer': ['development', 'operations'],
+    'Product Designer': ['design'],
+    'UX Designer': ['design'],
+    'UI Engineer': ['development', 'design'],
+    'UI Designer': ['design'],
+    'Designer': ['design'],
+    'Creative Director': ['design', 'marketing'],
+    'Brand Strategist': ['marketing', 'design'],
     'QA Lead': ['quality', 'development'],
     'Content Writer': ['marketing'],
-    'Designer': ['marketing', 'design']
+    'Copywriter': ['marketing'],
+    'Growth Marketer': ['marketing', 'data'],
+    'Marketing Specialist': ['marketing'],
+    'Social Media Manager': ['marketing'],
+    'SEO Specialist': ['marketing', 'data'],
+    'Email Specialist': ['marketing'],
+    'Data Analyst': ['data'],
+    'Data Scientist': ['data', 'development'],
+    'Operations Manager': ['operations', 'product'],
+    'Business Strategist': ['product', 'operations'],
+    'HR Specialist': ['operations'],
+    'Instructional Designer': ['design', 'product'],
+    'Audio Editor': ['design'],
+    'Idea Partner': ['product'],
   };
   
   // For generic greetings or very short messages, default to Product Manager
@@ -207,13 +231,36 @@ export function calculateExpertiseConfidence(
   
   // Base confidence from domain match
   const roleDomainMapping: Record<string, string[]> = {
-    'Product Designer': ['design'],
-    'UI Engineer': ['development', 'design'],
     'Product Manager': ['product', 'design', 'development'],
+    'Business Analyst': ['product', 'data'],
     'Backend Developer': ['development'],
+    'Software Engineer': ['development'],
+    'Technical Lead': ['development', 'quality'],
+    'AI Developer': ['development', 'data'],
+    'DevOps Engineer': ['development', 'operations'],
+    'Product Designer': ['design'],
+    'UX Designer': ['design'],
+    'UI Engineer': ['development', 'design'],
+    'UI Designer': ['design'],
+    'Designer': ['design'],
+    'Creative Director': ['design', 'marketing'],
+    'Brand Strategist': ['marketing', 'design'],
     'QA Lead': ['quality', 'development'],
     'Content Writer': ['marketing'],
-    'Designer': ['marketing', 'design']
+    'Copywriter': ['marketing'],
+    'Growth Marketer': ['marketing', 'data'],
+    'Marketing Specialist': ['marketing'],
+    'Social Media Manager': ['marketing'],
+    'SEO Specialist': ['marketing', 'data'],
+    'Email Specialist': ['marketing'],
+    'Data Analyst': ['data'],
+    'Data Scientist': ['data', 'development'],
+    'Operations Manager': ['operations', 'product'],
+    'Business Strategist': ['product', 'operations'],
+    'HR Specialist': ['operations'],
+    'Instructional Designer': ['design', 'product'],
+    'Audio Editor': ['design'],
+    'Idea Partner': ['product'],
   };
   
   const agentDomains = roleDomainMapping[agent.role] || [];

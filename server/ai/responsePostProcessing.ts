@@ -97,18 +97,18 @@ function stripChatUnfriendlyFormatting(input: string): string {
   // Remove markdown headers (## Header, ### Header)
   output = output.replace(/^#{1,6}\s+.+$/gm, '');
 
-  // Convert bullet lists to comma-joined prose if the list is short (under 4 items)
+  // Convert bullet lists to comma-joined prose (any length)
   output = output.replace(
-    /(?:^|\n)((?:\s*[-*+•]\s+.+\n?){2,4})/gm,
-    (match, listBlock) => {
+    /(?:^|\n)((?:\s*[-*+•]\s+.+\n?){2,})/gm,
+    (_match, listBlock) => {
       const items = listBlock
         .split('\n')
         .map((l: string) => l.replace(/^\s*[-*+•]\s+/, '').trim())
         .filter(Boolean);
-      if (items.length >= 2 && items.length <= 4) {
+      if (items.length >= 2) {
         return '\n' + items.join(', ') + '.';
       }
-      return match; // keep longer lists if any
+      return _match;
     }
   );
 
@@ -130,7 +130,11 @@ const AI_ISMS: [RegExp, string][] = [
   [/\bAs your (Product Manager|PM)[,]?\s*/gi, ''],
   [/\bI(?:'d| would) be happy to\b/gi, 'happy to'],
   [/\bGreat question[!.]?\s*/gi, ''],
+  [/^Great[!,.]?\s*/i, ''],
   [/\bI(?:'m| am) here to help\b[^.]*\./gi, ''],
+  [/\bLet me know (?:if|how|what)[^.!?]*[.!?]?\s*/gi, ''],
+  [/\bDon(?:'t|'t) hesitate to[^.]*\.\s*/gi, ''],
+  [/\bHappy to help[^.]*[.!]?\s*/gi, ''],
   [/\bFeel free to\b/gi, 'go ahead and'],
   [/\bPlease note that\b/gi, 'quick thing —'],
   [/\bIt is important to note that\b/gi, 'worth knowing —'],
@@ -208,8 +212,10 @@ function applyAdaptiveClosing(input: string, state: UserSignals['emotionalState'
 
 // ─── Layer 7: Question guard ──────────────────────────────────────────────────
 function keepSingleQuestion(input: string): string {
+  // Split into segments: code blocks and URLs should be preserved, only replace ? in prose
   let seenQuestion = false;
-  return input.replace(/\?/g, () => {
+  return input.replace(/(```[\s\S]*?```|`[^`]+`|https?:\/\/\S+)|(\?)/g, (match, preserved, questionMark) => {
+    if (preserved) return preserved; // Don't touch code blocks or URLs
     if (seenQuestion) return '.';
     seenQuestion = true;
     return '?';

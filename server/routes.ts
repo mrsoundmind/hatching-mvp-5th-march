@@ -15,6 +15,8 @@ import { registerMessageRoutes } from "./routes/messages.js";
 import { registerProjectRoutes } from "./routes/projects.js";
 import { registerTaskRoutes } from "./routes/tasks.js";
 import { registerChatRoutes } from "./routes/chat.js";
+import { registerBillingRoutes } from "./routes/billing.js";
+import { registerDeliverableRoutes } from "./routes/deliverables.js";
 import {
   buildGoogleAuthorizationUrl,
   exchangeGoogleAuthorizationCode,
@@ -65,7 +67,7 @@ export async function registerRoutes(app: Express, sessionParser?: SessionParser
 
   // Protect all API routes except auth endpoints and public storage status
   app.use('/api', (req, res, next) => {
-    if (req.path.startsWith('/auth') || req.path === '/system/storage-status') {
+    if (req.path.startsWith('/auth') || req.path === '/system/storage-status' || req.path === '/billing/webhook') {
       return next();
     }
     requireAuth(req, res, next);
@@ -168,6 +170,7 @@ export async function registerRoutes(app: Express, sessionParser?: SessionParser
       const user = await storage.upsertOAuthUser(identity);
       await regenerateSession(req);
       req.session.userId = user.id;
+      req.session.userTier = user.tier || 'free';
 
       req.session.save((saveError) => {
         if (saveError) {
@@ -239,13 +242,67 @@ export async function registerRoutes(app: Express, sessionParser?: SessionParser
       return res.status(401).json({ error: 'Not authenticated' });
     }
 
+    // Resolve daily usage for billing info
+    const { getDailyMessageCount } = await import('./billing/usageTracker.js');
+    const dailyMessagesUsed = await getDailyMessageCount(storage, user.id);
+    const tier = user.tier || 'free';
+    const dailyMessageLimit = tier === 'pro' ? 2000 : 500;
+
     return res.json({
       id: user.id,
       email: user.email,
       name: user.name,
       avatarUrl: user.avatarUrl,
       provider: user.provider,
+      tier,
+      subscriptionStatus: user.subscriptionStatus || 'none',
+      dailyMessagesUsed,
+      dailyMessageLimit,
     });
+  });
+
+  // Dev-only: one-click login for testing (no Google OAuth needed)
+  app.get('/api/auth/dev-login', async (req, res) => {
+    if (process.env.NODE_ENV === 'production') {
+      return res.status(403).json({ error: 'Dev login disabled in production' });
+    }
+
+    try {
+      const username = 'session:dev_tester';
+      const email = 'dev@local.hatchin';
+
+      let user = await storage.getUserByUsername(username);
+      if (!user) {
+        user = await storage.createUser({
+          email,
+          name: 'Dev Tester',
+          avatarUrl: null,
+          provider: 'legacy',
+          providerSub: 'legacy:dev_tester',
+          username,
+          password: randomUUID(),
+        } as any);
+      }
+
+      // Regenerate session to prevent fixation attacks
+      req.session.regenerate((err) => {
+        if (err) {
+          console.error('Session regeneration failed:', err);
+        }
+        req.session.userId = user!.id;
+        req.session.userName = user!.name;
+        req.session.userTier = user!.tier || 'free';
+        console.log('[Auth] Dev login:', user!.id, user!.name);
+        // Explicitly save before redirect to avoid race condition
+        req.session.save((saveErr) => {
+          if (saveErr) console.error('Session save failed:', saveErr);
+          return res.redirect('/');
+        });
+      });
+    } catch (error) {
+      console.error('Dev login failed:', error);
+      return res.status(500).json({ error: 'Dev login failed' });
+    }
   });
 
   app.post('/api/auth/logout', (req, res) => {
@@ -287,9 +344,15 @@ export async function registerRoutes(app: Express, sessionParser?: SessionParser
   });
 
   // B4: Personality Evolution API endpoints
-  app.get("/api/personality/:agentId/:userId", async (req, res) => {
+  app.get("/api/personality/:agentId", async (req, res) => {
     try {
-      const { agentId, userId } = req.params;
+      const { agentId } = req.params;
+      const userId = getSessionUserId(req);
+      // Ownership check: verify agent belongs to user's project
+      const agent = await storage.getAgent(agentId);
+      if (!agent) return res.status(404).json({ error: "Agent not found" });
+      const project = await storage.getProject(agent.projectId);
+      if (!project || project.userId !== userId) return res.status(404).json({ error: "Agent not found" });
       const stats = personalityEngine.getPersonalityStats(agentId, userId);
       res.json(stats);
     } catch (error) {
@@ -361,6 +424,11 @@ export async function registerRoutes(app: Express, sessionParser?: SessionParser
   app.get("/api/personality/analytics/:agentId", async (req, res) => {
     try {
       const { agentId } = req.params;
+      const userId = getSessionUserId(req);
+      const agent = await storage.getAgent(agentId);
+      if (!agent) return res.status(404).json({ error: "Agent not found" });
+      const project = await storage.getProject(agent.projectId);
+      if (!project || project.userId !== userId) return res.status(404).json({ error: "Agent not found" });
       const analytics = {
         totalUsers: 0,
         averageAdaptation: 0,
@@ -380,6 +448,8 @@ export async function registerRoutes(app: Express, sessionParser?: SessionParser
   // E3.4: Handoff statistics API
   app.get("/api/handoffs/stats", async (req, res) => {
     try {
+      const userId = getSessionUserId(req);
+      if (!userId) return res.status(401).json({ error: "Unauthorized" });
       const stats = handoffTracker.getHandoffStats();
       res.json(stats);
     } catch (error) {
@@ -389,8 +459,15 @@ export async function registerRoutes(app: Express, sessionParser?: SessionParser
 
   app.get("/api/handoffs/history", async (req, res) => {
     try {
+      const userId = getSessionUserId(req);
       const { agentId } = req.query;
-      const history = handoffTracker.getHandoffHistory(agentId as string);
+      if (!agentId || typeof agentId !== 'string') return res.status(400).json({ error: "agentId required" });
+      // Ownership check: verify agent belongs to user's project
+      const agent = await storage.getAgent(agentId);
+      if (!agent) return res.status(404).json({ error: "Agent not found" });
+      const project = await storage.getProject(agent.projectId);
+      if (!project || project.userId !== userId) return res.status(404).json({ error: "Agent not found" });
+      const history = handoffTracker.getHandoffHistory(agentId);
       res.json(history);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch handoff history" });
@@ -419,6 +496,7 @@ export async function registerRoutes(app: Express, sessionParser?: SessionParser
   // Health route registered after chat module so getWsHealth is available
   registerHealthRoute(app, {
     getWsHealth: () => getWsHealth(),
+    storage,
   });
 
   // Extracted route modules
@@ -427,6 +505,8 @@ export async function registerRoutes(app: Express, sessionParser?: SessionParser
   registerMessageRoutes(app);
   registerProjectRoutes(app, { broadcastToConversation });
   registerTaskRoutes(app, { broadcastToConversation, broadcastToProject });
+  registerBillingRoutes(app);
+  registerDeliverableRoutes(app, { broadcastToConversation });
 
   return httpServer;
 }

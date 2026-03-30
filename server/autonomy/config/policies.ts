@@ -53,6 +53,14 @@ export const FEATURE_FLAGS = {
 
 export const MAX_HANDOFF_HOPS = Number(process.env.MAX_HANDOFF_HOPS ?? 4);
 
+/** Tier-specific autonomy budgets */
+export function getTierBudgets(tier: 'free' | 'pro') {
+  return {
+    maxBackgroundLlmCallsPerProjectPerDay: tier === 'pro' ? 50 : 0,
+    autonomyEnabled: tier === 'pro',
+  };
+}
+
 export function resolveRuntimeModeFromEnv(env = process.env): RuntimeModeName {
   const llmMode = (env.LLM_MODE ?? 'prod').toLowerCase();
   const testProvider = (env.TEST_LLM_PROVIDER ?? '').toLowerCase();

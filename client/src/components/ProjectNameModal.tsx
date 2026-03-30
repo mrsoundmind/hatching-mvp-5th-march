@@ -23,12 +23,20 @@ export default function ProjectNameModal({
 }: ProjectNameModalProps) {
   const [projectName, setProjectName] = useState('');
   const [projectDescription, setProjectDescription] = useState('');
+  const [touched, setTouched] = useState(false);
+  const [dirty, setDirty] = useState(false);
+  const nameError = touched && dirty && projectName.trim().length === 0 ? 'Project name is required' :
+    projectName.length > 100 ? 'Name must be 100 characters or fewer' : '';
 
   // Pre-fill with template data when modal opens
   useEffect(() => {
-    if (isOpen && templateName) {
-      setProjectName(templateName);
-      setProjectDescription(templateDescription);
+    if (isOpen) {
+      setTouched(false);
+      setDirty(false);
+      if (templateName) {
+        setProjectName(templateName);
+        setProjectDescription(templateDescription);
+      }
     }
   }, [isOpen, templateName, templateDescription]);
 
@@ -85,12 +93,24 @@ export default function ProjectNameModal({
             <input
               type="text"
               value={projectName}
-              onChange={(e) => setProjectName(e.target.value)}
+              onChange={(e) => { setProjectName(e.target.value.slice(0, 100)); setDirty(true); }}
+              onBlur={() => setTouched(true)}
               placeholder="Enter your project name"
-              className="w-full px-4 py-3 bg-hatchin-surface border border-hatchin-border-subtle rounded-xl text-hatchin-text-bright placeholder-muted-foreground focus:border-hatchin-blue focus:outline-none focus:ring-1 focus:ring-hatchin-blue transition-colors"
+              className={`w-full px-4 py-3 bg-hatchin-surface border rounded-xl text-hatchin-text-bright placeholder-muted-foreground focus:outline-none focus:ring-1 transition-colors ${
+                nameError ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-hatchin-border-subtle focus:border-hatchin-blue focus:ring-hatchin-blue'
+              }`}
               autoFocus
               disabled={isLoading}
+              aria-invalid={!!nameError}
+              aria-describedby={nameError ? 'name-error' : undefined}
+              maxLength={100}
             />
+            <div className="flex justify-between mt-1">
+              {nameError ? (
+                <p id="name-error" className="text-red-500 text-xs">{nameError}</p>
+              ) : <span />}
+              <span className="text-xs text-muted-foreground">{projectName.length}/100</span>
+            </div>
           </div>
 
           {/* Project Description Input */}

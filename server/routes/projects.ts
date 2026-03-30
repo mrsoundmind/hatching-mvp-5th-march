@@ -37,6 +37,7 @@ const updateProjectSchema = z.object({
     taskGraph: z.unknown().optional(),
   }).nullable().optional(),
   starterPack: z.string().max(100).nullable().optional(),
+  teamCulture: z.string().max(5000).nullable().optional(),
 }).strict();
 
 export interface RegisterProjectDeps {

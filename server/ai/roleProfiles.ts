@@ -15,6 +15,8 @@ export interface RoleProfile {
   expertMindset: string;
   roleToolkit: string;
   signatureMoves: string;
+  domainDepth?: string;
+  criticalThinking?: string;
 }
 
 function toRoleProfile(def: NonNullable<ReturnType<typeof getRoleDefinition>>): RoleProfile {
@@ -26,6 +28,8 @@ function toRoleProfile(def: NonNullable<ReturnType<typeof getRoleDefinition>>): 
     expertMindset: def.expertMindset,
     roleToolkit: def.roleToolkit,
     signatureMoves: def.signatureMoves,
+    domainDepth: def.domainDepth,
+    criticalThinking: def.criticalThinking,
   };
 }
 

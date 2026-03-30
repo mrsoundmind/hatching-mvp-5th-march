@@ -8,13 +8,17 @@ import {
   generateChatWithRuntimeFallback,
   getCurrentRuntimeConfig,
   streamChatWithRuntimeFallback,
+  streamWithPreferredProvider,
 } from '../llm/providerResolver.js';
 import type { LLMResponseMetadata } from '../llm/providerTypes.js';
 import { loadRoleBrain, renderRoleBrainContext } from '../knowledge/roleBrains/loader.js';
 import { getCharacterProfile } from './characterProfiles.js';
+import { getRoleIntelligence } from '@shared/roleIntelligence';
 import { loadRoleSkillsWithUpdates } from '../knowledge/skillUpdates/skillUpdateStore.js';
 import { extractAndStoreMemory } from './memoryExtractor.js';
 import { detectEmotionalState } from './responsePostProcessing.js';
+import { classifyMessageComplexity, resolveMaxTokens } from './taskComplexityClassifier.js';
+import { getReasoningHint, cacheReasoningPattern } from './reasoningCache.js';
 
 export class OpenAIConfigurationError extends Error {
   code: string;
@@ -68,6 +72,11 @@ interface ColleagueResponse {
 function resolveRuntimeModel(preferred?: string): string | undefined {
   const runtime = getCurrentRuntimeConfig();
   if (runtime.provider !== 'openai') {
+    // Use Gemini Pro as default for all chat when available — gives every user the best experience.
+    // Cost is managed through adaptive maxTokens + conversation compaction, not model downgrade.
+    if (runtime.provider === 'gemini' && process.env.GEMINI_PRO_MODEL) {
+      return process.env.GEMINI_PRO_MODEL;
+    }
     // In test modes, let providerResolver inject provider-specific defaults (ollama/mock).
     return undefined;
   }
@@ -170,14 +179,26 @@ export async function* generateStreamingResponse(
     const characterProfile = getCharacterProfile(agentRole);
     const characterSection = characterProfile ? `\n--- CHARACTER VOICE ---\n${characterProfile.voicePrompt}\nVerbal tendencies: ${characterProfile.tendencies.join('. ')}\nNever say: ${characterProfile.neverSays.slice(0, 3).join(', ')}\n--- END CHARACTER VOICE ---` : '';
 
+    // Merged: PROFESSIONAL DEPTH + DOMAIN INTELLIGENCE → single ROLE EXPERTISE section
+    const intelligence = getRoleIntelligence(agentRole);
+    const expertiseParts: string[] = [];
+    if (roleProfile?.domainDepth) expertiseParts.push(`Domain: ${roleProfile.domainDepth}`);
+    if (intelligence?.reasoningPattern) expertiseParts.push(`Reasoning: ${intelligence.reasoningPattern}`);
+    if (intelligence?.outputStandards) expertiseParts.push(`Output standard: ${intelligence.outputStandards}`);
+    if (roleProfile?.criticalThinking) expertiseParts.push(`Critical thinking: ${roleProfile.criticalThinking}`);
+    if (characterProfile?.negativeHandling) expertiseParts.push(`Pushback: ${characterProfile.negativeHandling}`);
+    if (characterProfile?.collaborationStyle) expertiseParts.push(`Collaboration: ${characterProfile.collaborationStyle}`);
+    const professionalDepthSection = expertiseParts.length > 0
+      ? `\n--- ROLE EXPERTISE ---\n${expertiseParts.join('\n')}\n--- END ROLE EXPERTISE ---`
+      : '';
+    const domainIntelligenceSection = ''; // merged into ROLE EXPERTISE above
+
     // GAP 2: Emotional signature injection
     const currentEmotionalState = detectEmotionalState(userMessage);
     const emotionalSignatureMap: Record<string, keyof NonNullable<typeof characterProfile>['emotionalSignature']> = {
       'excited': 'excited',
       'frustrated': 'challenged',
       'uncertain': 'uncertain',
-      'casual': 'celebrating', // no direct match, skip
-      'focused': 'excited',    // no direct match, skip
     };
     const sigKey = emotionalSignatureMap[currentEmotionalState];
     const emotionalSignaturePhrase = characterProfile?.emotionalSignature?.[sigKey];
@@ -185,8 +206,11 @@ export async function* generateStreamingResponse(
       ? `\n--- EMOTIONAL RESONANCE ---\nUser's current state: ${currentEmotionalState}.\nYour authentic character response for this state: "${emotionalSignaturePhrase}"\nLet this inform your energy and word choice naturally — don't quote it directly.\n--- END EMOTIONAL RESONANCE ---`
       : '';
 
-    // P1: Practitioner skills injection (base Canon + living updates merged)
-    const skillsSection = `\n--- PRACTITIONER SKILLS ---\n${loadRoleSkillsWithUpdates(agentRole)}\n--- END PRACTITIONER SKILLS ---`;
+    // P1: Practitioner skills injection — only for first 3 messages (LLM internalizes after)
+    const turnCount = context.conversationHistory?.length ?? 0;
+    const skillsSection = turnCount <= 3
+      ? `\n--- PRACTITIONER SKILLS ---\n${loadRoleSkillsWithUpdates(agentRole)}\n--- END PRACTITIONER SKILLS ---`
+      : '';
 
     // P3: Project context injection
     const projectContextSection = context.projectDirection ? `\n--- PROJECT CONTEXT ---\nBuilding: ${context.projectDirection.whatBuilding || 'Not specified'}\nFor: ${context.projectDirection.whoFor || 'Not specified'}\nWhy it matters: ${context.projectDirection.whyMatters || 'Not specified'}${context.teamMembers?.length ? `\nTeam: ${context.teamMembers.map(a => `${a.name} (${a.role})`).join(', ')}` : ''}\n--- END PROJECT CONTEXT ---` : '';
@@ -224,25 +248,17 @@ export async function* generateStreamingResponse(
       : '';
 
     // GAP 5: Opinion and disagreement instruction
-    const opinionSection = `\n--- CONVICTION ---\nWhen you see a decision with clear risks or a better alternative, say so once, briefly, without lecturing. "That could work, but here's what I'd watch for..." is more valuable than agreement. Real teammates push back. Don't manufacture disagreement — but don't suppress genuine ones either.\n--- END CONVICTION ---`;
+    const opinionSection = `\n--- CONVICTION ---\nPush back briefly when you see clear risks or a better alternative — real teammates disagree when it matters.\n--- END CONVICTION ---`;
 
     // Build Maya-specific or generic Hatch intelligence instructions
-    const isMaya = agentRole === 'AI Idea Partner' || agentRole === 'Maya';
+    const isMaya = agentRole === 'Idea Partner' || agentRole === 'Maya';
     const conversationTurnCount = context.conversationHistory.length;
 
     const mayaTeamSuggestionInstructions = isMaya && conversationTurnCount >= 2 ? `
---- MAYA: TEAM AUTO-HATCH INTELLIGENCE ---
-You are Maya, an AI Idea Partner. You have been analyzing the user's idea across the conversation.
-If you now have enough context to suggest what kind of team the user needs (e.g., a designer, a developer, a marketer), append the following block AT THE VERY END of your response, AFTER all your conversational text. This block will be hidden from the user automatically.
-
-Format (replace example values with real recommendations based on the user's idea):
-<!--HATCH_SUGGESTION:{"teams":[{"name":"Core Team","emoji":"⭐","agents":[{"name":"Alex","role":"Product Designer","color":"orange"},{"name":"Sam","role":"Backend Developer","color":"blue"}]}],"trigger":"user_agreement"}-->
-
-Important rules:
-- ONLY include this block if you genuinely have enough context to make a real recommendation.
-- ALWAYS mention to the user in plain text first: "Based on what you've described, I'd suggest building a team with [X, Y, Z]. Should I add them to your project?"
-- Use realistic role names that match the idea (e.g., for a food app: Product Designer, Backend Developer, Marketing Strategist).
-- Maximum 3-4 agents total across all teams.
+--- MAYA TEAM INTELLIGENCE ---
+When you have enough context, suggest a team. Mention it in text first ("I'd suggest adding X, Y, Z — should I?"), then append at the very end:
+<!--HATCH_SUGGESTION:{"teams":[{"name":"Core Team","emoji":"⭐","agents":[{"name":"Alex","role":"Product Designer","color":"orange"}]}],"trigger":"user_agreement"}-->
+Max 3-4 agents. Use realistic roles matching the idea.
 --- END MAYA TEAM INTELLIGENCE ---
 ` : '';
 
@@ -259,22 +275,24 @@ Important rules:
 --- END HATCH TASK INTELLIGENCE ---
 
 --- HATCH BRAIN UPDATE INTELLIGENCE ---
-You can suggest updating the Project Brain with key insights you've learned. Only offer this after a substantive discussion (5+ meaningful exchanges).
-
-Format:
-<!--BRAIN_UPDATE:{"field":"coreDirection","value":"<concise description>"}-->
-
-Valid fields: coreDirection, executionRules, teamCulture, goals, summary.
-
-Important rules:
-- ONLY suggest an update when you have genuinely learned something significant about the project.
-- ALWAYS ask first: "I think I have a good picture of [X]. Should I update the Project Brain with this?"
+After 5+ exchanges, if you've learned something significant about the project, suggest a brain update. Ask first, then append:
+<!--BRAIN_UPDATE:{"field":"coreDirection|executionRules|teamCulture|goals|summary","value":"<concise>"}-->
 --- END HATCH BRAIN UPDATE INTELLIGENCE ---
 ` : '';
+
+    // 6.2: Inject reasoning pattern hint if cached for this role + project + category
+    const reasoningHint = context.projectId
+      ? getReasoningHint(context.projectId, agentRole, userMessage)
+      : null;
+    const reasoningHintSection = reasoningHint
+      ? `\n--- REASONING HINT ---\n${reasoningHint}\n--- END REASONING HINT ---`
+      : '';
 
     // Create system prompt based on role and context
     const systemPrompt = `${enhancedPrompt}
 ${characterSection}
+${professionalDepthSection}
+${domainIntelligenceSection}
 ${emotionalSignatureSection}
 ${skillsSection}
 ${projectContextSection}
@@ -292,22 +310,35 @@ ${roleBrainContext}
 --- END ROLE BRAIN ---
 
 ${opinionSection}
+${reasoningHintSection}
 ${mayaTeamSuggestionInstructions}
 ${hatchTaskInstructions}
 
 Respond as this specific role with appropriate expertise and personality. Keep responses concise and actionable.`;
 
-    const streamResult = await streamChatWithRuntimeFallback({
+    const messageComplexity = classifyMessageComplexity(basePrompt.userPrompt);
+    const isFirstMsg = (context.conversationHistory?.length ?? 0) <= 1;
+
+    const llmRequest = {
       model: resolveRuntimeModel(),
       messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: basePrompt.userPrompt }
+        { role: "system" as const, content: systemPrompt },
+        { role: "user" as const, content: basePrompt.userPrompt }
       ],
       temperature: 0.7,
-      maxTokens: userBehaviorProfile?.communicationStyle === 'anxious' ? 150 : 500,
+      maxTokens: userBehaviorProfile?.communicationStyle === 'anxious'
+        ? 150
+        : resolveMaxTokens(messageComplexity, isFirstMsg),
       timeoutMs: Number(process.env.HARD_RESPONSE_TIMEOUT_MS || 45000),
       seed: process.env.LLM_MODE === "test" ? 42 : undefined,
-    });
+    };
+
+    // Route simple messages through Groq (free) — saves Pro model costs for greetings/acks.
+    // Falls back to default chain if Groq fails.
+    const useGroq = messageComplexity === 'simple' && process.env.GROQ_API_KEY;
+    const streamResult = useGroq
+      ? await streamWithPreferredProvider(llmRequest, 'groq')
+      : await streamChatWithRuntimeFallback(llmRequest);
 
     onMetadata?.(streamResult.metadata);
 
@@ -336,6 +367,15 @@ Respond as this specific role with appropriate expertise and personality. Keep r
           createConversationMemory: context.createConversationMemory ?? (async () => {}),
         }
       ).catch(() => { /* fire-and-forget — never throw */ });
+    }
+
+    // 6.2: Cache reasoning pattern on high-confidence responses (fire-and-forget)
+    if (context.projectId && fullResponse.length > 50) {
+      const confidence = calculateConfidence(fullResponse, userMessage, roleProfile);
+      if (confidence > 0.85) {
+        const structure = fullResponse.slice(0, 120).replace(/\n/g, ' ').trim();
+        cacheReasoningPattern(context.projectId, agentRole, userMessage, structure);
+      }
     }
 
     // Update LangSmith trace with successful streaming response

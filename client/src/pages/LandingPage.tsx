@@ -811,9 +811,18 @@ export default function LandingPage() {
                     </Link>
                   </div>
                 ) : (
-                  <div className="relative border border-white/5 bg-slate-50 dark:bg-[#080A0F] py-3.5 px-4 flex items-center justify-center gap-2 opacity-60 rounded-md">
-                    <span className="w-2 h-2 rounded-full bg-slate-500 animate-[ping_2s_cubic-bezier(0,0,0.2,1)_infinite]" />
-                    <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">Processing...</span>
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="w-full relative border border-white/5 bg-slate-50 dark:bg-[#080A0F] py-3.5 px-4 flex items-center justify-center gap-2 opacity-60 rounded-md">
+                      <span className="w-2 h-2 rounded-full bg-slate-500 animate-[ping_2s_cubic-bezier(0,0,0.2,1)_infinite]" />
+                      <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">Processing...</span>
+                    </div>
+                    {(appState === "explaining" || appState === "processing_preset" || appState === "processing_name") && (
+                      <Link href="/login">
+                        <span className="text-xs text-muted-foreground hover:text-white transition-colors cursor-pointer">
+                          Skip, just let me sign up
+                        </span>
+                      </Link>
+                    )}
                   </div>
                 )}
               </div>
@@ -1020,6 +1029,59 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* Pricing */}
+      <section className="w-full max-w-[900px] mx-auto px-6 py-16 relative z-10">
+        <h2 className="text-3xl md:text-4xl font-semibold text-foreground mb-2 tracking-tight text-center">
+          Simple pricing
+        </h2>
+        <p className="text-muted-foreground text-center mb-10">Start free. Upgrade when you need more.</p>
+
+        <div className="grid md:grid-cols-2 gap-6">
+          {/* Free tier */}
+          <div className="rounded-xl border border-white/[0.08] bg-white/[0.02] p-6">
+            <h3 className="text-lg font-semibold text-foreground mb-1">Hatcher</h3>
+            <p className="text-3xl font-bold text-foreground mb-1">$0<span className="text-sm font-normal text-muted-foreground">/mo</span></p>
+            <p className="text-muted-foreground text-sm mb-5">For solo builders getting started</p>
+            <ul className="space-y-2.5 text-sm text-muted-foreground">
+              <li className="flex items-start gap-2"><span className="text-indigo-400 mt-0.5">&#10003;</span>Unlimited messages</li>
+              <li className="flex items-start gap-2"><span className="text-indigo-400 mt-0.5">&#10003;</span>3 projects</li>
+              <li className="flex items-start gap-2"><span className="text-indigo-400 mt-0.5">&#10003;</span>All 30 AI teammates</li>
+              <li className="flex items-start gap-2"><span className="text-indigo-400 mt-0.5">&#10003;</span>Pro AI model — same quality</li>
+              <li className="flex items-start gap-2"><span className="text-indigo-400 mt-0.5">&#10003;</span>Real-time chat with streaming</li>
+              <li className="flex items-start gap-2"><span className="text-indigo-400 mt-0.5">&#10003;</span>Automatic task detection</li>
+            </ul>
+            <Link href="/login">
+              <button className="w-full mt-6 py-2.5 rounded-lg border border-white/[0.12] text-foreground text-sm font-medium hover:bg-white/[0.04] transition-colors cursor-pointer">
+                Get Started
+              </button>
+            </Link>
+          </div>
+
+          {/* Pro tier */}
+          <div className="rounded-xl border border-indigo-500/30 bg-indigo-500/[0.04] p-6 relative">
+            <span className="absolute -top-3 left-6 bg-indigo-500 text-white text-[11px] font-bold uppercase tracking-wider px-3 py-0.5 rounded-full">Popular</span>
+            <h3 className="text-lg font-semibold text-foreground mb-1">Pro</h3>
+            <p className="text-3xl font-bold text-foreground mb-1">$19<span className="text-sm font-normal text-muted-foreground">/mo</span></p>
+            <p className="text-muted-foreground text-sm mb-5">For builders who ship fast</p>
+            <ul className="space-y-2.5 text-sm text-muted-foreground">
+              <li className="flex items-start gap-2"><span className="text-indigo-400 mt-0.5">&#10003;</span>Unlimited messages</li>
+              <li className="flex items-start gap-2"><span className="text-indigo-400 mt-0.5">&#10003;</span>Unlimited projects</li>
+              <li className="flex items-start gap-2"><span className="text-indigo-400 mt-0.5">&#10003;</span>All 30 AI teammates</li>
+              <li className="flex items-start gap-2"><span className="text-indigo-400 mt-0.5">&#10003;</span>Pro AI model</li>
+              <li className="flex items-start gap-2"><span className="text-indigo-400 mt-0.5">&#10003;</span>Full autonomous execution</li>
+              <li className="flex items-start gap-2"><span className="text-indigo-400 mt-0.5">&#10003;</span>50 background executions/day</li>
+              <li className="flex items-start gap-2"><span className="text-indigo-400 mt-0.5">&#10003;</span>Peer review + safety gates</li>
+            </ul>
+            <Link href="/login">
+              <button className="w-full mt-6 py-2.5 rounded-lg bg-indigo-500 hover:bg-indigo-400 text-white text-sm font-medium transition-colors cursor-pointer">
+                Start Building
+              </button>
+            </Link>
+            <p className="text-xs text-muted-foreground/50 text-center mt-2">or $190/year (save 17%)</p>
+          </div>
+        </div>
+      </section>
+
       {/* Bottom CTA */}
       <section className="w-full max-w-[800px] mx-auto px-6 py-16 text-center relative z-10">
         <h2 className="text-3xl md:text-4xl font-semibold text-foreground mb-3 tracking-tight">
@@ -1041,8 +1103,8 @@ export default function LandingPage() {
         <div className="max-w-[1000px] mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
           <span className="text-muted-foreground/40 text-[12px]">&copy; 2026 Hatchin. All rights reserved.</span>
           <div className="flex items-center gap-6">
-            <a href="#" className="text-muted-foreground/40 hover:text-muted-foreground text-[12px] transition-colors">Privacy</a>
-            <a href="#" className="text-muted-foreground/40 hover:text-muted-foreground text-[12px] transition-colors">Terms</a>
+            <a href="/legal/privacy" className="text-muted-foreground/40 hover:text-muted-foreground text-[12px] transition-colors">Privacy</a>
+            <a href="/legal/terms" className="text-muted-foreground/40 hover:text-muted-foreground text-[12px] transition-colors">Terms</a>
             <a href="mailto:hello@hatchin.ai" className="text-muted-foreground/40 hover:text-muted-foreground text-[12px] transition-colors">Contact</a>
           </div>
         </div>

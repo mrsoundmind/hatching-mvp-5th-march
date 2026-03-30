@@ -7,7 +7,7 @@ export interface ClassifierContext {
 }
 
 export type TaskIntent =
-  | { type: 'EXPLICIT_TASK_REQUEST'; taskDescription: string; priority?: string; assigneeHint?: string; dueDatePhrase?: string }
+  | { type: 'EXPLICIT_TASK_REQUEST'; taskDescription: string; additionalTasks?: string[]; priority?: string; assigneeHint?: string; dueDatePhrase?: string }
   | { type: 'USER_DELEGATION'; targetAgentId: string; targetAgentName: string; taskDescription: string }
   | { type: 'TASK_LIFECYCLE_COMMAND'; command: 'status_update' | 'priority_update' | 'assignee_update' | 'delete' | 'query' | 'filtered_query' | 'progress'; taskHint?: string; newStatus?: string; newPriority?: string; newAssignee?: string; filters?: { assignee?: string; status?: string; priority?: string } }
   | { type: 'ORGANIC_CANDIDATE' }
@@ -20,9 +20,27 @@ const EXPLICIT_TASK_PATTERNS = [
   /^task:\s*(.+)/i,
   /(?:add|put)\s+(?:this\s+)?(?:to|on|in)\s+(?:the\s+)?task\s*list[:\s]*(.+)?/i,
   /(?:need|want)\s+a\s+task\s+(?:to\s+|for\s+)(.+)/i,
+  /\bTODO:\s*(.+)/i,
+  /\bto-?do:\s*(.+)/i,
+  /\baction\s*item:\s*(.+)/i,
 ];
 
-function detectExplicitTaskRequest(msg: string): { taskDescription: string } | null {
+function detectExplicitTaskRequest(msg: string): { taskDescription: string; additionalTasks?: string[] } | null {
+  // Check for multiple TODO:/to-do:/action item: patterns first
+  const todoLinePattern = /\bTODO:\s*(.+)/gi;
+  const todoMatches: string[] = [];
+  let todoMatch;
+  while ((todoMatch = todoLinePattern.exec(msg)) !== null) {
+    const desc = todoMatch[1].trim();
+    if (desc) todoMatches.push(desc);
+  }
+  if (todoMatches.length > 1) {
+    return {
+      taskDescription: todoMatches[0],
+      additionalTasks: todoMatches.slice(1),
+    };
+  }
+
   for (const pattern of EXPLICIT_TASK_PATTERNS) {
     const match = msg.match(pattern);
     if (match) {
@@ -201,12 +219,12 @@ function detectLifecycleCommand(msg: string, agents: ClassifierContext['availabl
 
 // ── 4. Organic Candidate ─────────────────────────────────────────────
 
-const ACTION_VERBS = /\b(fix|build|implement|design|deploy|test|update|refactor|migrate|integrate|create|develop|setup|configure)\b/i;
+const ACTION_VERBS = /\b(fix|build|implement|design|deploy|test|update|refactor|migrate|integrate|create|develop|setup|configure|plan|write|draft|research|analyze|review|launch|prepare|define|outline|establish|set\s*up)\b/i;
 const GREETING_PATTERNS = /^(hey|hi|hello|howdy|sup|yo|greetings|good\s+(?:morning|afternoon|evening)|thanks|thank\s+you|great|nice|cool|awesome|interesting|ok|okay|sure|got\s+it|sounds\s+good)\b/i;
 
 function detectOrganicCandidate(msg: string, depth: number): boolean {
   if (msg.length < 20) return false;
-  if (depth < 4) return false;
+  if (depth < 2) return false;
   if (GREETING_PATTERNS.test(msg)) return false;
   // Skip pure questions without action verbs
   if (msg.endsWith('?') && !ACTION_VERBS.test(msg)) return false;
@@ -222,7 +240,7 @@ export function classifyTaskIntent(message: string, context: ClassifierContext):
   // 1. Explicit task request (highest priority)
   const explicit = detectExplicitTaskRequest(msg);
   if (explicit) {
-    return { type: 'EXPLICIT_TASK_REQUEST', taskDescription: explicit.taskDescription };
+    return { type: 'EXPLICIT_TASK_REQUEST', taskDescription: explicit.taskDescription, additionalTasks: explicit.additionalTasks };
   }
 
   // 2. User delegation

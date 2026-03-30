@@ -2,7 +2,7 @@
 // LLM-powered task extraction for ORGANIC_CANDIDATE messages.
 // Only called after intent classifier gates the message (depth ≥ 4, action verbs present).
 
-import { generateChatWithRuntimeFallback, getCurrentRuntimeConfig } from '../../llm/providerResolver.js';
+import { generateWithPreferredProvider, getCurrentRuntimeConfig } from '../../llm/providerResolver.js';
 import { checkForDuplicate } from './duplicateDetector.js';
 
 export interface OrganicTask {
@@ -22,6 +22,7 @@ export interface OrganicExtractionResult {
 // ── Cooldown ─────────────────────────────────────────────────────────────
 
 const COOLDOWN_MS = 30000;
+const MAX_COOLDOWN_ENTRIES = 500;
 const cooldownMap = new Map<string, number>();
 
 function isInCooldown(conversationId: string): boolean {
@@ -31,6 +32,13 @@ function isInCooldown(conversationId: string): boolean {
 
 function markExtraction(conversationId: string): void {
   cooldownMap.set(conversationId, Date.now());
+  // Prune expired entries to prevent unbounded growth
+  if (cooldownMap.size > MAX_COOLDOWN_ENTRIES) {
+    const now = Date.now();
+    for (const [key, ts] of cooldownMap) {
+      if (now - ts > COOLDOWN_MS) cooldownMap.delete(key);
+    }
+  }
 }
 
 // ── JSON extraction helper ───────────────────────────────────────────────
@@ -94,8 +102,8 @@ Return JSON: {"hasTasks": bool, "tasks": [{"title": "...", "description": "...",
 
     const userPrompt = `USER: "${userMessage}"\nAGENT: "${agentResponse}"\n\nExtract actionable tasks (be conservative).`;
 
-    const completion = await generateChatWithRuntimeFallback({
-      model: resolveModel(),
+    // Route to Groq (FREE) with silent fallback to default provider
+    const completion = await generateWithPreferredProvider({
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt },
@@ -104,7 +112,7 @@ Return JSON: {"hasTasks": bool, "tasks": [{"title": "...", "description": "...",
       maxTokens: 800,
       timeoutMs: Number(process.env.HARD_RESPONSE_TIMEOUT_MS || 45000),
       seed: process.env.LLM_MODE === 'test' ? 42 : undefined,
-    });
+    }, process.env.GROQ_API_KEY ? 'groq' : 'gemini');
 
     const jsonText = extractJsonObject(completion.content || '');
     if (!jsonText) return empty;

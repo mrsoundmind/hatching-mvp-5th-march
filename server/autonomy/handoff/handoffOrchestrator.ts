@@ -4,6 +4,7 @@ import { queueTaskExecution } from '../execution/jobQueue.js';
 import { logAutonomyEvent } from '../events/eventLogger.js';
 import { MAX_HANDOFF_HOPS } from '../config/policies.js';
 import type { IStorage } from '../../storage.js';
+import { getRoleIntelligence } from '@shared/roleIntelligence';
 
 export interface HandoffResult {
   status: 'queued' | 'cycle_detected' | 'no_next_task' | 'max_hops_reached';
@@ -32,9 +33,14 @@ export async function orchestrateHandoff(input: {
 
   // Find dependent tasks (tasks with metadata.dependsOn pointing to the completed task)
   const allTasks = await input.storage.getTasksByProject(input.completedTask.projectId);
-  const dependentTasks = allTasks.filter(
-    (t) => t.status === 'todo' && (t.metadata as any)?.dependsOn === input.completedTask.id,
-  );
+  const dependentTasks = allTasks.filter((t) => {
+    if (t.status !== 'todo') return false;
+    const dep = (t.metadata as any)?.dependsOn;
+    if (!dep) return false;
+    // Support both string and array of dependency IDs
+    if (Array.isArray(dep)) return dep.includes(input.completedTask.id);
+    return dep === input.completedTask.id;
+  });
   if (dependentTasks.length === 0) return { status: 'no_next_task' };
 
   const nextTask = dependentTasks[0];
@@ -55,7 +61,9 @@ export async function orchestrateHandoff(input: {
     projectName: project?.name,
   });
 
-  const targetAgent = conductorResult.primaryMatch ?? agents[0];
+  // Filter out special agents (Maya) from handoff targets — they shouldn't receive task handoffs
+  const eligibleAgents = agents.filter((a) => !(a as any).isSpecialAgent);
+  const targetAgent = conductorResult.primaryMatch ?? eligibleAgents[0];
   if (!targetAgent) return { status: 'no_next_task' };
 
   // Cycle detection via existing HandoffTracker
@@ -87,21 +95,41 @@ export async function orchestrateHandoff(input: {
     return { status: 'cycle_detected' };
   }
 
-  // Attach previous output as context in task metadata before queuing
+  // Attach structured handoff context using role-specific handoff protocols
+  const passingIntelligence = getRoleIntelligence(input.completedAgent.role);
+  const receivingIntelligence = getRoleIntelligence(targetAgent.role);
+
+  const structuredHandoff = {
+    from: {
+      agentName: input.completedAgent.name,
+      role: input.completedAgent.role,
+      passesFormat: passingIntelligence?.handoffProtocol?.passes,
+    },
+    to: {
+      role: targetAgent.role,
+      expectsFormat: receivingIntelligence?.handoffProtocol?.receives,
+    },
+    output: input.completedOutput,
+    taskCompleted: input.completedTask.title,
+  };
+
   await input.storage.updateTask(nextTask.id, {
     metadata: {
       ...((nextTask.metadata as any) ?? {}),
       previousAgentOutput: input.completedOutput,
       previousAgentName: input.completedAgent.name,
       handoffChain: [...input.handoffChain, input.completedAgent.id],
+      structuredHandoff,
     } as any,
   });
 
-  await queueTaskExecution({
+  const queued = await queueTaskExecution({
     taskId: nextTask.id,
     projectId: input.completedTask.projectId,
     agentId: targetAgent.id,
   });
+
+  const wasQueued = queued !== null && queued !== undefined;
 
   handoffTracker.recordHandoff(
     {
@@ -111,11 +139,11 @@ export async function orchestrateHandoff(input: {
       reason: 'Task completed: ' + input.completedTask.title,
       context: userMessage,
       timestamp: new Date(),
-      status: 'accepted',
+      status: wasQueued ? 'accepted' : 'pending',
     },
     0,
-    true,
+    wasQueued,
   );
 
-  return { status: 'queued', nextAgentId: targetAgent.id, nextTaskId: nextTask.id };
+  return { status: wasQueued ? 'queued' : 'no_next_task', nextAgentId: targetAgent.id, nextTaskId: nextTask.id } as HandoffResult;
 }

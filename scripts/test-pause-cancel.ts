@@ -295,7 +295,7 @@ async function testCostCapStillEnforced(): Promise<void> {
 
   assert(!generateTextCalled, 'generateText must NOT be called when daily cap is reached (even if not paused)');
   const taskState = state.tasks.get(task.id);
-  assert(taskState?.status === 'todo', `task status must remain 'todo' when cap exceeded, got '${taskState?.status}'`);
+  assert(taskState?.status === 'blocked', `task status must be 'blocked' when cap exceeded (user is notified), got '${taskState?.status}'`);
 }
 
 // ─── Test 5: Schema type includes autonomyPaused ──────────────────────────────

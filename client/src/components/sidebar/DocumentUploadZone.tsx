@@ -102,13 +102,11 @@ export function DocumentUploadZone({ projectId, onUploadComplete }: DocumentUplo
     }
   };
 
-  const borderStyle = error
-    ? '2px solid var(--destructive)'
+  const borderClass = error
+    ? 'border-2 border-solid border-destructive'
     : isDragging
-      ? '2px solid var(--hatchin-blue)'
-      : '2px dashed var(--hatchin-border)';
-
-  const bgStyle = isDragging ? 'rgba(108,130,255,0.06)' : 'var(--hatchin-surface)';
+      ? 'border-2 border-solid border-[var(--hatchin-blue)] bg-[var(--hatchin-blue)]/5'
+      : 'border-2 border-dashed border-[var(--hatchin-border-subtle)] hover:border-[var(--hatchin-blue)]/50';
 
   return (
     <div
@@ -121,14 +119,7 @@ export function DocumentUploadZone({ projectId, onUploadComplete }: DocumentUplo
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
-      className="flex flex-col items-center justify-center rounded-xl cursor-pointer select-none"
-      style={{
-        border: borderStyle,
-        background: bgStyle,
-        minHeight: '80px',
-        transition: 'border-color 0.15s, background-color 0.15s',
-        padding: '12px 16px',
-      }}
+      className={`flex flex-col items-center justify-center min-h-[80px] px-4 py-3 rounded-xl cursor-pointer select-none bg-[var(--hatchin-surface)] transition-colors duration-150 ${borderClass}`}
     >
       <input
         ref={inputRef}

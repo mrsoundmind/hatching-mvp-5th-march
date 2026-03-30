@@ -27,7 +27,10 @@ function inferRoleFromMessage(userMessage: string, agents: ExpertiseAgent[]): Ex
     if (found) return found;
   }
 
-  return agents.find((agent) => /product manager|pm|manager/i.test(agent.role)) || agents[0];
+  // Default: Maya (Idea Partner / special agent) first, then PM Alex, then first agent
+  return agents.find((agent) => (agent as any).isSpecialAgent || /idea partner/i.test(agent.role))
+    || agents.find((agent) => /product manager|pm|manager/i.test(agent.role))
+    || agents[0];
 }
 
 function inferDeliberationNeed(userMessage: string): boolean {
@@ -61,10 +64,33 @@ export function evaluateConductorDecision(input: {
   primaryMatch?: ExpertiseAgent;
   fallbackMatches: ExpertiseAgent[];
 } {
+  // Guard: no agents available — return safe default decision
+  if (!input.availableAgents || input.availableAgents.length === 0) {
+    const safetyScore = evaluateSafetyScore({
+      userMessage: input.userMessage,
+      conversationMode: input.conversationMode,
+      projectName: input.projectName,
+    });
+    return {
+      decision: {
+        route: "authority_default",
+        reviewRequired: false,
+        interventionRequired: false,
+        gateRequired: false,
+        confidence: 0,
+        reviewerCount: 0,
+        reasons: ["no_agents_available"],
+      },
+      safetyScore,
+      primaryMatch: undefined,
+      fallbackMatches: [],
+    };
+  }
+
   const matches = findBestAgentMatch(input.userMessage, input.availableAgents);
   const inferredPrimary = inferRoleFromMessage(input.userMessage, input.availableAgents);
   const primaryMatch = inferredPrimary || matches[0]?.agent;
-  const primaryScore = matches.find((match) => match.agent.id === primaryMatch?.id)?.confidence ?? (primaryMatch ? 0.72 : 0);
+  const primaryScore = matches.find((match) => match.agent.id === primaryMatch?.id)?.confidence ?? (primaryMatch ? 0.50 : 0);
   const routeReasons: string[] = [];
   let route: ConductorDecision["route"] = "authority_default";
 
