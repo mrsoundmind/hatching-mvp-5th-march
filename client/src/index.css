@@ -507,21 +507,12 @@
   border-radius: 6px;
 }
 
-/* Active item left accent in sidebar — applied via JS class */
 .sidebar-active-item {
   position: relative;
 }
 
-.sidebar-active-item::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 20%;
-  height: 60%;
-  width: 2px;
-  background: var(--hatchin-blue, #6C82FF);
-  border-radius: 0 2px 2px 0;
-}
+/* Accent highlight removed — transitioning to background scale/elevation */
+/* .sidebar-active-item::before { ... } */
 
 /* =====================================================
    Task 14: AI Sync micro-animations (Show, Don't Tell)
@@ -760,21 +751,11 @@
   background-clip: text;
 }
 
-/* Active sidebar accent — gradient bar (blue → green) */
 .sidebar-active-accent {
   position: relative;
 }
-.sidebar-active-accent::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 15%;
-  height: 70%;
-  width: 3px;
-  background: linear-gradient(180deg, #6C82FF 0%, #47DB9A 100%);
-  border-radius: 0 3px 3px 0;
-  box-shadow: 4px 0 12px rgba(108, 130, 255, 0.15);
-}
+/* Accent highlight removed — transitioning to background scale/elevation */
+/* .sidebar-active-accent::before { ... } */
 
 /* Frosted glass panel (iOS-style) */
 .frosted-panel {

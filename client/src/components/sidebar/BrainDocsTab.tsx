@@ -105,9 +105,9 @@ export function BrainDocsTab({ projectId, project }: BrainDocsTabProps) {
       </div>
 
       {/* ——— Packages ——— */}
-      <SectionDivider label="Packages" />
+      <SectionDivider label="Project Knowledge Base" />
       <div className="px-2 mb-2">
-        <p className="text-[10px] hatchin-text-muted leading-relaxed">Milestones automatically tracked as Hatches complete related tasks.</p>
+        <p className="text-[10px] hatchin-text-muted leading-relaxed">Resources and context your agents are actively learning from.</p>
       </div>
       <div className="px-1">
         <PackageProgress projectId={projectId} />

@@ -125,6 +125,11 @@ export function AutonomySettingsPanel({ projectId, executionRules }: AutonomySet
         <div className="flex-1 h-px bg-gradient-to-r from-[var(--hatchin-border-subtle)] to-transparent" />
       </div>
 
+      {/* Contextual Description */}
+      <p className="text-[11px] text-[var(--hatchin-text-muted)] leading-relaxed bg-[var(--hatchin-blue)]/5 p-2.5 rounded-lg border border-[var(--hatchin-blue)]/10">
+        Controls how much Hatches can do without your approval—from observation to fully independent execution.
+      </p>
+
       {/* Toggle row */}
       <div className="flex items-start gap-3">
         <div className="min-h-[44px] lg:min-h-auto flex items-center">
@@ -132,6 +137,7 @@ export function AutonomySettingsPanel({ projectId, executionRules }: AutonomySet
             checked={autonomyEnabled}
             onCheckedChange={handleToggle}
             aria-label="Autonomous execution toggle"
+            className="data-[state=checked]:bg-[var(--hatchin-green)]"
           />
         </div>
         <div className="flex-1 min-w-0">
@@ -157,7 +163,7 @@ export function AutonomySettingsPanel({ projectId, executionRules }: AutonomySet
             <div className="flex items-center justify-between">
               <span className="text-[12px] text-[var(--hatchin-text-muted)]">Auto-start after</span>
               <Select value={inactivityTriggerMinutes} onValueChange={handleInactivityChange}>
-                <SelectTrigger className="h-8 w-[120px] text-xs">
+                <SelectTrigger className="h-8 w-[120px] text-xs bg-transparent border-[var(--hatchin-border-subtle)]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -174,15 +180,16 @@ export function AutonomySettingsPanel({ projectId, executionRules }: AutonomySet
       </AnimatePresence>
 
       {/* Power level indicator dots */}
-      <div className={`space-y-2 ${!autonomyEnabled ? 'opacity-[0.65] grayscale-[50%] pointer-events-none' : ''}`}>
+      <div className={`space-y-3 transition-all duration-300 ${!autonomyEnabled ? 'opacity-80 grayscale-[70%] pointer-events-none' : ''}`}>
         {/* 4 dot power meter */}
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 h-1">
           {DIAL_POSITIONS.map((_, i) => (
             <div
               key={i}
-              className="flex-1 h-1 rounded-full transition-all duration-300"
+              className="flex-1 h-full rounded-full transition-all duration-500"
               style={{
                 background: i <= levelIndex ? config.gradient : 'var(--hatchin-surface)',
+                boxShadow: i <= levelIndex ? `0 0 8px ${config.textColor}40` : 'none',
               }}
             />
           ))}
@@ -192,44 +199,37 @@ export function AutonomySettingsPanel({ projectId, executionRules }: AutonomySet
         <div
           role="radiogroup"
           aria-label="Autonomy level"
-          className="grid grid-cols-2 gap-1"
+          className="grid grid-cols-2 gap-1.5"
         >
           {DIAL_POSITIONS.map(level => {
             const isActive = autonomyLevel === level;
             const lvlConfig = DIAL_CONFIG[level];
             return (
-              <button
+              <motion.button
                 key={level}
                 type="button"
                 role="radio"
                 aria-checked={isActive}
                 onClick={() => handleDialChange(level)}
-                className="flex items-center justify-center min-h-[44px] lg:min-h-[32px] text-[11px] font-medium capitalize rounded-md transition-all duration-200 border"
-                style={
-                  isActive
-                    ? {
-                        borderLeft: `3px solid ${lvlConfig.textColor}`,
-                        borderTop: '1px solid var(--hatchin-border-subtle)',
-                        borderRight: '1px solid var(--hatchin-border-subtle)',
-                        borderBottom: '1px solid var(--hatchin-border-subtle)',
-                        background: 'var(--glass-hover-bg)',
-                        color: 'var(--hatchin-text)',
-                      }
-                    : {
-                        borderColor: 'transparent',
-                        background: 'var(--hatchin-surface)',
-                        color: 'var(--hatchin-text-muted)',
-                      }
-                }
+                whileTap={{ scale: 0.97 }}
+                className={`flex items-center justify-center min-h-[44px] lg:min-h-[34px] text-[11px] font-medium capitalize rounded-xl transition-all duration-200 border ${
+                  isActive 
+                    ? 'bg-[var(--glass-frosted-strong)] border-[var(--hatchin-border)] shadow-sm' 
+                    : 'bg-[var(--hatchin-surface)] border-transparent text-[var(--hatchin-text-muted)]'
+                }`}
+                style={isActive ? {
+                  color: lvlConfig.textColor,
+                  boxShadow: `inset 0 0 12px ${lvlConfig.textColor}15`,
+                } : {}}
               >
                 {level}
-              </button>
+              </motion.button>
             );
           })}
         </div>
 
         {/* Active level description */}
-        <p className="text-[11px] leading-relaxed" style={{ color: config.textColor }}>
+        <p className="text-[11px] leading-relaxed transition-colors duration-300" style={{ color: config.textColor }}>
           {config.description}
         </p>
       </div>

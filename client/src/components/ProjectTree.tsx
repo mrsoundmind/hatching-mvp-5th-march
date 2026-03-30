@@ -711,7 +711,7 @@ export function ProjectTree({
                         <div
                           key={agent.id}
                           className={`flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer transition-all duration-200 relative group hover:bg-hatchin-border hover:shadow-sm ${isAgentActive
-                            ? 'bg-hatchin-blue/10 border-l-2 border-hatchin-blue'
+                            ? 'bg-hatchin-blue/10'
                             : ''
                             }`}
                           onClick={() => onSelectAgent(agent.id)}

@@ -158,7 +158,7 @@ export function ActivityFeedItem({ event }: ActivityFeedItemProps) {
             className="overflow-hidden"
           >
             <div className="ml-10 mr-2 mb-2 px-3 py-2 rounded-xl text-[12px] hatchin-text-muted leading-relaxed"
-              style={{ background: `${accent}12`, borderLeft: `2px solid ${accent}40` }}
+              style={{ background: `${accent}12` }}
             >
               {humanSummary}
             </div>

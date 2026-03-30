@@ -220,7 +220,7 @@ export function useAutonomyFeed(projectId: string | undefined) {
   // State for real-time events
   const [realtimeEvents, setRealtimeEvents] = useState<FeedEvent[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [activeFilter, setActiveFilter] = useState<FilterCategory>('all');
+  const [activeFilter, setActiveFilter] = useState<FilterCategory>('task');
   const [agentFilter, setAgentFilter] = useState<string | null>(null);
   const [timeFilter] = useState<TimeFilter>('today');
 

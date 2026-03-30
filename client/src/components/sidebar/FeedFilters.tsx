@@ -24,40 +24,45 @@ export function FeedFilters({
   onAgentFilterChange,
   agents,
 }: FeedFiltersProps) {
-  return (
-    <div className="mb-3">
-      {/* Inline text pills — no icons, underline shows active */}
-      <div className="flex items-center gap-1 flex-wrap px-1">
-        {FILTER_PILLS.map((pill) => {
-          const isActive = activeFilter === pill.id;
-          return (
-            <button
-              key={pill.id}
-              onClick={() => onFilterChange(pill.id)}
-              className="relative text-[10px] font-semibold px-2 py-0.5 rounded-full transition-colors min-h-[44px] lg:min-h-auto"
-              style={{
-                color: isActive ? pill.color : 'var(--hatchin-text-muted)',
-              }}
-            >
-              {pill.label}
-              {isActive && (
-                <motion.div
-                  layoutId="feed-filter-underline"
-                  className="absolute bottom-0.5 left-2 right-2 h-[2px] rounded-full"
-                  style={{ backgroundColor: pill.color }}
-                  transition={{ type: 'spring', stiffness: 500, damping: 35 }}
-                />
-              )}
-            </button>
-          );
-        })}
-      </div>
+  const activeFilterData = FILTER_PILLS.find(p => p.id === activeFilter);
+  const activeFilterColor = activeFilterData?.color;
+  const activeFilterLabel = activeFilterData?.label || 'Filter';
 
-      {/* Agent filter — only show when there are multiple agents */}
-      {agents.length > 1 && (
-        <div className="mt-2 px-1">
+  return (
+    <div className="mb-4 px-1">
+      <div className="flex items-center justify-between gap-2">
+        <Select value={activeFilter} onValueChange={onFilterChange}>
+          <SelectTrigger 
+            className="h-8 flex-1 text-[11px] font-medium rounded-lg transition-colors border"
+            style={{ 
+              borderColor: activeFilterColor ? `${activeFilterColor}50` : 'transparent',
+              backgroundColor: activeFilterColor ? `${activeFilterColor}10` : 'var(--hatchin-surface)'
+            }}
+          >
+            <div className="flex items-center gap-2">
+              <div 
+                className="w-1.5 h-1.5 rounded-full" 
+                style={{ backgroundColor: activeFilterColor || 'transparent' }}
+              />
+              <SelectValue style={{ color: activeFilterColor || 'inherit' }} />
+            </div>
+          </SelectTrigger>
+          <SelectContent>
+            {FILTER_PILLS.map((pill) => (
+              <SelectItem key={pill.id} value={pill.id} className="text-xs">
+                <div className="flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: pill.color }} />
+                  {pill.label}
+                </div>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {/* Agent filter — only show when there are multiple agents */}
+        {agents.length > 1 && (
           <Select value={agentFilter ?? '__all__'} onValueChange={(v) => onAgentFilterChange(v === '__all__' ? null : v)}>
-            <SelectTrigger className="h-8 text-[11px] rounded-full border-[var(--hatchin-border-subtle)] bg-transparent">
+            <SelectTrigger className="h-8 flex-1 text-[11px] font-medium bg-transparent border-[var(--hatchin-border-subtle)] rounded-lg">
               <SelectValue placeholder="All agents" />
             </SelectTrigger>
             <SelectContent>
@@ -69,8 +74,8 @@ export function FeedFilters({
               ))}
             </SelectContent>
           </Select>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

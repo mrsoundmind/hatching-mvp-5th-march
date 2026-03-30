@@ -65,7 +65,7 @@ export function ActivityTab({ projectId, agents }: ActivityTabProps) {
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
-      <div className="mb-4 px-1 shrink-0">
+      <div className="mb-3 px-1 shrink-0">
         <p className="text-[12px] font-medium hatchin-text mb-0.5">Live Activity</p>
         <p className="text-[10px] hatchin-text-muted">Real-time pulse of what your Hatches are working on.</p>
       </div>

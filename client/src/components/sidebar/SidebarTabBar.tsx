@@ -32,7 +32,7 @@ export function SidebarTabBar({
           <button
             key={tab.id}
             onClick={() => onTabChange(tab.id)}
-            className={`relative z-10 flex items-center justify-center gap-2 rounded-lg px-2 py-2 min-h-[44px] lg:min-h-auto text-xs font-medium transition-colors duration-200 ${
+            className={`relative z-10 flex items-center justify-center gap-2 rounded-lg px-2 py-2 min-h-[44px] lg:min-h-auto text-[11px] uppercase tracking-wider font-bold transition-colors duration-200 ${
               isActive
                 ? 'text-[var(--hatchin-blue)]'
                 : 'hatchin-text-muted hover:hatchin-text'
@@ -47,21 +47,19 @@ export function SidebarTabBar({
                 transition={{ type: 'spring', stiffness: 400, damping: 30 }}
               />
             )}
+            
             <span className="relative">
-              <Icon className="w-3.5 h-3.5" />
+              {tab.label}
               {tab.id === 'activity' && unreadActivityCount > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-2 py-0.5 bg-[var(--hatchin-orange)] text-white text-[10px] font-semibold rounded-full flex items-center justify-center">
-                  {unreadActivityCount > 99 ? '99+' : unreadActivityCount}
-                </span>
+                <span className="absolute -top-1 -right-2 min-w-[6px] h-1.5 px-0.5 bg-[var(--hatchin-orange)] rounded-full" />
               )}
               {tab.id === 'tasks' && hasPendingApprovals && (
                 <span
-                  className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-amber-400 rounded-full animate-pulse"
+                  className="absolute -top-1 -right-2 w-1.5 h-1.5 bg-amber-400 rounded-full animate-pulse"
                   aria-label="Pending approvals"
                 />
               )}
             </span>
-            <span className="relative">{tab.label}</span>
           </button>
         );
       })}
