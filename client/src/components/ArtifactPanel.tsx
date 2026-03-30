@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, ChevronLeft, ChevronRight, Copy, Download, Check, Pencil, Send, Loader2 } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Copy, Download, Check, Pencil, Send, Loader2, FileText } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -106,6 +106,11 @@ export function ArtifactPanel({ deliverableId, onClose }: ArtifactPanelProps) {
   const handleDownload = () => {
     if (!deliverable) return;
     window.open(`/api/deliverables/${deliverable.id}/download`, '_blank');
+  };
+
+  const handleDownloadPDF = () => {
+    if (!deliverable) return;
+    window.open(`/api/deliverables/${deliverable.id}/download/pdf`, '_blank');
   };
 
   const handleVersionNav = (direction: 'prev' | 'next') => {
@@ -277,12 +282,20 @@ export function ArtifactPanel({ deliverableId, onClose }: ArtifactPanelProps) {
             {copied ? 'Copied' : 'Copy'}
           </button>
           <button
+            onClick={handleDownloadPDF}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium
+              bg-[var(--hatchin-blue)] text-white hover:opacity-90 transition-colors min-h-[36px]"
+          >
+            <FileText className="w-3.5 h-3.5" />
+            PDF
+          </button>
+          <button
             onClick={handleDownload}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium
               bg-[var(--hatchin-surface)] hover:bg-[var(--hatchin-surface)]/80 transition-colors min-h-[36px]"
           >
             <Download className="w-3.5 h-3.5" />
-            Download .md
+            .md
           </button>
         </div>
       </div>

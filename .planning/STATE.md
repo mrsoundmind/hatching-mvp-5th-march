@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Hatches That Deliver
-status: in_progress
-stopped_at: v2.0 core infrastructure shipped, Phase 15 polish executing
+status: complete
+stopped_at: v2.0 all features shipped
 last_updated: "2026-03-30"
-last_activity: 2026-03-30 — v2.0 core wiring complete (detection, iteration UI, package streaming), Phase 15 polish in progress
+last_activity: 2026-03-30 — PDF export + zero-friction onboarding shipped, v2.0 milestone complete
 progress:
   total_phases: 6
-  completed_phases: 4
+  completed_phases: 6
   total_plans: 0
   completed_plans: 0
-  percent: 65
+  percent: 100
 ---
 
 # State: Hatchin
@@ -21,17 +21,17 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-30)
 
 **Core value:** No one should ever feel alone with their idea, have to start from scratch, or need to know how to prompt AI — just have a conversation and your team takes it from there.
-**Current focus:** v2.0 — Hatches That Deliver (core infrastructure shipped, remaining: PDF export, onboarding, chat integration polish)
+**Current focus:** v2.0 — Hatches That Deliver (COMPLETE)
 
 ---
 
 ## Current Position
 
-Phase: v2.0 infrastructure + v1.3 Phase 15 (Polish)
-Status: v2.0 Phases 16-20 core code shipped. Phase 15 polish executing (6 plans). Remaining: PDF export (Phase 21), zero-friction onboarding (Phase 21).
-Last activity: 2026-03-30 — Wired deliverable detection into chat, added ArtifactPanel refine UI, added package execution streaming
+Phase: v2.0 complete
+Status: All v2.0 features shipped. v1.3 Phase 15 polish complete. Ready for production.
+Last activity: 2026-03-30 — PDF export (pdfkit branded template), zero-friction onboarding (PackageSuggestionCard with role-based template matching)
 
-Progress: [██████░░░░] 65%
+Progress: [██████████] 100%
 
 ---
 
@@ -52,8 +52,8 @@ Progress: [██████░░░░] 65%
 | Package streaming (WS progress) | **SHIPPED** | deliverableChainOrchestrator.ts, deliverables.ts |
 | Type registry (15 types) | **SHIPPED** | shared/deliverableTypes.ts |
 | WS event schemas (4 events) | **SHIPPED** | shared/dto/wsSchemas.ts |
-| PDF export | **NOT STARTED** | — |
-| Zero-friction onboarding | **NOT STARTED** | — |
+| PDF export (branded with TOC) | **SHIPPED** | server/ai/pdfExport.ts, server/routes/deliverables.ts |
+| Zero-friction onboarding | **SHIPPED** | client/src/components/PackageSuggestionCard.tsx, CenterPanel.tsx |
 
 ## v1.3 Completion Status
 
@@ -63,7 +63,7 @@ Progress: [██████░░░░] 65%
 | 12 - Handoff Visualization | **SHIPPED** |
 | 13 - Approvals Hub | **SHIPPED** |
 | 14 - Brain Redesign | **SHIPPED** |
-| 15 - Polish | **IN PROGRESS** (6 plans executing) |
+| 15 - Polish | **SHIPPED** |
 
 ---
 
@@ -94,8 +94,6 @@ Key decisions for v2.0:
 
 ### Remaining Work
 
-- **PDF export (Phase 21)**: Install @react-pdf/renderer, build branded PDF template with TOC and attribution
-- **Zero-friction onboarding (Phase 21)**: Auto-suggest package on project creation, template picker, guided first deliverable
 - **Chat inline deliverable cards**: Render DeliverableChatCard when deliverable_created events arrive (component exists, not yet wired to message rendering)
 
 ---
@@ -103,5 +101,5 @@ Key decisions for v2.0:
 ## Session Continuity
 
 Last session: 2026-03-30
-Stopped at: Phase 15 polish executing, v2.0 core wiring complete
-Next action: Wait for Phase 15 polish agents to complete, then run Phase 15-06 (cross-cutting), typecheck, commit
+Stopped at: v2.0 milestone complete, all features shipped
+Next action: Push reconcile-codex to main, visual audit, launch preparation

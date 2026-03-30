@@ -186,6 +186,31 @@ export function registerDeliverableRoutes(app: Express, deps: RegisterDeliverabl
     return res.send(content);
   });
 
+  // GET /api/deliverables/:id/download/pdf — branded PDF export
+  app.get('/api/deliverables/:id/download/pdf', async (req, res) => {
+    const userId = getSessionUserId(req);
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+    const deliverable = await storage.getDeliverable(req.params.id);
+    if (!deliverable) return res.status(404).json({ error: 'Deliverable not found' });
+
+    const project = await getOwnedProject(deliverable.projectId, userId);
+    if (!project) return res.status(404).json({ error: 'Deliverable not found' });
+
+    try {
+      const { generateDeliverablePDF } = await import('../ai/pdfExport.js');
+      const pdfBuffer = await generateDeliverablePDF(deliverable);
+      const filename = `${deliverable.title.replace(/[^a-zA-Z0-9-_ ]/g, '').replace(/\s+/g, '-')}.pdf`;
+
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.setHeader('Content-Length', pdfBuffer.length.toString());
+      return res.send(pdfBuffer);
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message || 'PDF generation failed' });
+    }
+  });
+
   // POST /api/deliverables/generate — create a deliverable via LLM
   app.post('/api/deliverables/generate', async (req, res) => {
     const userId = getSessionUserId(req);

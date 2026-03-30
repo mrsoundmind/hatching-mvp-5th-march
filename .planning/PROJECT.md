@@ -14,7 +14,7 @@ No one should ever feel alone with their idea, have to start from scratch, or ne
 
 **Goal:** Transform Hatchin from "AI chatroom" to "AI team that ships coordinated work" — linked deliverable packages, visible team coordination, async production, professional export.
 
-**Status:** Core infrastructure shipped (DB, API, generation, chains, detection, UI). Remaining: PDF export, zero-friction onboarding.
+**Status:** COMPLETE — all features shipped 2026-03-30.
 
 **What's shipped:**
 - Deliverable system — artifact-style panel with markdown rendering, version history, agent attribution
@@ -23,11 +23,9 @@ No one should ever feel alone with their idea, have to start from scratch, or ne
 - Organic detection — pattern-based intent detection wired into chat flow
 - Iteration UX — inline refine input in ArtifactPanel, calls iterate endpoint
 - 15 deliverable types with role mapping and section schemas
-- Full API (12 endpoints) + 4 WS event types
-
-**Remaining:**
-- Professional PDF export (branded with TOC and attribution)
-- Zero-friction onboarding (auto-suggest package on project creation)
+- Full API (13 endpoints) + 4 WS event types
+- Professional PDF export — branded pdfkit template with TOC, attribution, Hatchin branding
+- Zero-friction onboarding — PackageSuggestionCard auto-suggests best chain template based on project agent roles
 
 **Details:** See plan at `.claude/plans/splendid-munching-flask.md`
 
