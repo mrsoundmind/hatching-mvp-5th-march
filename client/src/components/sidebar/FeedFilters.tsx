@@ -33,19 +33,12 @@ export function FeedFilters({
       <div className="flex items-center justify-between gap-2">
         <Select value={activeFilter} onValueChange={onFilterChange}>
           <SelectTrigger 
-            className="h-8 flex-1 text-[11px] font-medium rounded-lg transition-colors border"
+            className="h-8 flex-1 text-[11px] font-medium rounded-lg transition-colors border-transparent"
             style={{ 
-              borderColor: activeFilterColor ? `${activeFilterColor}50` : 'transparent',
               backgroundColor: activeFilterColor ? `${activeFilterColor}10` : 'var(--hatchin-surface)'
             }}
           >
-            <div className="flex items-center gap-2">
-              <div 
-                className="w-1.5 h-1.5 rounded-full" 
-                style={{ backgroundColor: activeFilterColor || 'transparent' }}
-              />
-              <SelectValue style={{ color: activeFilterColor || 'inherit' }} />
-            </div>
+            <SelectValue style={{ color: activeFilterColor || 'inherit' }} />
           </SelectTrigger>
           <SelectContent>
             {FILTER_PILLS.map((pill) => (

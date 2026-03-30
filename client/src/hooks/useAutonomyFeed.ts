@@ -7,7 +7,7 @@
  * and supports category/agent/time filtering.
  */
 
-import { useState, useMemo, useRef, useCallback } from 'react';
+import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useSidebarEvent } from './useSidebarEvent';
 import { useAgentWorkingState } from './useAgentWorkingState';
@@ -228,6 +228,12 @@ export function useAutonomyFeed(projectId: string | undefined) {
   const pendingBatch = useRef<FeedEvent[]>([]);
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Clear realtime events when project changes
+  useEffect(() => {
+    setRealtimeEvents([]);
+    pendingBatch.current = [];
+  }, [projectId]);
+
   // Agent working state (passthrough per CONTEXT.md)
   const workingAgents = useAgentWorkingState();
 
@@ -344,11 +350,30 @@ export function useAutonomyFeed(projectId: string | undefined) {
     setUnreadCount(0);
   }, []);
 
-  // Combine historical + realtime
+  // Combine historical + realtime and filter strictly by active projectId
   const allEvents = useMemo(() => {
     const historical = (historicalData?.events || []).map(mapAutonomyEventToFeedEvent);
-    return [...historical, ...realtimeEvents];
-  }, [historicalData, realtimeEvents]);
+    const combined = [...historical, ...realtimeEvents];
+    
+    // Strict isolation: only show events for the currently selected project
+    if (projectId) {
+      return combined.filter(event => {
+        // FeedEvent doesn't explicitly guarantee a top-level projectId property on the object 
+        // because it comes from the API route. The API does include it in RawApiEvent but 
+        // we should verify both top-level and payload.
+        const eventProjectId = event.expandableData?.projectId;
+        
+        // If the backend strictly filtered historical events, we trust them, but 
+        // validating payload.projectId if it exists is safer.
+        if (eventProjectId && eventProjectId !== projectId) {
+          return false;
+        }
+        return true;
+      });
+    }
+    
+    return combined;
+  }, [historicalData, realtimeEvents, projectId]);
 
   // Apply filters
   const filteredEvents = useMemo(() => {

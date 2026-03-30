@@ -20,7 +20,6 @@ import UpgradeModal from './UpgradeModal';
 import { HandoffCard } from './chat/HandoffCard';
 import { DeliberationCard } from './chat/DeliberationCard';
 import { DeliverableProposalCard } from '@/components/DeliverableChatCard';
-import { PackageSuggestionCard, suggestPackageTemplate } from '@/components/PackageSuggestionCard';
 import { dispatchAutonomyEvent, AUTONOMY_EVENTS } from '@/lib/autonomyEvents';
 import type { HandoffAnnouncedPayload } from '@/lib/autonomyEvents';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
@@ -154,21 +153,6 @@ export function CenterPanel({
     type: string; title: string; agentName: string; agentRole: string;
     confidence: number; conversationId: string; projectId: string;
   } | null>(null);
-
-  // Package suggestion state (v2.0 zero-friction onboarding)
-  const [packageSuggestionDismissed, setPackageSuggestionDismissed] = useState(() => {
-    try {
-      const dismissed = localStorage.getItem('hatchin_pkg_dismissed');
-      return dismissed ? JSON.parse(dismissed) : {};
-    } catch { return {}; }
-  });
-  const isPackageDismissed = activeProject ? !!packageSuggestionDismissed[activeProject.id] : false;
-  const dismissPackageSuggestion = () => {
-    if (!activeProject) return;
-    const next = { ...packageSuggestionDismissed, [activeProject.id]: true };
-    setPackageSuggestionDismissed(next);
-    try { localStorage.setItem('hatchin_pkg_dismissed', JSON.stringify(next)); } catch {}
-  };
 
   const resizeComposer = (el: HTMLTextAreaElement | null) => {
     if (!el) return;
@@ -2852,20 +2836,6 @@ export function CenterPanel({
           </>)
         )}
       </div>
-      {/* Package Suggestion Card (zero-friction onboarding) */}
-      {!isPackageDismissed && activeProject && activeProjectAgents.length >= 2 && (() => {
-        const template = suggestPackageTemplate(activeProjectAgents.filter(a => !a.isSpecialAgent).map(a => a.role));
-        if (!template) return null;
-        return (
-          <PackageSuggestionCard
-            projectId={activeProject.id}
-            projectName={activeProject.name}
-            suggestedTemplate={template}
-            onDismiss={dismissPackageSuggestion}
-            onStarted={dismissPackageSuggestion}
-          />
-        );
-      })()}
       {/* Deliverable Proposal Card */}
       {deliverableProposal && (
         <div className="px-6 py-2">
