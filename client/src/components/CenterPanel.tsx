@@ -1109,6 +1109,28 @@ export function CenterPanel({
         console.warn('Failed to dispatch task_created_from_chat event');
       }
     }
+    else if (message.type === 'task_lifecycle_result') {
+      devLog('📋 [TaskLifecycle] Result:', message.result);
+      // Refresh tasks
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${message.projectId}/tasks`] });
+      queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
+      if (message.result?.success && message.result?.message) {
+        toast({ title: 'Task updated', description: message.result.message });
+      }
+    }
+    else if (message.type === 'task_completion_suggested') {
+      devLog('✅ [TaskCompletion] Suggested:', message.task, message.phrase);
+      // Auto-mark the task complete and notify
+      fetch(`/api/tasks/${message.task.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'completed', completedAt: new Date().toISOString() }),
+      }).then(() => {
+        queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
+        queryClient.invalidateQueries({ queryKey: [`/api/projects/${message.projectId}/tasks`] });
+        toast({ title: 'Task complete', description: `"${message.task.title}" marked done` });
+      }).catch(() => { /* non-critical */ });
+    }
     else if (message.type === 'deliverable_proposal') {
       devLog('📄 [Deliverable] Proposal received:', message);
       setDeliverableProposal({

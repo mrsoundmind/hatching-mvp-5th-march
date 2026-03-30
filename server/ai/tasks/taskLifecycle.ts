@@ -188,7 +188,7 @@ export async function executeLifecycleCommand(
       }
 
       case 'delete': {
-        // Soft delete — set status to cancelled
+        // Soft delete — mark completed (schema lacks 'cancelled' status)
         const updated = await ctx.updateTask(task.id, { status: 'completed' });
         return { success: true, action: 'delete', task: updated, message: `Removed "${task.title}" from the task list.` };
       }

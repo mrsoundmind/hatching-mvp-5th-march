@@ -2138,6 +2138,10 @@ export function registerChatRoutes(
                       agentId: respondingAgent?.id || null,
                       dueDate: null,
                       completedAt: null,
+                      metadata: {
+                        sourceConversationId: conversationId,
+                        createdFromChat: true,
+                      },
                     } as any);
 
                     ws.send(JSON.stringify({

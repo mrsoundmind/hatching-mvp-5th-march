@@ -19,6 +19,7 @@ import { extractAndStoreMemory } from './memoryExtractor.js';
 import { detectEmotionalState } from './responsePostProcessing.js';
 import { classifyMessageComplexity, resolveMaxTokens } from './taskComplexityClassifier.js';
 import { getReasoningHint, cacheReasoningPattern } from './reasoningCache.js';
+import { storage } from '../storage.js';
 
 export class OpenAIConfigurationError extends Error {
   code: string;
@@ -288,6 +289,45 @@ After 5+ exchanges, if you've learned something significant about the project, s
       ? `\n--- REASONING HINT ---\n${reasoningHint}\n--- END REASONING HINT ---`
       : '';
 
+    // 6.3: Inject assigned tasks for agent awareness
+    let assignedTasksSection = '';
+    if (context.projectId) {
+      try {
+        const projectTasks = await storage.getTasksByProject(context.projectId);
+        const openTasks = (projectTasks as any[]).filter(
+          (t: any) => t.status !== 'completed' && t.status !== 'cancelled'
+        );
+        // Filter to tasks assigned to this agent (by name or role match)
+        const agentName = roleProfile?.characterName || agentRole;
+        const myTasks = openTasks.filter((t: any) => {
+          const assignee = (t.assignee || '').toLowerCase();
+          return assignee.includes(agentName.toLowerCase()) || assignee.includes(agentRole.toLowerCase());
+        });
+        // Also show unassigned tasks for awareness
+        const unassigned = openTasks.filter((t: any) => !t.assignee);
+
+        if (myTasks.length > 0 || unassigned.length > 0) {
+          const lines: string[] = [];
+          if (myTasks.length > 0) {
+            lines.push('Your assigned tasks:');
+            for (const t of myTasks.slice(0, 8)) {
+              const priority = t.priority ? `[${t.priority.toUpperCase()}]` : '';
+              const due = t.dueDate ? ` (due: ${new Date(t.dueDate).toLocaleDateString()})` : '';
+              const overdue = t.dueDate && new Date(t.dueDate) < new Date() ? ' ⚠️ OVERDUE' : '';
+              lines.push(`- ${priority} ${t.title} (${t.status})${due}${overdue}`);
+            }
+          }
+          if (unassigned.length > 0 && myTasks.length < 5) {
+            lines.push('Unassigned project tasks:');
+            for (const t of unassigned.slice(0, 4)) {
+              lines.push(`- ${t.title} (${t.status})`);
+            }
+          }
+          assignedTasksSection = `\n--- ASSIGNED TASKS ---\n${lines.join('\n')}\nReference these naturally if contextually relevant. Mention overdue tasks proactively.\n--- END ASSIGNED TASKS ---`;
+        }
+      } catch { /* non-critical — skip task injection on error */ }
+    }
+
     // Create system prompt based on role and context
     const systemPrompt = `${enhancedPrompt}
 ${characterSection}
@@ -311,6 +351,7 @@ ${roleBrainContext}
 
 ${opinionSection}
 ${reasoningHintSection}
+${assignedTasksSection}
 ${mayaTeamSuggestionInstructions}
 ${hatchTaskInstructions}
 
