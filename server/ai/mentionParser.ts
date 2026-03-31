@@ -36,18 +36,22 @@ function extractAtMention(message: string): string | null {
  * Returns the role hint string or null.
  */
 function extractRoleReference(message: string): string | null {
-    const phrases = [
-        /\b(ask|let|have|get|tell|have)\s+the\s+([a-z ]+?)\s+(to|help|handle|answer|respond|explain|look at)/i,
-        /\bcan\s+the\s+([a-z ]+?)\s+(help|handle|answer|look|explain|weigh in|respond)/i,
-        /\bi\s+want\s+to\s+(talk|speak|chat)\s+to\s+the\s+([a-z ]+)/i,
-        /\bget\s+(a\s+)?([a-z ]+?)\s+(to\s+)?(help|handle|look|answer)/i,
+    // Each entry: [pattern, roleGroupIndex] — roleGroupIndex is the capture group containing the role name
+    const phrases: Array<[RegExp, number]> = [
+        [/\b(?:ask|let|have|get|tell)\s+the\s+([a-z ]+?)\s+(?:to|help|handle|answer|respond|explain|look at)/i, 1],
+        [/\bcan\s+the\s+([a-z ]+?)\s+(?:help|handle|answer|look|explain|weigh in|respond)/i, 1],
+        [/\bi\s+want\s+to\s+(?:talk|speak|chat)\s+to\s+the\s+([a-z ]+)/i, 1],
+        [/\bget\s+(?:a\s+)?([a-z ]+?)\s+(?:to\s+)?(?:help|handle|look|answer)/i, 1],
+        // Natural phrasing: "ux designer please reply", "developer respond", "the engineer to reply"
+        [/\b(?:the\s+)?([a-z ]+?)\s+(?:please\s+|to\s+)?(?:reply|respond|answer|help|chime in|weigh in)\b/i, 1],
+        // "I need the developer" / "where is the designer"
+        [/\b(?:i need|where is|where's|talk to|speak to|hear from)\s+(?:the\s+)?([a-z ]+)/i, 1],
     ];
 
-    for (const phrase of phrases) {
+    for (const [phrase, groupIdx] of phrases) {
         const match = message.match(phrase);
         if (match) {
-            // Find the capture group that likely holds the role
-            const roleCandidate = match[match.length - 1] || match[2] || match[1];
+            const roleCandidate = match[groupIdx];
             if (roleCandidate && roleCandidate.length > 2) {
                 return roleCandidate.toLowerCase().trim();
             }
@@ -87,10 +91,33 @@ export function resolveMentionedAgent(
         // If @mention not resolved, fall through to role reference
     }
 
-    // Step 2: Check for role-based reference
+    // Step 1.5: Check for direct name reference (without @)
+    // Handles "hey Dev, ..." or "Kai, what about..." or "can Maya help"
+    // Only match names as whole words in addressing positions (start of sentence, after "hey/hi", before comma)
+    for (const agent of availableAgents) {
+        const nameLower = agent.name.toLowerCase();
+        const escaped = nameLower.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        // Match name at start, after greeting, or followed by comma/question
+        const addressingPatterns = [
+            new RegExp(`^${escaped}\\b`, 'i'),                    // "Dev, can you..."
+            new RegExp(`\\b(?:hey|hi|yo|thanks)\\s+${escaped}\\b`, 'i'), // "hey Dev..."
+            new RegExp(`\\b${escaped},`, 'i'),                    // "...Dev, what..."
+            new RegExp(`\\bask\\s+${escaped}\\b`, 'i'),           // "ask Dev about..."
+            new RegExp(`\\b${escaped}\\s+(?:can|should|could|would|will|help|what|how)\\b`, 'i'), // "Dev can you..."
+        ];
+        if (addressingPatterns.some(p => p.test(message))) {
+            return {
+                mentionedAgentId: agent.id,
+                mentionedName: agent.name,
+                matchType: 'role_reference',
+            };
+        }
+    }
+
+    // Step 2: Check for role-based reference (structured phrases)
     const roleRef = extractRoleReference(message);
     if (roleRef) {
-        // Try to find a matching agent
+        // Try to find a matching agent by role or name
         const matchedAgent = availableAgents.find(a => {
             const roleLower = a.role.toLowerCase();
             const nameLower = a.name.toLowerCase();
@@ -104,21 +131,22 @@ export function resolveMentionedAgent(
                 matchType: 'role_reference',
             };
         }
+    }
 
-        // Step 3: Use pattern hints as a fallback
-        for (const { pattern, roleHint } of ROLE_REFERENCE_PATTERNS) {
-            if (pattern.test(message)) {
-                const hintMatch = availableAgents.find(a =>
-                    a.role.toLowerCase().includes(roleHint) ||
-                    a.name.toLowerCase().includes(roleHint)
-                );
-                if (hintMatch) {
-                    return {
-                        mentionedAgentId: hintMatch.id,
-                        mentionedName: hintMatch.name,
-                        matchType: 'role_reference',
-                    };
-                }
+    // Step 3: Role keyword detection — always runs as final fallback
+    // Catches "ux designer please reply", "developer to reply", "what does the engineer think"
+    for (const { pattern, roleHint } of ROLE_REFERENCE_PATTERNS) {
+        if (pattern.test(message)) {
+            const hintMatch = availableAgents.find(a =>
+                a.role.toLowerCase().includes(roleHint) ||
+                a.name.toLowerCase().includes(roleHint)
+            );
+            if (hintMatch) {
+                return {
+                    mentionedAgentId: hintMatch.id,
+                    mentionedName: hintMatch.name,
+                    matchType: 'role_reference',
+                };
             }
         }
     }

@@ -1562,6 +1562,7 @@ export function registerChatRoutes(
       let authority: { allowedSpeaker: Agent; reason: string } | null = null;
       let isPmFallback = false;
       let isSystemFallback = false;
+      let mentionResolvedAgentId: string | null = null;
 
       if (availableAgents.length === 0) {
         // Persistence invariant: Even with no agents, we must persist a response
@@ -1590,7 +1591,6 @@ export function registerChatRoutes(
         // 🆕 Feature 4: @Mention & Role Reference Resolution
         // Check if the user's message contains an @mention or role reference to a specific Hatch.
         // This overrides all other routing if a valid match is found.
-        let mentionResolvedAgentId: string | null = null;
         try {
           const mentionResult = resolveMentionedAgent(
             userMessage.content || '',
@@ -1682,13 +1682,22 @@ export function registerChatRoutes(
       }
 
       // Conductor-directed routing override: choose intent specialist when appropriate
-      // BUT never override if user explicitly @mentioned an agent (envelope or mention-parsed)
+      // BUT never override if:
+      //   1. User explicitly @mentioned an agent (envelope or mention-parsed)
+      //   2. Speaking authority chose Maya for project scope (she's the project-level voice)
+      //   3. Speaking authority resolved a direct agent conversation
       const matches = findBestAgentMatch(userMessage.content, availableAgents);
-      const hasExplicitMention = !!addressedAgentId;
+      const hasExplicitMention = !!(mentionResolvedAgentId || addressedAgentId);
+      const authorityIsDefinitive = authority && (
+        authority.reason === 'project_scope_maya_authority' ||
+        authority.reason === 'direct_agent_conversation' ||
+        authority.reason === 'explicit_addressing'
+      );
       if (
         !isPmFallback &&
         !isSystemFallback &&
         !hasExplicitMention &&
+        !authorityIsDefinitive &&
         conductorResult.decision.route === "intent_specialist" &&
         conductorResult.primaryMatch
       ) {
@@ -2993,145 +3002,163 @@ export function registerChatRoutes(
       }
 
       const payload = getStreamingErrorPayload(error);
+
+      // If the real agent already sent content chunks, do NOT send a fallback ghost message.
+      // The user already saw the agent's response — sending a second message from Maya/PM is confusing.
+      const hasPartialResponse = !!_lastAccumulatedContent;
+
       try {
-        let effectiveAgent = fallbackResponder;
-        if ((!effectiveAgent || effectiveAgent.id === "system") && resolvedProjectId) {
-          const projectAgents = await storage.getAgentsByProject(resolvedProjectId);
-          const pmAgent = projectAgents.find((agent) => /product manager|^pm$/i.test(agent.role));
-          const selected = pmAgent || projectAgents[0];
-          if (selected) {
-            effectiveAgent = {
-              id: selected.id,
-              name: selected.name,
-              role: selected.role,
-              teamId: selected.teamId
-            };
-          }
-        }
-
-        const runtimeNow = getCurrentRuntimeConfig();
-        const fallbackContent = buildServiceFallbackMessage({
-          mode: resolvedMode,
-          agentName: effectiveAgent?.name,
-          agentRole: effectiveAgent?.role,
-          userMessage: userMessage?.content || "",
-          errorCode: payload.code,
-        });
-
-        if (!hasStreamingStarted) {
+        if (hasPartialResponse) {
+          // Skip fallback message — real agent already responded (even if post-processing failed).
+          // Just send the error event so the frontend can show "Failed to generate" inline.
+          devLog('⚠️ Skipping fallback ghost message — real agent already sent content');
           ws.send(JSON.stringify({
-            type: 'streaming_started',
+            type: 'streaming_error',
             messageId: responseMessageId,
-            agentId: effectiveAgent?.id || 'system',
-            agentName: effectiveAgent?.name || 'Project Manager'
+            code: payload.code,
+            error: payload.error
           }));
-        }
-
-        ws.send(JSON.stringify({
-          type: 'streaming_chunk',
-          messageId: responseMessageId,
-          chunk: fallbackContent,
-          accumulatedContent: fallbackContent
-        }));
-
-        const persistedFallback = await storage.createMessage({
-          id: responseMessageId,
-          conversationId,
-          agentId: effectiveAgent?.id || null,
-          content: fallbackContent,
-          messageType: 'agent' as const,
-          metadata: {
-            fallback: {
-              type: 'service',
-              reason: payload.code
-            },
-            llm: llmMetadata || {
-              provider: runtimeNow.provider,
-              mode: runtimeNow.mode,
-              model: runtimeNow.model,
-            },
+        } else {
+          // No content was streamed — send a fallback message from PM/Maya
+          let effectiveAgent = fallbackResponder;
+          if ((!effectiveAgent || effectiveAgent.id === "system") && resolvedProjectId) {
+            const projectAgents = await storage.getAgentsByProject(resolvedProjectId);
+            const pmAgent = projectAgents.find((agent) => /product manager|^pm$/i.test(agent.role));
+            const selected = pmAgent || projectAgents[0];
+            if (selected) {
+              effectiveAgent = {
+                id: selected.id,
+                name: selected.name,
+                role: selected.role,
+                teamId: selected.teamId
+              };
+            }
           }
-        } as any);
 
-        await logAutonomyEvent({
-          eventType: "provider_fallback",
-          projectId: resolvedProjectId,
-          teamId: null,
-          conversationId,
-          hatchId: effectiveAgent?.id || null,
-          provider: (llmMetadata?.provider || runtimeNow.provider) as string,
-          mode: (llmMetadata?.mode || runtimeNow.mode) as string,
-          latencyMs: Date.now() - turnStartedAt,
-          confidence: null,
-          riskScore: null,
-          payload: {
-            reason: payload.code,
-            error: (error as any)?.message || "unknown",
-          },
-        });
+          const runtimeNow = getCurrentRuntimeConfig();
+          const fallbackContent = buildServiceFallbackMessage({
+            mode: resolvedMode,
+            agentName: effectiveAgent?.name,
+            agentRole: effectiveAgent?.role,
+            userMessage: userMessage?.content || "",
+            errorCode: payload.code,
+          });
 
-        if (traceId) {
-          await finalizeDeliberationTrace(traceId, fallbackContent);
-        }
+          if (!hasStreamingStarted) {
+            ws.send(JSON.stringify({
+              type: 'streaming_started',
+              messageId: responseMessageId,
+              agentId: effectiveAgent?.id || 'system',
+              agentName: effectiveAgent?.name || 'Project Manager'
+            }));
+          }
 
-        // Keep project brain auto-sync active even when LLM falls back (quota/rate-limit/etc).
-        if (resolvedProjectId) {
-          try {
-            const existingProject = await storage.getProject(resolvedProjectId);
-            if (existingProject) {
-              const chatPatch = deriveProjectBrainPatch({
-                userMessage: userMessage?.content || "",
-                assistantResponse: fallbackContent,
-                existingProject: existingProject as Project
-              });
+          ws.send(JSON.stringify({
+            type: 'streaming_chunk',
+            messageId: responseMessageId,
+            chunk: fallbackContent,
+            accumulatedContent: fallbackContent
+          }));
 
-              if (chatPatch) {
-                const mergedPatch: any = {};
-                if (chatPatch.coreDirection) {
-                  mergedPatch.coreDirection = {
-                    ...((existingProject as any).coreDirection || {}),
-                    ...chatPatch.coreDirection
-                  };
-                }
-                if (chatPatch.executionRules && typeof chatPatch.executionRules === "object") {
-                  mergedPatch.executionRules = { ...((existingProject as any).executionRules || {}), ...chatPatch.executionRules };
-                }
-                if (typeof chatPatch.teamCulture === "string" && chatPatch.teamCulture.trim().length > 0) {
-                  mergedPatch.teamCulture = chatPatch.teamCulture.trim();
-                }
+          const persistedFallback = await storage.createMessage({
+            id: responseMessageId,
+            conversationId,
+            agentId: effectiveAgent?.id || null,
+            content: fallbackContent,
+            messageType: 'agent' as const,
+            metadata: {
+              fallback: {
+                type: 'service',
+                reason: payload.code
+              },
+              llm: llmMetadata || {
+                provider: runtimeNow.provider,
+                mode: runtimeNow.mode,
+                model: runtimeNow.model,
+              },
+            }
+          } as any);
 
-                if (Object.keys(mergedPatch).length > 0) {
-                  const updatedProject = await storage.updateProject(resolvedProjectId, mergedPatch);
-                  if (updatedProject) {
-                    const updateEvent = {
-                      type: "project_brain_updated",
-                      conversationId,
-                      projectId: resolvedProjectId,
-                      source: "chat_auto_sync",
-                      patch: mergedPatch
+          await logAutonomyEvent({
+            eventType: "provider_fallback",
+            projectId: resolvedProjectId,
+            teamId: null,
+            conversationId,
+            hatchId: effectiveAgent?.id || null,
+            provider: (llmMetadata?.provider || runtimeNow.provider) as string,
+            mode: (llmMetadata?.mode || runtimeNow.mode) as string,
+            latencyMs: Date.now() - turnStartedAt,
+            confidence: null,
+            riskScore: null,
+            payload: {
+              reason: payload.code,
+              error: (error as any)?.message || "unknown",
+            },
+          });
+
+          if (traceId) {
+            await finalizeDeliberationTrace(traceId, fallbackContent);
+          }
+
+          // Keep project brain auto-sync active even when LLM falls back (quota/rate-limit/etc).
+          if (resolvedProjectId) {
+            try {
+              const existingProject = await storage.getProject(resolvedProjectId);
+              if (existingProject) {
+                const chatPatch = deriveProjectBrainPatch({
+                  userMessage: userMessage?.content || "",
+                  assistantResponse: fallbackContent,
+                  existingProject: existingProject as Project
+                });
+
+                if (chatPatch) {
+                  const mergedPatch: any = {};
+                  if (chatPatch.coreDirection) {
+                    mergedPatch.coreDirection = {
+                      ...((existingProject as any).coreDirection || {}),
+                      ...chatPatch.coreDirection
                     };
-                    ws.send(JSON.stringify(updateEvent));
-                    broadcastToConversation(conversationId, updateEvent, { exclude: ws });
+                  }
+                  if (chatPatch.executionRules && typeof chatPatch.executionRules === "object") {
+                    mergedPatch.executionRules = { ...((existingProject as any).executionRules || {}), ...chatPatch.executionRules };
+                  }
+                  if (typeof chatPatch.teamCulture === "string" && chatPatch.teamCulture.trim().length > 0) {
+                    mergedPatch.teamCulture = chatPatch.teamCulture.trim();
+                  }
+
+                  if (Object.keys(mergedPatch).length > 0) {
+                    const updatedProject = await storage.updateProject(resolvedProjectId, mergedPatch);
+                    if (updatedProject) {
+                      const updateEvent = {
+                        type: "project_brain_updated",
+                        conversationId,
+                        projectId: resolvedProjectId,
+                        source: "chat_auto_sync",
+                        patch: mergedPatch
+                      };
+                      ws.send(JSON.stringify(updateEvent));
+                      broadcastToConversation(conversationId, updateEvent, { exclude: ws });
+                    }
                   }
                 }
               }
+            } catch (autoSyncError) {
+              console.error("Failed to auto-sync project brain from fallback:", autoSyncError);
             }
-          } catch (autoSyncError) {
-            console.error("Failed to auto-sync project brain from fallback:", autoSyncError);
           }
+
+          ws.send(JSON.stringify({
+            type: 'streaming_completed',
+            messageId: responseMessageId,
+            message: persistedFallback
+          }));
+
+          broadcastToConversation(conversationId, {
+            type: 'new_message',
+            message: persistedFallback,
+            conversationId
+          }, { exclude: ws });
         }
-
-        ws.send(JSON.stringify({
-          type: 'streaming_completed',
-          messageId: responseMessageId,
-          message: persistedFallback
-        }));
-
-        broadcastToConversation(conversationId, {
-          type: 'new_message',
-          message: persistedFallback,
-          conversationId
-        }, { exclude: ws });
 
       } catch (fallbackError) {
         console.error('❌ Fallback response persistence failed:', fallbackError);
