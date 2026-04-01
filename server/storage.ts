@@ -95,6 +95,9 @@ export interface IStorage {
   getArchivedConversations(projectId: string): Promise<Conversation[]>;
   deleteConversation(conversationId: string): Promise<boolean>;
 
+  // Message search across project conversations
+  searchMessages(projectId: string, query: string, limit?: number): Promise<Message[]>;
+
   // Task methods
   getTask(id: string): Promise<Task | undefined>;
   getTasksByProject(projectId: string): Promise<Task[]>;
@@ -1233,6 +1236,21 @@ export class MemStorage implements IStorage {
     return conversationDeleted;
   }
 
+  async searchMessages(projectId: string, query: string, limit = 50): Promise<Message[]> {
+    const queryLower = query.toLowerCase();
+    const projectConvPrefix = `project:${projectId}`;
+    const results: Message[] = [];
+    for (const msg of this.messages.values()) {
+      if (results.length >= limit) break;
+      if (!msg.conversationId.includes(projectId)) continue;
+      const content = typeof msg.content === 'string' ? msg.content : '';
+      if (content.toLowerCase().includes(queryLower)) {
+        results.push(msg);
+      }
+    }
+    return results;
+  }
+
   // Task methods
   async getTask(id: string): Promise<Task | undefined> {
     return this.tasks.get(id);
@@ -1458,7 +1476,7 @@ export class MemStorage implements IStorage {
 // ============================================================
 import { db } from "./db";
 import * as schema from "@shared/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, sql, desc } from "drizzle-orm";
 
 export class DatabaseStorage implements IStorage {
   // Users
@@ -1745,6 +1763,19 @@ export class DatabaseStorage implements IStorage {
     await db.delete(schema.conversationMemory).where(eq(schema.conversationMemory.conversationId, conversationId));
     const result = await db.delete(schema.conversations).where(eq(schema.conversations.id, conversationId)).returning();
     return result.length > 0;
+  }
+
+  async searchMessages(projectId: string, query: string, limit = 50): Promise<Message[]> {
+    return db.select()
+      .from(schema.messages)
+      .where(
+        and(
+          sql`${schema.messages.conversationId} LIKE ${'%' + projectId + '%'}`,
+          sql`LOWER(${schema.messages.content}) LIKE ${'%' + query.toLowerCase() + '%'}`
+        )
+      )
+      .orderBy(desc(schema.messages.createdAt))
+      .limit(limit);
   }
 
   // Tasks

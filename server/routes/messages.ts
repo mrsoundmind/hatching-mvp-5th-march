@@ -402,4 +402,32 @@ export function registerMessageRoutes(app: Express): void {
       res.status(500).json({ error: "Failed to record feedback" });
     }
   });
+
+  // ─── Message Search ─────────────────────────────────────────────────────────
+  const searchQuerySchema = z.object({
+    q: z.string().min(1).max(200),
+    limit: z.coerce.number().int().min(1).max(100).optional(),
+  });
+
+  app.get("/api/projects/:projectId/messages/search", async (req, res) => {
+    try {
+      const userId = getSessionUserId(req);
+      const project = await getOwnedProject(req.params.projectId, userId);
+      if (!project) {
+        return res.status(404).json({ error: "Project not found" });
+      }
+
+      const parsed = searchQuerySchema.safeParse(req.query);
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Invalid search query", details: parsed.error.errors });
+      }
+
+      const { q, limit } = parsed.data;
+      const messages = await storage.searchMessages(req.params.projectId, q, limit ?? 50);
+      res.json({ messages, query: q, count: messages.length });
+    } catch (error) {
+      console.error("Error searching messages:", error);
+      res.status(500).json({ error: "Failed to search messages" });
+    }
+  });
 }
