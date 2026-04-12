@@ -1,278 +1,215 @@
-# Feature Research
+# Feature Research — v3.0 Reliable Autonomy
 
-**Domain:** AI deliverable/artifact systems — cross-agent coordinated document production (Hatchin v2.0)
-**Researched:** 2026-03-25
-**Confidence:** MEDIUM-HIGH — derived from training knowledge of Claude Artifacts (Anthropic, shipped Oct 2024), ChatGPT Canvas (OpenAI, shipped Oct 2024), Notion AI document generation (2023–2025), Jasper AI (2022–2025), Copy.ai (2022–2025), and Coda AI, all as of Aug 2025 knowledge cutoff. External verification tools unavailable in this session; confidence is MEDIUM for product-specific details, HIGH for UX pattern analysis.
-
----
-
-## Context
-
-This research answers: what do competing AI artifact systems (Claude Artifacts, ChatGPT Canvas, Notion AI, Jasper, Copy.ai) do for structured document creation from AI conversation? What is table stakes vs differentiating? What makes a great artifact/deliverable experience?
-
-The critical distinction for Hatchin v2.0: single-agent artifact generation (writing a PRD in one chat) is fully commoditized. The differentiator is cross-agent deliverable chains — PM writes PRD, Engineer writes tech spec referencing it, Designer creates brief from both, Marketing drafts GTM from the PRD. Five linked documents from a coordinated team. No single-chat AI product can do this. Hatchin's existing handoff orchestrator, safety gates, and multi-agent architecture make this achievable.
+**Domain:** AI agent scheduling + autonomous budget enforcement (B2B/prosumer AI team product)
+**Researched:** 2026-04-13
+**Confidence:** MEDIUM-HIGH (competitive landscape well-documented; specific UX patterns verified against 2+ products per feature; budget enforcement UX less standardized across competitors, so LOW confidence on "industry norms" there — HIGH confidence on first-principles UX)
 
 ---
 
-## Competitor Landscape
+## Scope
 
-### Claude Artifacts (Anthropic, Oct 2024)
-A split-screen panel that opens to the right of chat when Claude generates structured content (code, HTML, SVG, markdown documents). Artifacts are:
-- Persistent across the conversation — they do not disappear when you scroll past them
-- Iteratable — "make this more formal" updates the artifact in-place with a diff-style visual
-- Copyable and downloadable — code runs in a sandboxed iframe; documents are copyable markdown
-- Version-navigable — arrow buttons step through previous versions (like undo)
-- Single-artifact-per-panel — one artifact visible at a time; no multi-artifact linking
+Two feature areas for v3.0:
+1. **Scheduled routines** — recurring autonomous work ("Kai, draft the growth update every Monday")
+2. **Atomic budget enforcement (UX surfaces)** — real-time consumption, approaching-limit warnings, hard stops
 
-What Claude Artifacts does not do: multiple linked artifacts, multi-agent authorship, project-level persistence, packages of related documents, or PDF export. Each artifact is session-scoped unless you use Projects.
-
-**Confidence: HIGH** (shipped product, well-documented in training data)
-
-### ChatGPT Canvas (OpenAI, Oct 2024)
-A collaborative editor that opens alongside chat, designed specifically for document and code editing:
-- Full rich-text editing — users can directly edit the document, not just instruct ChatGPT to edit
-- Context-aware AI suggestions — highlight a passage and ask "make this sharper"
-- Toolbar shortcuts — reading level, length adjustment, add emojis (document), explain code, add logs (code)
-- Track-changes style highlighting — shows what ChatGPT changed
-- Targeted editing — can ask ChatGPT to edit only the highlighted section, not the whole document
-- No multi-document linking, no multi-agent authorship, single document per canvas
-
-Canvas positions itself as a collaborative writing environment more than an artifact viewer. The ability to directly edit alongside AI assistance is its core differentiator vs Claude Artifacts' read-only panel model.
-
-**Confidence: HIGH** (shipped product, extensively covered in training data)
-
-### Notion AI
-- Inline AI generation inside Notion pages — write a page outline, generate content for each section
-- `/AI` slash command generates blocks within existing page structure
-- "Continue writing" and "Improve writing" on selected blocks
-- AI Autofill in databases — fill a property based on page content (e.g., summarize meeting notes into action items column)
-- AI Q&A — answer questions about your entire Notion workspace
-- No dedicated artifact panel; AI output appears directly in the page inline
-
-What Notion AI does not do: autonomous background production, agent handoffs, multi-document chain production, or export-to-PDF with agent attribution. It is fundamentally a writing assistant within pages, not a coordinated team producing standalone deliverables.
-
-**Confidence: HIGH** (well-documented product used extensively in training data)
-
-### Jasper AI
-- Template-first workflow — user selects a document template (blog post, ad copy, product description, email sequence)
-- Boss Mode — long-form document editor with AI commands inserted via `/`
-- Campaign mode — input a brief, Jasper produces multiple assets (blog post + LinkedIn post + Twitter thread + email) from a single brief
-- Brand voice — company tone, vocabulary, style stored as a brand asset; all outputs enforce it
-- Team collaboration — multiple users can work on the same document
-
-Jasper's Campaign mode is the closest analog to Hatchin's v2.0 ambition at the single-source level: one input produces multiple related outputs. But Jasper's "agents" are just sequential generation steps in one linear pipeline — not specialist agents with distinct roles, peer review, or handoff awareness.
-
-**Confidence: MEDIUM** (well-documented in training data through 2024; Jasper underwent significant product changes in 2024)
-
-### Copy.ai
-- Workflow automation — define a multi-step pipeline (input → AI step → output) like Zapier but for content
-- Pre-built workflows for common content chains: blog post → social media → email newsletter
-- No conversational interface — purely template/workflow driven
-- No agent personas — steps are generic AI generation, not specialist roles
-
-Copy.ai's Workflows are technically close to what Hatchin calls "project packages" — a grouped set of content outputs from one input. But there is no conversation, no specialist expertise, and no autonomy — users define every step explicitly.
-
-**Confidence: MEDIUM** (2024 knowledge; Copy.ai's product evolved significantly)
-
-### Coda AI
-- AI assistant within Coda docs — generate tables, formulas, and page sections from prompts
-- AI columns in tables — auto-fill a column based on row content (competitor analysis, SEO tags)
-- Document Q&A across Coda workspace
-- No multi-agent, no handoffs, no export-oriented deliverables
-
-### Key Patterns Across All Products
-
-1. **Split-screen is the canonical UX** — Claude Artifacts and ChatGPT Canvas both open a second panel to the right of chat. This pattern is now the de-facto user expectation for AI-generated structured content. Users have internalized it.
-
-2. **In-place iteration is essential** — Every product allows "make this better" to update the existing document, not append a new one. Users expect refinement, not replacement.
-
-3. **Version history is expected in editors** — Canvas tracks changes; Artifacts shows step-back arrows. The moment a user iterates, they expect to be able to undo.
-
-4. **Single document at a time** — No competitor shows multiple linked documents simultaneously. This is an unmet gap and Hatchin's opportunity.
-
-5. **No cross-agent authorship** — No competitor shows "this section was written by your PM, this section by your Engineer." Visible team attribution is a completely unoccupied space.
-
-6. **Export is an afterthought** — Most tools offer copy or basic download. Professional branded PDF export is table stakes that nobody does well.
-
-7. **No async / background production** — Every competitor requires the user to be present. "Your team produced 4 documents overnight" is entirely unoccupied.
+The backend correctness fix for atomic budget is non-negotiable infra; this doc focuses on the user-facing features that *ride on top* of it.
 
 ---
 
-## Feature Landscape
+## Competitive Landscape (Scheduled AI Agents)
 
-### Table Stakes (Users Expect These)
+| Product | Schedule Creation | Past-Run History | Cancellation | Chat-Native? |
+|---------|-------------------|------------------|--------------|--------------|
+| **OpenAI ChatGPT Tasks** | Natural language in chat ("remind me daily at 9"); confirms with a card | Tasks panel shows past runs as new chat threads | Pause/delete from Tasks panel | YES — chat triggers, separate panel to manage |
+| **Zapier AI Agents / Zaps** | Visual trigger-action builder (cron UI); NL Copilot builder available | Task History log with run status, inputs, outputs | Toggle off, delete from dashboard | NO — form/builder-first |
+| **Lindy** | Natural-language agent instruction + schedule trigger picker; "every Monday at 9am" parsed | Run history per agent with outputs, errors, cost | Pause agent, edit trigger | HYBRID — chat to configure, dashboard to manage |
+| **Relevance AI** | Visual workflow builder + schedule trigger node | Run logs with full input/output trace | Toggle schedule, disable agent | NO — builder-first |
+| **CrewAI** | Code-defined (Python), no built-in UI scheduling — users wire up cron externally | Logs via observability (AgentOps) | Process-level | N/A — framework |
+| **AutoGen** | Code-defined; no scheduling primitive | Via logging framework | Process-level | N/A |
+| **Paperclip** (per milestone context) | Timeline-style audit + schedule creation inline with agent | Audit timeline with diff view | Inline pause/cancel | YES — timeline-native |
+| **Claude Projects / Claude Code** | No native scheduling (as of research date) | N/A | N/A | N/A |
 
-Features users assume exist in any AI product that produces structured documents. Missing these makes the deliverable system feel unfinished or broken.
+**Key pattern observations:**
+- **Consumer/prosumer products** (OpenAI Tasks, Lindy, Paperclip) → natural-language chat creation + lightweight management panel
+- **Power-user/B2B products** (Zapier, Relevance AI) → visual builders with cron precision
+- **Every shipping product has a "past runs" view** — table stakes, not a differentiator
+- **Confirmation card pattern** (user says "every Monday" → card renders "Every Monday at 9:00 AM IST, Kai will draft the growth update — Confirm?") is universal in chat-native products
+
+---
+
+## Feature Landscape — SCHEDULED ROUTINES
+
+### Table Stakes (Must Have)
 
 | Feature | Why Expected | Complexity | Notes |
 |---------|--------------|------------|-------|
-| Split-panel artifact viewer | Claude Artifacts and ChatGPT Canvas shipped Oct 2024 and immediately became the canonical UX. Any AI that produces a document is now expected to show it in a dedicated panel, not inline in chat. | MEDIUM | Right-side panel that opens when a deliverable is created. Markdown rendering with syntax highlighting for code blocks. Persistent across conversation — stays visible while chat continues. |
-| In-place iteration via chat | All three major products (Artifacts, Canvas, Notion AI) allow "make this more concise" to update the existing document. Users expect refinement to happen in-place, not as a new message. | MEDIUM | Active deliverable receives chat instructions. Agent updates the document with animated diff-style highlight of changed sections. Conversation and artifact stay linked. |
-| Version history | Canvas tracks changes; Artifacts has back/forward navigation. Once users iterate even once, they expect to go back. | MEDIUM | Arrow navigation between versions. At minimum: current and previous. Ideal: full history with timestamps. Can be implemented as append-only version array in JSONB. |
-| Copy and download | Every AI document tool offers copy-to-clipboard and download. Copy.ai, Jasper, Notion AI, Claude Artifacts all provide this. | LOW | Copy button (raw markdown or plain text). Download as .md or .txt. PDF export addressed separately as a differentiator. |
-| Deliverable list / browser | Once a user has created more than one document, they need a way to find and switch between them. Every productivity tool (Notion, Google Docs, Jasper) has this. | MEDIUM | List of deliverables per project. Grouped by type or agent. Title, creation date, status (draft / complete). Click to open in viewer panel. Builds on v1.3's Work Output Viewer concept. |
-| Explicit creation trigger | "Write me a PRD" must reliably produce a deliverable in the artifact panel, not just a chat response. Users trained by Claude/ChatGPT expect explicit commands to produce artifacts. | MEDIUM | Intent detection: "write", "create", "draft", "generate", "produce" + document type → artifact mode. Separate from organic detection (see Differentiators). |
-| Organic detection from conversation | When a conversation naturally reaches the point where a document makes sense (PM has gathered enough context for a PRD), it should happen automatically or with a suggestion. Claude does this implicitly. | HIGH | Context threshold detection: when enough PRD elements (problem statement, audience, goals, features) have been discussed, Maya or the relevant Hatch offers "Ready to write this up as a PRD?" Builds on existing task detection infrastructure. |
-| Loading / progress state during generation | Every async AI generation product shows some progress indicator. Users given a blank spinner for 30–60 seconds assume something broke. Jasper and Canvas both show streaming content. | LOW | Stream document content into the panel as it generates — same streaming pattern already used in chat. Show "Alex is writing your PRD..." with the writing avatar state. |
-| Empty state with actionable prompt | Users opening the deliverable system for the first time need to understand what it can produce and how to start. Without this, they close it and never return. | LOW | Clear empty state: "Your team can produce professional documents from your conversations. Try: 'Write me a PRD for this project'" with examples of package types. |
-| Deliverable status badges | Drafts, complete, in-review, approved — users need to understand the state of each document at a glance. Linear, GitHub, and Notion all use status badges. | LOW | Status tags on deliverable cards: Draft / In Review / Complete / Needs Approval. Tied to safety gate tier and peer review state from existing v1.1 autonomy backend. |
+| Natural-language schedule parsing | OpenAI Tasks + Lindy both support this; users won't accept cron syntax | M | chrono-node or similar NLP date library + LLM fallback for ambiguous cases ("every other Tuesday") |
+| Confirmation card before schedule saves | All chat-native competitors confirm; prevents "did it understand me?" anxiety | S | Structured card in chat with cadence, next run time, agent, prompt — Confirm/Edit/Cancel |
+| List of active routines | Zapier, Lindy, OpenAI Tasks all have a panel | S | New Routines tab in existing right sidebar OR merged into Tasks tab |
+| Pause / resume | Universal — need to pause without losing config | S | Single toggle per routine; preserves definition |
+| Delete routine | Universal | S | Confirmation modal; decide cascade behavior for past-run history |
+| Past-run history (last 10–30 runs) | Every product has this; trust requires seeing what happened | M | Link to deliverable/message; status (success/failed/skipped/budget-blocked); cost per run |
+| Timezone handling | Non-negotiable — "9am" is ambiguous globally | M | Default to browser TZ; persist IANA tz string; display TZ in confirmation card |
+| Next-run-time display | Shown in all competitor UIs | S | Compute from cron + TZ; update live |
+| Failed-run notification | Silent failure = trust death | M | Push to chat via Maya briefing OR sidebar notification; tab badge |
+| Manual "run now" trigger | Lindy, Zapier both have this — test before waiting | S | Button on routine card; runs through same pipeline as scheduled trigger |
 
-### Differentiators (Competitive Advantage)
-
-Features that set Hatchin apart from Claude Artifacts, ChatGPT Canvas, Notion AI, Jasper, and Copy.ai. All are achievable on Hatchin's existing architecture.
+### Differentiators (Reinforces Hatchin Brand)
 
 | Feature | Value Proposition | Complexity | Notes |
 |---------|-------------------|------------|-------|
-| Cross-agent deliverable chains | PM writes PRD → Engineer writes tech spec that explicitly references it → Designer creates brief based on both. Downstream agents have read access to upstream outputs. This is the single most important differentiator — no competitor does this. ChatGPT Canvas, Claude Artifacts, and Jasper all produce one document at a time from one model. | HIGH | Handoff orchestrator already routes between agents. Add deliverable context injection: when Engineer picks up, inject PM's PRD as "prior work" context in the prompt. Link deliverables in the database with a `parent_deliverable_id` foreign key. |
-| Project packages | "Launch Package" = PRD + Tech Spec + Design Brief + GTM Plan, produced as a coordinated set. User selects a package type, their team produces all documents and links them. No competitor has this concept. | HIGH | Package templates define the member deliverables and their agent ownership. User initiates a package → each deliverable is queued as a background job → agents produce in parallel where possible, sequentially where one feeds the next. |
-| Visible team attribution | Each section or document shows which Hatch authored it. "This tech spec was written by Coda (Engineer)" with their avatar. No competitor shows multi-agent authorship because no competitor has multiple specialist agents. | LOW | Store `agent_id` and `agent_name` on the deliverable record. Render avatar + name in the viewer header. For cross-agent packages, show all contributing agents with their respective documents. |
-| Async background production | "Your team is working on this overnight — you'll be notified when it's ready." No competitor offers this. Jasper, Canvas, and Artifacts all require the user to be present and watching. | HIGH | Already exists in v1.1 pg-boss execution pipeline. Deliverable jobs are the natural next artifact type for background execution. Maya return briefing (already shipped) becomes the notification mechanism for "your team produced 4 documents overnight." |
-| Handoff notes visible in documents | When PM hands off to Engineer, the document includes a brief handoff note: "Alex (PM) to Coda (Engineer): PRD is complete, key technical constraints on page 2." Makes team coordination visible inside the deliverable itself, not just in the chat. | MEDIUM | Add a metadata section at the document top showing handoff context. Structured data from existing handoffProtocol.passes / receives fields in roleIntelligence.ts. |
-| Professional PDF export with attribution | Branded PDF with cover page, table of contents, agent attribution, Hatchin watermark (or white-labeled for Pro). Clean typography. No competitor does this well — Notion's export is sparse; Jasper's is basic. | HIGH | Puppeteer (headless Chrome) or `@react-pdf/renderer` for styled PDF. Cover page: project name, date, document type. TOC from headings. Footer: "Produced by [Agent Name] on [date] — Hatchin." For packages: combined multi-document PDF with dividers. |
-| Peer-reviewed deliverables | Before delivery, cross-agent peer review checks the document using the reviewer's peerReviewLens. "QA reviewed this spec and flagged 2 ambiguous requirements." No AI writing tool shows this. Already exists in v1.1 for task execution — extend to deliverables. | MEDIUM | Mid-risk deliverables (score 0.35–0.59) go through peerReviewRunner.ts before being marked Complete. Add a "Reviewed by [Agent]" badge with expandable review summary. |
-| Zero-friction first deliverable (<3 min) | Onboarding benchmark: first document produced in under 3 minutes without explaining what AI is or how to prompt it. No current tool achieves this for non-technical users — all require template selection or prompt crafting. | HIGH | Maya initiates during onboarding: "Tell me about your project. I'll have a project overview ready in a few minutes." Organic detection triggers immediately from onboarding conversation. First deliverable is a simple Project Summary — low token cost, high perceived value. |
-| Shared context between linked deliverables | When the tech spec references "as described in the PRD," that reference is accurate — the Engineer agent actually read the PRD, not a summary. Cross-document context injection at prompt time. | HIGH | Store deliverable content in the database. When generating a downstream deliverable, inject upstream content (or a structured summary if too long) into the prompt context alongside the project brain. |
-| Package progress tracker | "Launch Package: 2 of 5 documents complete. In progress: Tech Spec (Coda)." Users starting an async package need to know what's happening. No competitor has multi-document progress tracking. | MEDIUM | Progress bar on the package card. Each member deliverable reports status independently. Rolls up to package-level percentage. WS event fires when each member completes. |
+| **Chat-native creation — zero UI for common case** | No competitor nails this. OpenAI is close but still centers a separate Tasks UI. Hatchin can do it purely through conversation with the executing Hatch. | M | User DMs Kai: "draft the growth update every Monday morning" → Kai confirms in-character → saved |
+| **Personality-aware scheduling dialogue** | Kai confirms differently than Alex (PM). Reinforces "AI team" not "AI tool." | S | Reuse existing role voice prompts; confirmation is just another agent response with card attached |
+| **Assignment to specific agent, not generic task** | Lindy binds to agent; OpenAI Tasks is tool-generic. Hatchin's moat is the team — schedules belong to a *person* (Hatch). | S | Routine row: assigneeAgentId required |
+| **Deliverable-linked routines** | v2.0 shipped deliverables. Recurring routines that produce deliverables (weekly report) auto-version them. No competitor has this. | M | Reuse deliverable generator; each run = new version in existing version history |
+| **"Return briefing" integration** | v1.1 shipped Maya return briefing. Past scheduled runs surface naturally: "While you were away, Kai ran your Monday routine — draft's ready." | S | Hook into existing returnBriefing.ts |
+| **Conversational edit** | "Kai, move that to Tuesdays" — agent re-confirms with updated card. No competitor does this (all require dashboard edit). | M | Intent classifier recognizes schedule-modification language; fuzzy match to existing routine |
+| **Skip-next-run command** | "Skip next week's growth update, I'm on vacation" — one-off skip without killing the schedule | S | skippedUntil timestamp on routine |
+| **Budget-aware scheduling** | On routine creation, show projected cost — "this will use ~30% of your daily budget" before confirming | M | Leverages atomic budget system; cost estimation per routine type |
 
-### Anti-Features (Deliberately NOT Build)
+### Anti-Features (Avoid)
 
 | Feature | Why Requested | Why Problematic | Alternative |
 |---------|---------------|-----------------|-------------|
-| Rich text WYSIWYG editor (Google Docs-style) | Users want to edit the AI output directly, like ChatGPT Canvas | Canvas positions ChatGPT as a collaborative editor; Hatchin's brand positions Hatches as colleagues who produce work for you. Building a full editor says "you still do the writing." More importantly, implementing a robust rich text editor (Tiptap, Slate.js) is 2-3 weeks of work that delays the core differentiator (cross-agent chains). | Allow direct text editing as a future iteration. For v2.0, support text editing via chat instruction ("make this more concise") to the authoring agent — the Hatch revises, you review. Add direct editing in v2.1 if users request it. |
-| Real-time multi-user collaborative editing | Multiple users editing the same deliverable simultaneously (Google Docs style) | Requires CRDT infrastructure (Yjs, Automerge) or operational transforms — months of work. Hatchin has no multi-user collaboration layer at all yet (single-user per project). Premature feature before core deliverable system is validated. | Single-user viewing and iteration is sufficient for v2.0. Add collaborative editing when multi-user collaboration milestone ships. |
-| Importing existing documents to edit | Users want to paste in their existing PRD and ask the AI to improve it | Creates a different product category (AI document editor vs AI team that produces documents). Pulls engineering toward upload/parse infrastructure for user content, not team-coordination infrastructure. Confuses the product narrative: are Hatches editing my work or producing their own? | Hatchin's value prop is production, not editing. For context, users can add their existing documents to the Project Brain (already shipping in v1.3). Hatches then produce new documents informed by that context — not edits of the user's document. |
-| Template library (user-selects template, AI fills it) | Jasper's model — very familiar to content teams | Template-first is the opposite of Hatchin's anti-prompting philosophy. It forces users to know what template they need and how to fill it. Also commoditized — Jasper, Copy.ai, and dozens of tools already do this. | Hatches detect what kind of document is needed from conversation context and produce the appropriate format automatically. No template selection required. Maya or the relevant Hatch suggests the right document type. |
-| Instant single-message generation without conversation | "Click button → PRD generated from project name alone" | Produces shallow, generic documents with no real project context. First-time users might be impressed; after one use they'll see it's hollow. Destroys trust in the deliverable quality. | Organic detection ensures documents are generated after enough context has been gathered. The Hatch asks clarifying questions if needed before producing the deliverable. Quality over speed. |
-| Per-document revision history for every edit | Full version control with diff-view, like Google Docs revision history | High storage complexity and UI complexity for MVP. Storing every incremental edit multiplies JSONB storage requirements. Diff rendering is a significant UI investment. | Store a maximum of 5 previous versions per deliverable (append to version array, drop oldest). Arrow navigation between versions (same pattern as Claude Artifacts). Full git-style diff is a v3+ concern. |
-| Public sharing / publishing deliverables | "Share this PRD with a public link" | Privacy and compliance complexity before any user validation. Who owns documents produced by AI? What data appears in public links? Hatchin has no public-facing document infrastructure. | Pro users can export to PDF and share the file. Public sharing links deferred to v2.1 when B2B customers need to share deliverables with stakeholders outside Hatchin. |
+| Visual cron editor (day-picker grid, time sliders) | "Power users want precision" | Breaks chat-native brand; Zapier/Relevance own this space | NL + confirmation card handles 95%; show parsed cron in card read-only for the 5% |
+| Sub-minute or sub-hourly cadence | "Every 5 minutes" requests | Explodes LLM cost; pointless for creative work | Minimum cadence: hourly. Reject in-character ("I work in longer cycles") |
+| Complex conditional triggers ("run only if X") | Zapier-envy | Turns Hatchin into a no-code automation builder — wrong product | Agents decide whether to deliver each run; condition lives in the prompt |
+| Cross-routine dependency chains ("after Kai, run Alex") | Sounds like v2.0 chains | v2.0 chains are per-request. Cross-routine deps = distributed systems nightmare | Single routine can internally trigger handoff (existing handoff orchestrator) |
+| Shared / team-wide routines | B2B future-state | Premature before multi-user collab ships | Defer to v3.x+ |
+| Scheduled new-project creation | Over-generalization | Degenerates into workflow builder | Routines only operate within existing project + assigned Hatch |
+| Separate top-level "Routines" nav | "Easier to find" | Fragments mental model; Hatchin is project-scoped | Keep routines in project right sidebar |
+
+---
+
+## Feature Landscape — BUDGET UX
+
+### Table Stakes
+
+| Feature | Why Expected | Complexity | Notes |
+|---------|--------------|------------|-------|
+| Live budget-consumed indicator | Users on a cap need to see it; existing UsageBar (v1.2) is the seed | S | Extend UsageBar to show autonomy budget separately from chat usage |
+| Approaching-limit warning (~80%) | Stripe, AWS, every SaaS has this | S | Toast + sidebar banner; WS event `usage_warning` exists for chat — extend for autonomy |
+| Hard-stop UX at 100% | User must know *why* Hatches went quiet | M | In-character Maya message: "Team's paused for today — daily budget's maxed. Resets at midnight IST." Plus sidebar banner. |
+| Reset-time visibility | User needs to know when autonomy resumes | S | Display "Resets at 12:00 AM IST" next to budget bar |
+| Per-run cost attribution | "What used it up?" — every cloud dashboard has this | M | Activity feed logs events; add cost field; optional sum chart |
+| Failed/blocked run logged (not silent) | Silent budget blocks = trust death | S | Budget-blocked scheduled runs logged as autonomy_event type=budget_blocked, visible in past-runs |
+| Upgrade prompt when Pro would unblock | Conversion path | S | Reuse existing UpgradeModal when Free user hits autonomy cap |
+
+### Differentiators
+
+| Feature | Value Proposition | Complexity | Notes |
+|---------|-------------------|------------|-------|
+| **In-character budget communication** | Maya (or assigned Hatch) explains the pause conversationally, not as a sterile error | S | Templated message through existing briefing channel |
+| **Budget projection at create time** | Show "this routine will use ~$0.12/week, ~15% of weekly budget" when confirming schedule | M | Requires cost model per deliverable type; Groq-based estimate is cheap |
+| **Deferred-run queue** | Instead of killing blocked runs, optionally queue for next reset | M | User opt-in per routine |
+| **Per-routine spend breakdown** | Past-runs shows cost per run; routine card shows rolling 7-day spend | S | Already logging cost per event; aggregation query |
+
+### Anti-Features
+
+| Feature | Why Requested | Why Problematic | Alternative |
+|---------|---------------|-----------------|-------------|
+| User-editable per-agent budgets | "Power users want granular control" | Complexity explosion; milestone context explicitly defers this | Project-level budget for v3.0; per-agent = v3.x+ |
+| Real-time token counter streaming during generation | "Transparency!" | Distracting; competitors don't do this | Per-completion cost logged after the fact |
+| Dollar-denominated budgets for Free tier | "Match Pro UX" | Free isn't $-constrained — it's run-count constrained | Free shows "X of Y autonomous runs today"; Pro shows $ |
+| Manual budget override button ("let it run anyway") | User frustration escape hatch | Defeats atomic enforcement; breaks billing invariants | Upgrade or wait for reset; be explicit and polite |
+
+---
+
+## Budget-Exhausted UX States
+
+Concrete user-facing states downstream consumer needs for roadmap:
+
+| State | Threshold | UI Surface | User Actions Available |
+|-------|-----------|------------|------------------------|
+| Normal | 0–79% | UsageBar shows autonomy budget, green | All (create routine, run now, etc.) |
+| Approaching | 80–99% | UsageBar amber + toast on crossing 80% + sidebar banner | All, but Hatches may remind ("getting close to budget") |
+| Exhausted (soft) | 100% for Free user | Red UsageBar + Maya in-chat message + UpgradeModal on next autonomy action | Upgrade, wait for reset, run chat (unaffected) |
+| Exhausted (hard) | 100% for Pro user | Red UsageBar + Maya in-chat message + reset-time display | Wait for reset, adjust routines, run chat (unaffected) |
+| Reset | midnight user-TZ | UsageBar back to green; "Team's back online" WS event | All |
+| Scheduled run blocked | Any time budget=100% when routine fires | Logged as budget_blocked event, visible in routine past-runs, tab badge | Review in Routines panel; optionally enable deferred-run (P2) |
+
+**Critical invariant:** Chat with Hatches is never blocked by autonomy budget exhaustion — only background/scheduled autonomy. User can always talk to their team.
 
 ---
 
 ## Feature Dependencies
 
 ```
-[Deliverable System — Core Infrastructure]
-    └──requires──> [Deliverables DB table (id, project_id, agent_id, type, content, status, version_history)]
-    └──requires──> [GET /api/deliverables — list per project]
-    └──requires──> [POST /api/deliverables — create]
-    └──requires──> [PATCH /api/deliverables/:id — update content / status]
-    └──required-by──> ALL deliverable features below
+Natural-language schedule parsing
+    └──requires──> Intent classifier extension (existing tasks/intentClassifier.ts pattern)
+                       └──requires──> Schedule persistence (new scheduled_routines table)
+                                          └──requires──> Atomic budget enforcement backend
 
-[Split-Panel Artifact Viewer]
-    └──requires──> [Deliverable System — Core Infrastructure]
-    └──requires──> [v1.3 RightSidebar decomposed into tabs] (mount surface)
-    └──required-by──> [In-place iteration]
-    └──required-by──> [Version history]
-    └──required-by──> [Deliverable list / browser]
+Confirmation card in chat
+    └──requires──> Structured card rendering (existing AutonomousApprovalCard pattern)
 
-[In-place Iteration via Chat]
-    └──requires──> [Split-Panel Artifact Viewer]
-    └──requires──> [Active deliverable tracked in CenterPanel state]
-    └──enhances──> [Existing streaming chat] (same WS pattern, different output target)
+Past-run history
+    └──requires──> Scheduled-run event type in autonomy_events (existing eventLogger.ts)
+                       └──enhances──> Activity feed (v1.3 shipped)
 
-[Organic Detection]
-    └──requires──> [Deliverable System — Core Infrastructure]
-    └──requires──> [Existing task detection infrastructure] (extends taskDetection.ts)
-    └──enhances──> [Zero-friction onboarding] (first document triggered without explicit request)
+Manual "run now" trigger
+    └──requires──> Same execution pipeline as scheduled trigger (reuse taskExecutionPipeline.ts)
 
-[Cross-Agent Deliverable Chains]
-    └──requires──> [Deliverable System — Core Infrastructure]
-    └──requires──> [parent_deliverable_id FK on deliverables table]
-    └──requires──> [Deliverable context injection in agent prompts]
-    └──requires──> [Existing handoff orchestrator] (handoffOrchestrator.ts — already ships)
-    └──required-by──> [Project Packages]
-    └──required-by──> [Shared context between linked deliverables]
-    └──required-by──> [Handoff notes visible in documents]
+Budget projection on routine create
+    └──requires──> Atomic budget enforcement + cost estimation model
 
-[Project Packages]
-    └──requires──> [Cross-Agent Deliverable Chains]
-    └──requires──> [Package templates table (name, member_types[], agent_assignments)]
-    └──requires──> [Package progress tracker]
-    └──requires──> [Existing background execution (pg-boss)] (async production already ships)
+Deliverable-linked routines
+    └──enhances──> v2.0 deliverables (version history, types)
 
-[Async Background Production]
-    └──requires──> [Deliverable System — Core Infrastructure]
-    └──requires──> [Existing pg-boss job queue] (already ships in v1.1)
-    └──requires──> [Existing Maya return briefing] (notification mechanism already ships)
-    └──enhances──> [Project Packages] (packages run async in background)
+Conversational edit ("move to Tuesdays")
+    └──requires──> Fuzzy routine matching (similar to task lifecycle commands)
 
-[Peer-Reviewed Deliverables]
-    └──requires──> [Deliverable System — Core Infrastructure]
-    └──requires──> [Existing peerReviewRunner.ts] (already ships in v1.1)
-    └──enhances──> [Cross-Agent Deliverable Chains] (peer review per hop)
-
-[Professional PDF Export]
-    └──requires──> [Deliverable System — Core Infrastructure]
-    └──requires──> [Split-Panel Artifact Viewer] (HTML template as render source)
-    └──enhances──> [Project Packages] (export entire package as one PDF)
-
-[Zero-Friction Onboarding (<3 min)]
-    └──requires──> [Organic Detection]
-    └──requires──> [Async Background Production]
-    └──enhances──> [Project Packages] (first experience is a simple package, not a blank tool)
-
-[Package Progress Tracker]
-    └──requires──> [Project Packages]
-    └──requires──> [WS events for deliverable status changes]
-    └──enhances──> [v1.3 Activity Feed] (package progress appears as activity events)
+Deferred-run queue
+    └──conflicts──> Strict hard-stop (must be explicit opt-in, not default)
 ```
 
 ### Dependency Notes
 
-- **Deliverable DB table is the single gating dependency.** Everything above requires a `deliverables` table to exist. This is the first commit in Phase 1 of v2.0. The schema design (especially `parent_deliverable_id` and `version_history` JSONB) must be finalized before any UI work begins.
-
-- **v1.3 must ship before v2.0 starts.** The split-panel viewer needs a mount surface — the v1.3 tab shell provides it. The Work Output Viewer planned for v1.3.x is the direct predecessor to the deliverable browser. The v1.3 activity feed is the natural display surface for package progress events.
-
-- **Cross-agent chains require upstream context injection.** This is the technically hardest new piece — not the UI, but ensuring the Engineer agent's prompt actually contains the PM's PRD content, managed within LLM token limits. Token budget management is the primary risk here (see PITFALLS.md).
-
-- **Async production already exists.** pg-boss is shipped. Maya return briefing is shipped. The v2.0 deliverable execution jobs are a new job type in the existing queue, not a new queue. This dramatically reduces risk.
-
-- **Organic detection extends existing task detection.** `server/ai/taskDetection.ts` already parses chat messages for implicit task intents. Deliverable detection is the same pattern targeting document types instead of tasks.
+- **Scheduler requires atomic budget first:** A scheduled routine firing into a racy budget check = the exact runaway-spend scenario v3.0 exists to fix. Budget enforcement must land first in the milestone.
+- **Chat-native scheduling reuses existing intent classifier:** Smart Task Detection (shipped 2026-03-31) gives the pattern — add SCHEDULE_CREATE, SCHEDULE_MODIFY, SCHEDULE_CANCEL, SKIP_NEXT intents.
+- **Past-run history reuses existing autonomy events:** Extend event types, don't create a new table for logs.
+- **Conflict — deferred-run queue vs strict hard stop:** Opposing philosophies. Default must be hard stop (safer, predictable). Deferred queue = explicit per-routine opt-in, v3.1+.
 
 ---
 
 ## MVP Definition
 
-### Launch With (v2.0)
+### Launch With (v3.0)
 
-The minimum deliverable system that validates the cross-agent coordination value proposition.
+**Budget (correctness + minimum UX):**
+- [ ] Atomic budget check + deduct in single DB transaction (backend)
+- [ ] UsageBar extended to show autonomy budget separately from chat
+- [ ] Soft warning at 80% (toast + banner)
+- [ ] Hard stop at 100% with in-character Maya message + reset-time display
+- [ ] Budget-blocked runs logged as autonomy events, visible in Activity feed
+- [ ] Upgrade prompt for Free users hitting autonomy cap
 
-- [ ] Deliverables database table with core schema (id, project_id, agent_id, type, content, status, version_history JSONB, parent_deliverable_id) — gating dependency
-- [ ] Split-panel artifact viewer — opens to the right of chat when a deliverable is created; markdown rendering; persistent across chat; copy and download buttons
-- [ ] In-place iteration — active deliverable receives chat instructions from the authoring agent; document updates in-place with visual diff highlight
-- [ ] Version history (5 versions max) — back/forward arrow navigation; timestamps
-- [ ] Deliverable list / browser per project — title, agent avatar, type badge, status, creation date; click to open in viewer
-- [ ] Explicit trigger path — "Write me a PRD" → agent produces deliverable in artifact panel; covers all common document types (PRD, tech spec, design brief, GTM plan, project plan)
-- [ ] Organic detection for common types — when enough context is gathered for a PRD or project plan, Maya offers to write it; at minimum for project creation and onboarding
-- [ ] Streaming generation — document content streams into panel as it generates; authoring agent shows "working" avatar state; progress visible
-- [ ] Visible agent attribution — deliverable header shows author avatar, role, and creation timestamp
-- [ ] Basic status (Draft / Complete) — Simple two-state status; complete when agent marks finished and peer review (if applicable) passes
-- [ ] Cross-agent deliverable chains — when Engineer writes tech spec, PRD context is injected; parent_deliverable_id linked; viewer shows "based on [PRD title]" reference
-- [ ] Three starter package types — Launch Package (PRD + Tech Spec + Design Brief + GTM), Content Sprint (Blog + Social Calendar + Email Sequence), Planning Package (Project Plan + Competitive Analysis + SOP); initiatable with one click; async production; progress tracking
-- [ ] Async background production — deliverable jobs run in pg-boss background queue; Maya notifies on completion via return briefing
-- [ ] Package progress tracker — progress bar on package card; per-deliverable status; WS updates
-- [ ] Zero-friction onboarding — first deliverable offered within 3 minutes of project creation; Maya initiates during onboarding conversation
+**Scheduled routines:**
+- [ ] Natural-language schedule parsing (chrono-node + LLM fallback)
+- [ ] Confirmation card in chat before save
+- [ ] Routines panel in right sidebar (new tab or merged into Tasks)
+- [ ] Pause / resume / delete per routine
+- [ ] Past-run history per routine (last 30 runs: status + cost)
+- [ ] Timezone handling (browser default, IANA persistence, display in card)
+- [ ] Next-run-time display
+- [ ] Manual "run now" button
+- [ ] Failed-run surfaced in Maya return briefing + tab notification
 
-### Add After Validation (v2.0.x)
+### Add After Validation (v3.1)
 
-Features to add once the core deliverable loop is working and users are producing documents.
+- [ ] Conversational edit ("move that to Tuesdays") — validate users actually phrase it this way
+- [ ] Skip-next-run command
+- [ ] Budget projection at routine-create time
+- [ ] Deferred-run queue (opt-in per routine)
+- [ ] Per-routine rolling spend breakdown
 
-- [ ] Peer-reviewed deliverables — add once base quality is validated; apply peerReviewRunner to mid-risk deliverable types; show "Reviewed by [Agent]" badge
-- [ ] Professional PDF export — add once users demonstrate they share documents externally; Puppeteer or @react-pdf/renderer; cover page, TOC, attribution, Hatchin branding
-- [ ] Handoff notes in documents — add once cross-agent chains are shipping and users respond to the coordination narrative; structured metadata section at document top
-- [ ] Expanded package library — more package types based on what users request; landing page and GTM driven by real user packages produced
-- [ ] Deliverable sharing (private link, PDF only) — add when Pro users ask to share with stakeholders outside Hatchin
+### Future (v3.x+ / v4)
 
-### Future Consideration (v2.1+)
-
-Features to defer until product-market fit on core deliverables is established.
-
-- [ ] Direct text editing (WYSIWYG) — add if users consistently request it; Tiptap or similar; significant complexity investment
-- [ ] Full git-style revision history with diff view — storage and UI complexity; defer until enterprise/B2B customers need audit trails
-- [ ] Multi-user collaborative editing on deliverables — requires CRDT infrastructure; defer to multi-user collaboration milestone
-- [ ] Public sharing / publishing deliverables — privacy and compliance complexity; defer to B2B milestone
-- [ ] Custom package creation (user defines member deliverables and agent assignments) — powerful for B2B but adds configuration complexity; defer until company-level intelligence milestone
-- [ ] Deliverable templates (user-selects) — contradicts anti-prompting philosophy; only viable if B2B customers need branded document structures enforced
+- [ ] Per-agent budgets (Paperclip-inspired, deferred per milestone context)
+- [ ] Mobile digest of past runs
+- [ ] Shared/team routines (requires multi-user collab first)
+- [ ] Exportable routine templates
+- [ ] Audit-timeline UX for routines
 
 ---
 
@@ -280,105 +217,72 @@ Features to defer until product-market fit on core deliverables is established.
 
 | Feature | User Value | Implementation Cost | Priority |
 |---------|------------|---------------------|----------|
-| Deliverables DB table + API | HIGH | LOW | P1 |
-| Split-panel artifact viewer | HIGH | MEDIUM | P1 |
-| Streaming generation in panel | HIGH | LOW | P1 |
-| Agent attribution in deliverable | HIGH | LOW | P1 |
-| Deliverable list / browser | HIGH | MEDIUM | P1 |
-| Explicit trigger path | HIGH | MEDIUM | P1 |
-| In-place iteration via chat | HIGH | MEDIUM | P1 |
-| Version history (5 versions) | MEDIUM | LOW | P1 |
-| Copy and download | MEDIUM | LOW | P1 |
-| Organic detection (onboarding-scope) | HIGH | MEDIUM | P1 |
-| Cross-agent deliverable chains | HIGH | HIGH | P1 |
-| Three starter package types | HIGH | HIGH | P1 |
-| Async background production | HIGH | LOW | P1 — backend already exists |
-| Package progress tracker | HIGH | MEDIUM | P1 |
-| Zero-friction onboarding | HIGH | MEDIUM | P1 |
-| Status badges (Draft/Complete) | MEDIUM | LOW | P1 |
-| Empty state with actionable prompt | MEDIUM | LOW | P1 |
-| Peer-reviewed deliverables | HIGH | LOW | P2 — backend already exists |
-| PDF export (basic) | HIGH | HIGH | P2 |
-| Handoff notes in documents | MEDIUM | MEDIUM | P2 |
-| Expanded organic detection (all types) | MEDIUM | HIGH | P2 |
-| Deliverable sharing (PDF only) | MEDIUM | MEDIUM | P2 |
-| In-deliverable cross-references (linked sections) | MEDIUM | HIGH | P3 |
-| Direct text editing (WYSIWYG) | MEDIUM | HIGH | P3 |
-| Custom package templates | LOW | HIGH | P3 |
-| Public sharing links | LOW | MEDIUM | P3 |
+| Atomic budget enforcement (backend) | HIGH (correctness) | MEDIUM | P1 |
+| UsageBar autonomy extension | HIGH | LOW | P1 |
+| Hard-stop in-character message | HIGH | LOW | P1 |
+| NL schedule parsing | HIGH | MEDIUM | P1 |
+| Confirmation card | HIGH | LOW | P1 |
+| Routines panel | HIGH | MEDIUM | P1 |
+| Pause/resume/delete | HIGH | LOW | P1 |
+| Past-run history | HIGH | MEDIUM | P1 |
+| Timezone handling | HIGH | MEDIUM | P1 |
+| Manual "run now" | MEDIUM | LOW | P1 |
+| Failed-run notification | HIGH | LOW | P1 |
+| Conversational edit | MEDIUM | MEDIUM | P2 |
+| Skip-next-run | MEDIUM | LOW | P2 |
+| Budget projection on create | MEDIUM | MEDIUM | P2 |
+| Deferred-run queue | LOW | MEDIUM | P3 |
+| Per-agent budgets | LOW (for now) | HIGH | P3 |
 
-**Priority key:**
-- P1: Must ship in v2.0 — core value proposition not demonstrated without these
-- P2: Target for v2.0.x after initial user validation
-- P3: v2.1+ or explicitly deferred
+---
+
+## Recommendation: Chat-Native vs UI-Based Schedule Creation
+
+**Primary: chat-native.** Aligns with Hatchin's anti-prompting philosophy and brand. No competitor owns this combination — OpenAI Tasks is closest but still surfaces a Tasks UI as the primary mental model. Hatchin can own "just ask your teammate to do it every Monday."
+
+**Secondary: minimal management panel.** Users still need a place to see all active routines, pause them, and review history. Table stakes per competitive research. Keep in existing right sidebar (new Routines tab or merged into Tasks), not top-level nav.
+
+**Explicitly reject: visual cron editor / drag-and-drop builder.** That's Zapier's lane. Fighting there is off-brand and duplicative. Confirmation card shows parsed schedule in human-readable form; power users who want precision specify in natural language ("every weekday at 9am except holidays") — parser + LLM handles it.
+
+**Concrete flow:**
+1. User (in chat with Kai): "draft the growth update every Monday morning"
+2. Intent classifier detects SCHEDULE_CREATE
+3. NL parser extracts: cadence=weekly, dow=Mon, time=09:00, tz=user-browser
+4. Kai responds in-character + confirmation card renders: "Every Monday at 9:00 AM IST — draft the growth update. First run: Mon Apr 20. [Confirm] [Edit] [Cancel]"
+5. Confirm → routine saved → tab-badge + appears in Routines panel
 
 ---
 
 ## Competitor Feature Analysis
 
-| Feature | Claude Artifacts | ChatGPT Canvas | Notion AI | Jasper Campaign Mode | Copy.ai Workflows | Hatchin v2.0 Approach |
-|---------|-----------------|----------------|-----------|---------------------|-------------------|-----------------------|
-| Artifact panel / viewer | Split-screen right panel. Persists across conversation. Code runs in sandbox. | Full editor opens alongside chat. Richer than Artifacts — user can type directly. | Inline in page. No dedicated panel. | Dedicated long-form editor. | No conversational UI. Workflow output shown as final. | Split-panel right of chat (same pattern, proven UX). Viewer-first not editor-first, consistent with "team produces work for you" brand. |
-| In-place iteration | Yes — "make this shorter" updates artifact in-place. | Yes — highlight + prompt. Most powerful implementation. Direct editing also allowed. | Yes — select block, choose action. Very limited. | Yes — via Boss Mode `/` commands. | No — workflow outputs are final. | Yes — chat instruction to authoring agent updates in-place. No direct editing in v2.0 (deferred to v2.1). |
-| Version history | Yes — back/forward arrows, multiple versions. | Yes — tracks changes, shows diffs. | No version history for AI-generated blocks. | No version history. | No version history. | Yes — 5 version max via JSONB array. Back/forward arrows. Timestamps. |
-| Multi-document linking | No — one artifact at a time per session. | No — one canvas at a time. | No — documents are separate pages. | Campaign mode produces multiple but not linked. | Workflows produce multiple but not linked. | Yes — parent_deliverable_id FK; downstream agents read upstream content; viewer shows "based on [PRD]" reference. This is the primary gap in all competitors. |
-| Specialist authorship | No — one model, no role specialization. | No — one model. | No — generic AI assistant. | Named "brand voice" but not specialist roles. | Generic AI steps, no roles. | Yes — each deliverable has a specialist author (PM writes PRD, Engineer writes tech spec). Avatar, name, role displayed on deliverable. |
-| Cross-agent context injection | No — session context only. | No — single model has all context. | No | No | No | Yes — when Engineer generates tech spec, PM's PRD is injected into the prompt as "prior work." Managed within token budget via structured summary. |
-| Async / background production | No — user must be present. | No — user must be present. | No | No | Workflows run but no async notification. | Yes — pg-boss background queue (already ships). Maya return briefing notification (already ships). "Your team produced 4 docs overnight." |
-| Packages / grouped deliverables | No | No | Notion pages can be grouped in a database but not AI-coordinated production. | Campaign mode: one brief → multiple assets. Not "packages." | Workflow: closest analog. Sequential steps, not specialist agents. | Yes — Launch Package, Content Sprint, Planning Package. Team produces all member deliverables and links them. Package-level progress tracker. |
-| Peer review | No | No | No | No | No | Yes — peerReviewRunner.ts already ships in v1.1. Extend to deliverables. |
-| PDF export | Basic download (markdown/code). No PDF. | No | Notion PDF export: functional but bare, no branding, poor typography. | Jasper PDF: basic, no agent attribution. | No PDF. | Professional PDF: cover page, TOC, agent attribution, Hatchin branding. Puppeteer or @react-pdf/renderer. Multi-document package PDF with dividers. |
-| Zero-friction first document | Requires knowing to ask. No onboarding guidance. | Requires knowing Canvas exists. | Requires navigating Notion UI, using /AI command. | Template selection required. | Template/workflow selection required. | Maya initiates during onboarding. First deliverable offered without user knowing what a deliverable is. <3 min benchmark. |
-
----
-
-## Hatchin-Specific Dependencies on Existing Architecture
-
-These features are specifically enabled by Hatchin's existing v1.1/v1.2 infrastructure — things no competitor can replicate without rebuilding from scratch:
-
-| v2.0 Feature | Depends On | Already Exists? |
-|-------------|-----------|-----------------|
-| Cross-agent chains | handoffOrchestrator.ts | Yes — v1.1 |
-| Async production | pg-boss job queue | Yes — v1.1 |
-| Background notification | Maya return briefing | Yes — v1.1 |
-| Peer-reviewed deliverables | peerReviewRunner.ts | Yes — v1.1 |
-| Safety-gated delivery | taskExecutionPipeline.ts | Yes — v1.1 |
-| Specialist authorship | 30-role roleRegistry + roleIntelligence | Yes — v1.1 |
-| Project context in prompts | Project Brain JSONB | Yes — v1.0 |
-| Trust-adjusted autonomy | trustScorer + trustAdapter | Yes — v1.1 |
-| Organic detection | taskDetection.ts (extension point) | Yes — v1.0 (extend) |
-| Activity feed for package progress | autonomy_events + ActivityFeed | Yes — v1.3 (extend) |
-
-The backend effort for v2.0 is primarily:
-1. A new `deliverables` database table (1 migration)
-2. CRUD API routes for deliverables (new route module)
-3. Deliverable context injection logic (new module in `server/ai/`)
-4. Package templates and job routing (new module in `server/autonomy/`)
-5. New background job type in the existing pg-boss queue
-
-The frontend effort is the primary scope:
-1. Split-panel viewer component
-2. Deliverable list / browser
-3. Package selection and progress UI
-4. Artifact streaming integration
-5. Onboarding integration
+| Feature | OpenAI ChatGPT Tasks | Lindy | Hatchin Approach |
+|---------|---------------------|-------|------------------|
+| Creation | Chat + inline confirm | NL chat + visual trigger picker | Pure chat with assigned Hatch + confirmation card |
+| Storage/nav | Tasks sidebar (separate) | Per-agent dashboard list | Right-sidebar Routines tab (project-scoped) |
+| Past runs | Each run = new chat thread | Per-agent run log with outputs | Per-routine history card + deliverable version link |
+| Editing | Delete + recreate | Dashboard edit | Conversational edit — differentiator |
+| Timezone | Account TZ | Per-agent TZ setting | Browser default, overridable in confirmation card |
+| Budget integration | N/A (bundled) | Per-agent usage visible | Projected cost at create + live deduction |
+| Personality | Single assistant | Per-agent, utilitarian | Role-voiced confirmation (Kai sounds like Kai) |
 
 ---
 
 ## Sources
 
-All sourced from training data (knowledge cutoff: August 2025). External verification tools unavailable in this session.
+- OpenAI ChatGPT scheduled tasks (announced Jan 2025) — product docs + user reports
+- Lindy AI agents (lindy.ai) — public docs, pricing, demo videos
+- Zapier AI Agents + Zap scheduling (zapier.com/ai-agents) — help docs
+- Relevance AI (relevance.ai) — agent scheduling primitives
+- CrewAI + AutoGen framework repos — absence of scheduling confirms they defer to external orchestration
+- Paperclip product (per milestone context — not independently verified)
+- Hatchin internal: CLAUDE.md, PROJECT.md, MILESTONES.md, shipped v1.1/v1.2/v1.3/v2.0 infrastructure
 
-- **Claude Artifacts** — Anthropic, shipped October 2024; extensively documented in Claude release notes and user guides; HIGH confidence on feature set as of Aug 2025
-- **ChatGPT Canvas** — OpenAI, shipped October 2024; extensively covered in OpenAI release notes and independent reviews; HIGH confidence on feature set as of Aug 2025
-- **Notion AI** — feature set stable 2023–2025; inline generation, AI columns, workspace Q&A are well-documented; HIGH confidence
-- **Jasper AI** — campaign mode, Boss Mode, brand voice; MEDIUM confidence (Jasper pivoted product direction in 2024; specific features may have changed)
-- **Copy.ai** — workflow automation model; MEDIUM confidence (significant product changes in 2024 toward enterprise GTM workflows)
-- **Coda AI** — AI assistant, AI columns; HIGH confidence (stable feature set well-documented)
-- UX pattern analysis: Claude Artifacts vs Canvas UX difference (split-panel vs collaborative editor) derived from extensive training data coverage of both products at launch
-- Hatchin codebase: `.planning/PROJECT.md`, `CLAUDE.md`, `server/autonomy/`, `shared/roleRegistry.ts`, `shared/roleIntelligence.ts` — direct dependency mapping
+**Confidence caveats:**
+- OpenAI Tasks exact UX: MEDIUM (feature is recent, UX has iterated)
+- Lindy past-run UX: MEDIUM (verified via public demos, not hands-on)
+- Paperclip: LOW (referenced without independent verification) — recommendations don't depend on Paperclip specifics
+- First-principles UX (chat-native, confirmation card, personality-aware): HIGH — follows from Hatchin's brand + shipped patterns
 
 ---
-
-*Feature research for: AI deliverable/artifact systems — cross-agent coordinated document production (Hatchin v2.0)*
-*Researched: 2026-03-25*
+*Feature research for: v3.0 Reliable Autonomy (scheduled routines + budget UX)*
+*Researched: 2026-04-13*

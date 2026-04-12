@@ -1,249 +1,305 @@
-# Stack Research
+# Technology Stack — v3.0 Reliable Autonomy
 
-**Domain:** Deliverable/artifact system — rich markdown document panel, PDF export with branded styling, deliverable versioning/storage, cross-agent deliverable chains. Adding to existing React 18 + Tailwind + Framer Motion + Shadcn + Express + Drizzle + Neon PostgreSQL platform.
-**Researched:** 2026-03-25
-**Confidence:** HIGH (all existing versions confirmed directly from package.json; new package recommendations based on direct codebase inspection and library analysis)
-
----
-
-## Context: Do NOT Re-Research (Existing Stack)
-
-This is v2.0 on an existing production platform. The following are already installed:
-
-| Already Installed | Version | Relevant to Deliverables |
-|-------------------|---------|--------------------------|
-| `react-markdown` | ^10.1.0 | Already used in MessageBubble — extend, do not replace |
-| `remark-gfm` | ^4.0.1 | Already used — tables, strikethrough, task lists |
-| `rehype-highlight` | ^7.0.2 | Already used — code block syntax highlighting |
-| `@tailwindcss/typography` | ^0.5.15 | Already installed AND registered in tailwind.config.ts plugins — `prose` class available now |
-| `framer-motion` | ^11.18.2 | Panel animations, version history slide transitions |
-| `react-resizable-panels` | ^2.1.7 | Split-pane layout primitive — already wrapped in `ui/resizable.tsx` |
-| `@radix-ui/react-scroll-area` | ^1.2.4 | Scrollable artifact panel container |
-| `@radix-ui/react-tabs` | ^1.1.4 | Deliverable version history tabs |
-| `@radix-ui/react-tooltip` | ^1.2.7 | Toolbar button tooltips in artifact panel |
-| `@tanstack/react-query` | ^5.60.5 | All deliverable data fetching |
-| `drizzle-orm` | ^0.39.1 | New deliverables + versions tables |
-| `date-fns` | ^3.6.0 | Version timestamps, "updated 2 hours ago" |
-| `pg-boss` | ^10.4.2 | Already handles background task execution — deliverable production runs through this |
-| `lucide-react` | ^0.453.0 | Toolbar icons (copy, download, version history) |
-
-**Critical finding:** `@tailwindcss/typography` is already installed and already added to `tailwind.config.ts` plugins. The `prose` class is immediately available. This means rich markdown rendering for the artifact panel requires ZERO new frontend packages — just apply `prose` class to a `ReactMarkdown` wrapper.
+**Project:** Hatchin v3.0 (atomic budget enforcement + scheduled routines)
+**Researched:** 2026-04-13
+**Scope:** Incremental additions only. Existing stack (Express, Drizzle, Neon, pg-boss, Gemini/Groq, React/Wouter/TanStack) is validated and retained.
 
 ---
 
-## Recommended Stack Additions
+## Executive Recommendation
 
-### New Dependencies Required
+**No new heavy runtime dependencies required.** Both capabilities ship primarily on libraries already in `package.json`:
 
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| `@react-pdf/renderer` | ^4.3.0 | Generate branded PDF exports on the server | React-like declarative PDF construction with full font embedding, custom layouts, tables, and images. Runs in Node.js (server-side generation). Produces binary PDF buffer returned as a download response. The only mature React-ecosystem PDF library that supports full custom branding with Hatchin's design language. Actively maintained (2.4M weekly downloads). |
-| `rehype-sanitize` | ^6.0.0 | Sanitize LLM-produced markdown HTML in artifact panel | Deliverable content comes from LLM — any code block or user-influenced prompt could inject raw HTML into the rendered tree. `rehype-highlight` (already in use for chat) does not sanitize. The artifact panel renders richer content (tables, task lists, full headings) and must sanitize before rendering. Drop-in addition to the existing `rehypePlugins` array. |
-| `rehype-slug` | ^6.0.0 | Add `id` attributes to headings for TOC anchor links | Each `<h2>` and `<h3>` in a deliverable gets an auto-generated slug id (e.g., `id="executive-summary"`). Required for the floating table of contents to scroll-link to sections. Tiny package, no dependencies. |
-| `rehype-autolink-headings` | ^7.1.0 | Add clickable anchor `#` links to headings | Pairs with `rehype-slug`. Users can copy a link to a specific section of a deliverable — important for PRDs and tech specs that get shared with stakeholders. |
+1. **Atomic budget enforcement** → `drizzle-orm@0.39.1`'s `db.transaction()` + `.for('update')` row lock on a new `autonomy_budget_ledger` row. No new library.
+2. **Scheduled routines** → `pg-boss@10.4.2`'s native cron scheduler (`boss.schedule(name, cronExpr, data, { tz })`). No new scheduling library.
+3. **Natural-language → cron parsing** → Add **`chrono-node@^2.9.0`** (NL date parser) + a small in-house recurrence adapter. Optionally add **`cronstrue@^2.50.0`** for human-readable display of the resulting cron in confirmation UI.
 
-**That is four new packages total.** Everything else uses the existing stack.
+`node-cron@4.2.1` (currently in deps, unused) should be **removed**. pg-boss's cron is the durable, distributed-safe path; `node-cron` is in-process only and would double-fire on multi-node deploys.
 
-### No New Dependencies Needed (Covered by Existing Stack)
+---
 
-| Feature | Use Existing | Rationale |
-|---------|-------------|-----------|
-| Rich artifact markdown rendering | `react-markdown` + `remark-gfm` + `@tailwindcss/typography` (all installed) | Apply `prose dark:prose-invert prose-sm max-w-none` to the ReactMarkdown wrapper. Tables, task lists, blockquotes, headings — all handled. The existing MessageBubble custom component overrides (h1, h2, code blocks) are SUPPRESSED in the artifact panel to let `prose` styles take over. |
-| Artifact panel split layout | `react-resizable-panels` (installed, wrapped in `ui/resizable.tsx`) | Chat on left, artifact panel on right — use `ResizablePanelGroup direction="horizontal"`. Exact same primitive already used in the app. |
-| Artifact panel scroll | `@radix-ui/react-scroll-area` (installed) | Styled scrollable container with custom scrollbar. Already used in the sidebar. |
-| Version history UI | `@radix-ui/react-tabs` (installed) | Version switcher renders as horizontal tabs: v1, v2, v3 — click switches the displayed content. |
-| Deliverable animation | `framer-motion` (installed) | Slide-in animation when artifact panel opens (translate from right). Version switch cross-fade. |
-| Background deliverable production | `pg-boss` (installed) | Deliverable chain jobs run via existing job queue. No new queue infrastructure needed. |
-| Deliverable storage | `drizzle-orm` + Neon PostgreSQL (installed) | New `deliverables` and `deliverable_versions` tables via Drizzle migration. |
-| Real-time completion notification | `ws` + existing WebSocket (installed) | `deliverable_ready` WS event triggers artifact panel to open with completed content. |
-| Copy-to-clipboard button | Browser `navigator.clipboard` API | No library needed for the toolbar Copy button. |
-| Deliverable type badges | `lucide-react` (installed) | FileText, Code2, Layout, BarChart icons for PRD/TechSpec/DesignBrief/GTM badge types. |
-| Agent attribution display | Existing avatar system (`AgentAvatar`) | Already built — show which Hatch produced the deliverable with role color + avatar. |
-| Onboarding first deliverable | Existing `pg-boss` + WS notification | Zero-friction onboarding is a UX flow, not a new technical dependency. |
+## New / Changed Dependencies
+
+### Add
+
+| Package | Version | Purpose | Why |
+|---|---|---|---|
+| `chrono-node` | ^2.9.0 | Parse natural-language schedule phrases ("every Monday at 9am", "daily at 8", "weekdays 5pm") into structured date/time components | Battle-tested NL date parser (6M+ weekly downloads, MIT). `chrono.parse()` returns `ParsedResult[]` with `start.knownValues` (hour, minute, weekday) — exactly what's needed to emit cron fields. No real competitor in JS. |
+| `cronstrue` | ^2.50.0 (optional, ~15KB) | Convert cron expression back to human-readable string for confirmation UI | After translating "every Monday 9am" → `0 9 * * 1`, show "Every Monday at 9:00 AM" so user can verify before Kai commits. Zero deps, 25+ locales. |
+
+### Keep (already installed, becomes load-bearing)
+
+| Package | Version | Role in v3.0 |
+|---|---|---|
+| `pg-boss` | ^10.4.2 | Native cron via `boss.schedule()` — Timekeeper enabled by default, supports `tz`, 5-field cron, distributed-lock safe across instances |
+| `drizzle-orm` | ^0.39.1 | `db.transaction(cb, { isolationLevel })` + `.for('update')` for atomic check-and-debit |
+| `@neondatabase/serverless` | ^0.10.4 | Pool in `server/db.ts`; transactions + row locks work over the WS-based driver |
+
+### Remove
+
+| Package | Version | Reason |
+|---|---|---|
+| `node-cron` | ^4.2.1 | In-process scheduler without persistence or multi-node coordination. Unused today; remove to prevent misuse. |
+| `@types/node-cron` | ^3.0.11 | Remove with `node-cron`. |
+
+### Do NOT add
+
+| Package | Why not |
+|---|---|
+| `bullmq` / `bull` | Requires Redis. pg-boss already covers durable queues on Postgres — no benefit, new infra. |
+| `agenda` | MongoDB-based. Wrong datastore. |
+| `node-schedule` | In-process only; same durability gap as `node-cron`. |
+| `croner` | pg-boss already evaluates cron internally. No gap. |
+| `cron-parser` | Only needed if we validate/evaluate cron ourselves. pg-boss does it; a regex sanity check is enough. Add later if validation errors prove insufficient. |
+| `pg_cron` (Postgres extension, supported by Neon) | Duplicates pg-boss; moves scheduling logic outside the app (harder to test, version, instrument). |
+| Advisory-lock wrapper libs | Drizzle can execute `pg_advisory_xact_lock` via raw `sql\`...\``. No wrapper needed. |
+
+---
+
+## Integration Points
+
+### (a) Atomic Budget Enforcement
+
+**Current race in `server/autonomy/execution/taskExecutionPipeline.ts` (lines 544-560):**
+
+```ts
+const todayCount = await deps.storage.countAutonomyEventsForProjectToday(...);  // READ
+if (todayCount >= BUDGETS.maxBackgroundLlmCallsPerProjectPerDay) { ... }        // CHECK
+// LLM call happens here ...                                                    // ACT
+// logAutonomyEvent() only AFTER success → concurrent workers bypass cap
+```
+
+N concurrent workers all see `count=4` with `limit=5` → all proceed → N× overspend.
+
+**Fix — new module `server/autonomy/budget/atomicBudget.ts`:**
+
+```ts
+import { db } from '../../db.js';
+import { sql } from 'drizzle-orm';
+
+// Dedicated ledger row per (projectId, date, kind) — UNIQUE constraint enforces 1 row.
+export async function reserveBudget(
+  projectId: string,
+  date: string,       // 'YYYY-MM-DD'
+  kind: 'background_llm' | 'routine_exec',
+  limit: number,
+): Promise<{ granted: boolean; remaining: number }> {
+  return db.transaction(async (tx) => {
+    // Ensure row exists (idempotent)
+    await tx.execute(sql`
+      INSERT INTO autonomy_budget_ledger (project_id, date, kind, used_count)
+      VALUES (${projectId}, ${date}, ${kind}, 0)
+      ON CONFLICT (project_id, date, kind) DO NOTHING
+    `);
+    // Lock THIS row for the remainder of tx
+    const res = await tx.execute(sql`
+      SELECT used_count FROM autonomy_budget_ledger
+      WHERE project_id = ${projectId} AND date = ${date} AND kind = ${kind}
+      FOR UPDATE
+    `);
+    const used = Number((res.rows?.[0] as any)?.used_count ?? 0);
+    if (used >= limit) return { granted: false, remaining: 0 };
+    await tx.execute(sql`
+      UPDATE autonomy_budget_ledger
+      SET used_count = used_count + 1, updated_at = now()
+      WHERE project_id = ${projectId} AND date = ${date} AND kind = ${kind}
+    `);
+    return { granted: true, remaining: limit - used - 1 };
+  }, { isolationLevel: 'read committed' });
+}
+```
+
+**Why `read committed` + `FOR UPDATE` (not `serializable`):**
+- `serializable` on Neon triggers serialization-failure retries — extra complexity, retry loop required, surprising failure mode for engineers.
+- `FOR UPDATE` on a single ledger row serializes writers for exactly that `(project, date, kind)` — this is the canonical textbook pattern for single-row counters. No retries needed; blocked workers simply wait.
+- We intentionally pin all contention to one row, so `serializable` has no marginal benefit.
+
+**Alternative (simpler, no new table) — advisory lock:**
+```ts
+const key = hash64(`${projectId}:${date}`);
+await tx.execute(sql`SELECT pg_advisory_xact_lock(${key})`);
+// then read count from existing autonomy_events table
+```
+This works, but loses the observable counter row we want for UI ("3 of 5 used today"). **Recommend the ledger row.**
+
+**Integration site:** Replace lines 544-560 of `taskExecutionPipeline.ts` with a call to `reserveBudget()`. On `granted: false`, run the existing "blocked + `task_requires_approval`" path. On success, the remaining pipeline runs unchanged. Cross-validate the ledger against `autonomy_events` counts in a daily consistency check.
+
+**Drizzle API specifics (verified):**
+- `db.transaction(cb, options?)` — SUPPORTED. `options.isolationLevel: 'read committed' | 'repeatable read' | 'serializable' | 'read uncommitted'`; `accessMode: 'read only' | 'read write'`; `deferrable: boolean`.
+- `.for('update')` / `.for('share')` / `.for('update', { noWait: true })` / `.for('update', { skipLocked: true })` — SUPPORTED on the standard query builder (`db.select()...`), **NOT** on `db.query.tableName` relational API. Confidence: MEDIUM (feature confirmed via Drizzle GitHub issue #2875 + community answers, but undocumented on the docs site). Mitigation: write a smoke test against Neon in Phase 1 to confirm; if it fails, fall back to raw `sql` template (`SELECT ... FOR UPDATE`) which we already use above.
+- Advisory locks via `sql\`SELECT pg_advisory_xact_lock(${n})\`` — fully supported through the `sql` template tag.
+
+### (b) Scheduled Routines
+
+**pg-boss native API (verified from pg-boss v10.1 Cron Scheduling docs):**
+
+```ts
+// server/autonomy/scheduling/routineScheduler.ts
+const boss = await getJobQueue();
+
+await boss.schedule(
+  `routine:${routineId}`,                           // unique name
+  '0 9 * * 1',                                       // 5-field cron
+  { routineId, projectId, agentId, prompt },         // payload
+  { tz: 'America/New_York' },                        // IANA timezone
+);
+
+// Routines fire into the SAME queue as ad-hoc autonomy tasks
+await boss.work('autonomous_task_execution', handleTaskJob);
+
+// Management
+await boss.unschedule(`routine:${routineId}`);
+const all = await boss.getSchedules();
+```
+
+**Verified pg-boss scheduling properties:**
+- Default-on (Timekeeper: `schedule: true`) — no opt-in needed.
+- 5-field cron format (`m h dom mon dow`).
+- `tz` option accepts IANA zones (`'America/Los_Angeles'`, `'UTC'`, `'Europe/London'`).
+- Clock-skew detection + distributed lock — safe across multiple Node instances sharing one Postgres.
+- Scheduled jobs enqueue into a normal queue when due → flow through existing `handleTaskJob` → **budget check + safety gates + peer review all apply automatically** (this is critical — routines inherit all v1.1/v3.0 safety rails).
+
+**Natural-language → cron pipeline (`server/autonomy/scheduling/scheduleParser.ts`):**
+
+```ts
+import * as chrono from 'chrono-node';
+import cronstrue from 'cronstrue';
+
+export function parseSchedulePhrase(
+  phrase: string,
+  userTz: string,
+): { cron: string; tz: string; description: string } | null {
+  const results = chrono.parse(phrase, new Date(), { forwardDate: true });
+  if (!results.length) return null;
+  const known = results[0].start.knownValues;
+  const hour   = known.hour   ?? 9;
+  const minute = known.minute ?? 0;
+
+  const lc = phrase.toLowerCase();
+  let dom = '*', mon = '*', dow = '*';
+
+  if (known.weekday !== undefined) {
+    dow = String(known.weekday);                         // 0-6
+  } else if (/every weekday|weekdays/.test(lc)) {
+    dow = '1-5';
+  } else if (/every day|daily/.test(lc)) {
+    // dow stays '*'
+  } else if (/monthly|every month|first of (the )?month/.test(lc)) {
+    dom = '1';
+  } else {
+    return null;  // unrecognized → ask user to confirm
+  }
+
+  const cron = `${minute} ${hour} ${dom} ${mon} ${dow}`;
+  return { cron, tz: userTz, description: cronstrue.toString(cron) };
+}
+```
+
+**Why this split (chrono + ~50-LOC adapter) instead of a monolithic NL→cron lib:**
+- No mature, actively maintained "NL → cron" JavaScript library exists (verified web search 2026-04). Projects like `friendly-cron` are dead or extremely narrow.
+- `chrono-node` handles the hard part (parsing human time references) robustly; adapter is just recurrence-word regex over ~10 phrase patterns.
+- Keeping recurrence logic in-tree means we can test, extend, and debug it — no black-box parser surprises.
+
+**Integration site:**
+1. New route `POST /api/routines` in `server/routes/routines.ts`: `{ projectId, agentId, phrase, prompt }` → parse → persist to new `autonomy_routines` table → `boss.schedule()`.
+2. Chat-native trigger: extend `server/ai/tasks/intentClassifier.ts` with a new `SCHEDULE_ROUTINE` intent pattern (`/every (day|week|monday|...)|daily|weekly|on \w+days?/i`) routed to routine creator instead of task creator.
+3. Clarification path: if `parseSchedulePhrase` returns null, emit an in-character clarification from the addressed agent ("I didn't catch when — did you mean every Monday at 9?") rather than fail silently.
+4. Broadcast `routine_created` WS event with `cronstrue` description so UI can show "Runs every Monday at 9:00 AM" in a confirmation chip.
+
+---
+
+## Database Schema Additions (informational — Architecture research finalizes)
+
+```ts
+// shared/schema.ts — sketch
+export const autonomyBudgetLedger = pgTable('autonomy_budget_ledger', {
+  projectId: uuid('project_id').notNull(),
+  date: date('date').notNull(),                       // YYYY-MM-DD
+  kind: text('kind').notNull(),                       // 'background_llm' | 'routine_exec' | ...
+  usedCount: integer('used_count').notNull().default(0),
+  updatedAt: timestamp('updated_at').defaultNow(),
+}, (t) => ({ pk: primaryKey({ columns: [t.projectId, t.date, t.kind] }) }));
+
+export const autonomyRoutines = pgTable('autonomy_routines', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  projectId: uuid('project_id').notNull(),
+  agentId: uuid('agent_id').notNull(),
+  createdByUserId: uuid('created_by_user_id').notNull(),
+  phrase: text('phrase').notNull(),                   // original NL phrase
+  cronExpr: text('cron_expr').notNull(),
+  tz: text('tz').notNull(),
+  prompt: text('prompt').notNull(),
+  enabled: boolean('enabled').notNull().default(true),
+  lastRunAt: timestamp('last_run_at'),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+```
 
 ---
 
 ## Installation
 
 ```bash
-# New packages only
-npm install @react-pdf/renderer rehype-sanitize rehype-slug rehype-autolink-headings
-
-# TypeScript types (if not bundled)
-npm install -D @types/rehype-sanitize
+npm install chrono-node@^2.9.0 cronstrue@^2.50.0
+npm uninstall node-cron @types/node-cron
+npm run db:push   # apply autonomy_budget_ledger + autonomy_routines schema
 ```
 
-**Note:** `@react-pdf/renderer` ships its own TypeScript types. `rehype-sanitize`, `rehype-slug`, and `rehype-autolink-headings` are written in TypeScript — no separate `@types/` packages needed.
+No dev-dep changes. No Drizzle-kit config changes.
 
 ---
 
 ## Alternatives Considered
 
-| Recommended | Alternative | When to Use Alternative |
-|-------------|-------------|-------------------------|
-| `@react-pdf/renderer` | `puppeteer` / Chromium headless | Puppeteer produces pixel-perfect PDFs from HTML/CSS — better for complex layouts with web fonts. Choose it if the PDF needs to exactly mirror a web page. Rejected here because: (1) Chromium binary is 300MB+, incompatible with Neon/serverless deploy constraints; (2) `@react-pdf/renderer` gives programmatic control over PDF structure (TOC entries, page breaks, agent attribution blocks) that Puppeteer cannot provide declaratively; (3) Puppeteer crashes at Neon's memory limits with multiple concurrent export requests. |
-| `@react-pdf/renderer` | `pdfmake` | `pdfmake` is a JSON-config PDF library — good for simple tables and reports. Does not support component composition or React mental model. `@react-pdf/renderer` integrates into the existing React component system, so `<DeliverablePDF>` is a reusable, typed React component. |
-| `@react-pdf/renderer` | `jspdf` | `jspdf` is client-side and canvas-based. Does not support custom fonts cleanly, produces low-quality output for text-heavy documents. All Hatchin deliverables are text-heavy (PRDs, specs, GTM plans). Server-side generation via `@react-pdf/renderer` is higher quality and avoids client-side memory issues on large documents. |
-| `rehype-sanitize` | `dompurify` | `dompurify` is DOM-dependent (browser-only). The deliverable render pipeline runs on the server for email/export previews. `rehype-sanitize` is AST-based, runs in Node.js and browser. |
-| `rehype-slug` + `rehype-autolink-headings` | Custom heading components in ReactMarkdown | Custom components in the `components` prop of `ReactMarkdown` could add ids manually, but require maintaining a slug function and anchor insertion. `rehype-slug` handles this with one plugin line. Two-line change vs 40-line custom implementation. |
-| New `deliverables` table | Storing deliverables in `messages.content` | Messages table stores chat messages — stuffing large document content (5,000+ word PRDs) into the message content field would (1) break cursor pagination assumptions, (2) make deliverable search impossible, (3) prevent version history without message duplication, (4) conflate two distinct data types. Dedicated `deliverables` table with a FK to `projects` is the correct model. |
-| New `deliverable_versions` table | `jsonb` version array on `deliverables` | JSONB array of version snapshots would hit PostgreSQL TOAST threshold after 2–3 revisions of a 5,000-word document. Separate `deliverable_versions` rows (one row per version, `content text NOT NULL`) keep the parent `deliverables` row small and allow efficient `SELECT * FROM deliverable_versions WHERE deliverable_id = X ORDER BY version_number DESC` queries. |
+| Capability | Recommended | Alternative | Why Not |
+|---|---|---|---|
+| Atomic budget | Drizzle tx + `FOR UPDATE` on ledger row | `SERIALIZABLE` isolation + retry loop | Retry logic adds complexity + surprising failure modes; `FOR UPDATE` is the textbook pattern for single-row counters |
+| Atomic budget | Ledger row + `FOR UPDATE` | `pg_advisory_xact_lock` only | Works but no observable counter row for "% budget used" UI |
+| Scheduling | pg-boss `schedule()` | `pg_cron` (Neon extension) | Scheduling logic outside app — harder to test/instrument/version |
+| Scheduling | pg-boss `schedule()` | `node-cron` / `node-schedule` | In-process, non-durable, double-fires on multi-node |
+| Scheduling | pg-boss `schedule()` | BullMQ + Redis | New infra for zero incremental benefit |
+| NL parsing | `chrono-node` + thin adapter | Single "NL→cron" lib | None mature/maintained in JS ecosystem (2026-04) |
+| Cron display | `cronstrue` | Hand-rolled | ~15KB for battle-tested phrasing in 25+ locales |
 
 ---
 
-## What NOT to Add
+## Confidence Assessment
 
-| Avoid | Why | Use Instead |
-|-------|-----|-------------|
-| **`puppeteer` / `playwright` for PDF** | Chromium binary is 300MB+; incompatible with serverless memory limits on Neon; startup latency (2–4s) degrades UX; over-engineered for the use case | `@react-pdf/renderer` server-side |
-| **`slate-react` / `prosemirror`** | Full rich-text editors (collaborative editing, inline formatting toolbar, selection API). Deliverables are produced by Hatches and iterated through conversation — not edited in-place by users in v2.0. Adding a rich-text editor doubles the frontend complexity for a v2.0 that doesn't need it. Revisit for v3.0 if users request in-panel editing. | `ReactMarkdown` with `prose` class |
-| **`@uiw/react-md-editor`** / any markdown editor component | Same reason as Slate — deliverables are LLM-produced, read-optimized, not user-edited in v2.0. Editors bring keybinding conflicts, custom CSS overrides that fight Tailwind, and bundle bloat. | Read-only `ReactMarkdown` + conversation-based iteration |
-| **`shiki`** | Better syntax highlighting than `rehype-highlight` but requires 2.8MB+ grammar bundle. The artifact panel renders business documents (PRDs, GTM plans, design briefs) — code blocks are rare. `rehype-highlight` (already installed) is sufficient. | `rehype-highlight` (already installed) |
-| **`zustand` / `jotai`** | Global state for "which deliverable is open" is not needed — it's a URL param (`?artifact=<id>`) + TanStack Query. Adding a client-side store for this creates a second source of truth. | `wouter` URL params + `@tanstack/react-query` |
-| **`react-pdf` (viewer)** | Renders PDF pages as canvas in the browser (different library from `@react-pdf/renderer`). Not needed — deliverables display as rich markdown in the panel; PDF is a download/export action only. | `ReactMarkdown` with `prose` for in-panel view |
-| **`mammoth` / `docx` for DOCX export** | DOCX export is out of scope for v2.0. PDF + copy-to-clipboard covers stakeholder sharing needs. DOCX generation adds complexity without clear user demand. | Defer to post-v2.0 based on user feedback |
-
----
-
-## Integration Points with Existing Stack
-
-### Artifact Panel Data Flow
-
-```
-User or Hatch triggers deliverable production
-  → pg-boss job created: { type: 'produce_deliverable', agentId, projectId, deliverableType, chainContext }
-  → taskExecutionPipeline.ts: executes LLM call → produces markdown content
-  → storage.createDeliverable({ projectId, agentId, type, title, content }) → INSERT INTO deliverables
-  → storage.createDeliverableVersion({ deliverableId, content, versionNumber: 1, agentId }) → INSERT INTO deliverable_versions
-  → WS broadcast: { type: 'deliverable_ready', deliverableId, agentId, title, deliverableType }
-  → CenterPanel.tsx: receives WS event → sets openArtifactId state
-  → ArtifactPanel.tsx: useQuery(['deliverable', id]) → GET /api/deliverables/:id
-  → ReactMarkdown + prose class renders content
-```
-
-### PDF Export Flow
-
-```
-User clicks "Export PDF" in artifact toolbar
-  → POST /api/deliverables/:id/export (new route in server/routes/deliverables.ts)
-  → server fetches deliverable content + project branding (name, color, logo if present)
-  → @react-pdf/renderer: renderToBuffer(<DeliverablePDF project={...} deliverable={...} />)
-  → res.setHeader('Content-Type', 'application/pdf')
-  → res.setHeader('Content-Disposition', `attachment; filename="${title}.pdf"`)
-  → res.send(buffer)
-  → Browser triggers download
-```
-
-### Deliverable Chain Flow (Cross-Agent)
-
-```
-PM Hatch produces PRD → deliverable:{ id, type: 'prd', content }
-  → pg-boss enqueues: { type: 'produce_deliverable', type: 'tech_spec', chainContext: { priorDeliverableId: prdId } }
-  → Engineer Hatch receives job: loads prior deliverable content via storage.getDeliverable(priorDeliverableId)
-  → Injects prior content into LLM context: "The PM produced the following PRD: [content]. Write a tech spec that references and expands on this."
-  → Produces tech spec with explicit PRD references
-  → WS broadcast: { type: 'deliverable_ready', deliverableId, chainPosition: 2, chainTotal: 4 }
-```
-
-### Version History Flow
-
-```
-User sends follow-up message: "Can you make the PRD more concise?"
-  → CenterPanel detects active deliverable context (openArtifactId set)
-  → Agent regenerates deliverable with revision instruction
-  → storage.createDeliverableVersion({ deliverableId, content: revised, versionNumber: 2 })
-  → ArtifactPanel.tsx: useQuery(['deliverable_versions', deliverableId]) revalidates
-  → Version tabs show v1 / v2; user can click back to compare
-```
-
-### Database Schema (New Tables Required)
-
-Two new Drizzle tables via migration — no changes to existing tables:
-
-```typescript
-// shared/schema.ts additions
-
-export const deliverables = pgTable("deliverables", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  projectId: varchar("project_id").references(() => projects.id).notNull(),
-  agentId: varchar("agent_id").references(() => agents.id),
-  type: text("type").notNull().$type<"prd" | "tech_spec" | "design_brief" | "gtm_plan" | "content" | "research" | "sop">(),
-  title: text("title").notNull(),
-  status: text("status").notNull().default("draft").$type<"draft" | "complete" | "superseded">(),
-  chainId: varchar("chain_id"),  // groups linked deliverables from one production run
-  chainPosition: integer("chain_position"),  // 1 = first in chain, 2 = second, etc.
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
-
-export const deliverableVersions = pgTable("deliverable_versions", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  deliverableId: varchar("deliverable_id").references(() => deliverables.id).notNull(),
-  agentId: varchar("agent_id").references(() => agents.id),
-  content: text("content").notNull(),  // full markdown — TEXT not JSONB, no TOAST issues
-  versionNumber: integer("version_number").notNull(),
-  changeNote: text("change_note"),  // "Made more concise per user feedback"
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-}, (table) => ({
-  deliverableIdIdx: index("deliverable_versions_deliverable_id_idx").on(table.deliverableId),
-}));
-```
-
-**Why `TEXT` not `JSONB` for `content`:** Markdown is a flat string. JSONB provides no query advantage for a string field and adds unnecessary parsing overhead. `text` with a PostgreSQL index on `deliverable_id` is the correct column type. A 5,000-word PRD is ~30KB as text — well within PostgreSQL's 1GB column limit and below TOAST threshold concerns at typical document lengths.
+| Claim | Confidence | Source |
+|---|---|---|
+| pg-boss v10 has native `schedule()` with `tz` option | HIGH | pg-boss DeepWiki 10.1 Cron Scheduling (API signatures, `tz` param, Timekeeper default-on) |
+| Drizzle supports `db.transaction(cb, { isolationLevel })` | HIGH | Drizzle official `/docs/transactions` |
+| Drizzle query builder supports `.for('update')` | MEDIUM | GitHub issue #2875 + community answers confirm; undocumented on docs site. Mitigation: smoke-test in Phase 1; fallback to raw `sql\`SELECT ... FOR UPDATE\`` always works |
+| Advisory locks via Drizzle `sql` template | HIGH | Standard Drizzle template-tag usage |
+| `chrono-node` parses recurring phrases with weekday/hour | HIGH | 2.9.0 docs; 6M+ weekly downloads; stable API |
+| `cronstrue` reliably verbalizes 5-field cron | HIGH | 1M+ weekly downloads; 25+ locales |
+| No mature JS "NL → cron" monolithic library | MEDIUM | Web search 2026-04 surfaced none; niche candidate may have been missed |
 
 ---
 
-## Stack Patterns by Variant
+## Definitive Answers to Downstream Questions
 
-**For the artifact panel markdown rendering:**
-- Apply `className="prose dark:prose-invert prose-sm max-w-none"` to the `<ReactMarkdown>` container div
-- Suppress MessageBubble's custom component overrides — let `prose` handle h1/h2/ul/li/code
-- Add `rehypePlugins={[rehypeSanitize, rehypeSlug, rehypeAutolink, rehypeHighlight]}` in that order (sanitize before slug)
-- Do NOT pass `components` prop with custom h1/h2/code overrides to the artifact panel `<ReactMarkdown>` — `prose` handles this cleanly
+1. **Is pg-boss's built-in cron sufficient, or do we need a separate scheduler?**
+   **Sufficient.** pg-boss v10.4.2 ships `schedule()`, `unschedule()`, `getSchedules()`, Timekeeper with clock-skew detection, IANA timezone support via `tz` option, distributed-lock safe. **Do not add a second scheduler.** Remove `node-cron`.
 
-**For the PDF export:**
-- Run `@react-pdf/renderer` **server-side only** — do not bundle it in Vite frontend build (Chromium dependency causes build issues)
-- Add `@react-pdf/renderer` to the esbuild `external` list in `package.json` build script if it resolves browser dependencies
-- Use `renderToBuffer()` not `renderToStream()` for Express response — simpler error handling
-- Embed Hatchin fonts via `Font.register()` at server startup for consistent branding
+2. **Does Drizzle expose `SELECT FOR UPDATE`, serializable isolation, and advisory locks?**
+   - **Serializable isolation: YES**, native via `db.transaction(cb, { isolationLevel: 'serializable' })`. All four PG levels supported.
+   - **`SELECT FOR UPDATE`: YES** via `.for('update')` on standard query builder (confirmed but undocumented — fallback to raw `sql\`... FOR UPDATE\`` always works). Recommendation: **use raw `sql` template** for the budget ledger tx to avoid depending on undocumented API.
+   - **Advisory locks: YES** via raw `sql\`SELECT pg_advisory_xact_lock(${key})\``.
+   - **Recommended pattern for v3.0:** `read committed` isolation + `FOR UPDATE` on the ledger row (raw `sql`). Not `serializable`, because pinning contention to one row already serializes writers and avoids retry-loop complexity.
 
-**For deliverable versioning:**
-- `deliverable_versions` is the source of truth for content — `deliverables` is the metadata record
-- The "current" version is always `SELECT ... ORDER BY version_number DESC LIMIT 1`
-- Never update content in-place on `deliverable_versions` — append new rows only (immutable version history)
-
-**For the chain orchestration:**
-- Use `chainId` (a shared UUID generated at chain creation) to group related deliverables
-- Use `chainPosition` to determine ordering without hard-coding type sequences
-- The chain is defined by the production job, not the schema — schema just records position
-
----
-
-## Version Compatibility
-
-| Package | Compatible With | Notes |
-|---------|-----------------|-------|
-| `@react-pdf/renderer@4.3.0` | `node@20.16.11` | Node.js 16+ required. Server-side use only. Do not import in Vite client bundle. |
-| `rehype-sanitize@6.0.0` | `react-markdown@10.1.0` | Both use unified/rehype AST pipeline. rehype-sanitize must come before rehype-slug in plugin array. |
-| `rehype-slug@6.0.0` | `rehype-autolink-headings@7.1.0` | rehype-slug must run before rehype-autolink-headings (autolink requires existing slug ids). |
-| `rehype-autolink-headings@7.1.0` | `rehype-highlight@7.0.2` | No conflicts — all three operate on different node types in the AST. |
-| All new rehype plugins | `remark-gfm@4.0.1` | remark plugins (remark-gfm) run before rehype plugins in the unified pipeline. Order: remark → rehype. No conflicts. |
+3. **Best library for natural-language → cron?**
+   **`chrono-node` + 50-LOC in-house adapter.** Optionally `cronstrue` for reverse-display. No single maintained NL→cron library exists in JS. `chrono-node` parses the time component; recurrence keywords map to cron fields with simple regex.
 
 ---
 
 ## Sources
 
-- `/Users/shashankrai/Documents/hatching-mvp-5th-march/package.json` — all existing versions confirmed directly — HIGH confidence
-- `/Users/shashankrai/Documents/hatching-mvp-5th-march/tailwind.config.ts` — `@tailwindcss/typography` confirmed in plugins array — HIGH confidence
-- `/Users/shashankrai/Documents/hatching-mvp-5th-march/client/src/components/MessageBubble.tsx` — existing `react-markdown` + `remark-gfm` + `rehype-highlight` usage pattern confirmed — HIGH confidence
-- `/Users/shashankrai/Documents/hatching-mvp-5th-march/shared/schema.ts` — existing table structure, confirmed no `deliverables` table exists yet — HIGH confidence
-- `/Users/shashankrai/Documents/hatching-mvp-5th-march/.planning/PROJECT.md` — v2.0 deliverable system requirements, confirmed cross-agent chain requirement — HIGH confidence
-- `@react-pdf/renderer` — 2.4M weekly downloads, actively maintained, Node.js server-side PDF generation; no browser import required — HIGH confidence (training data corroborated by npm adoption)
-- `rehype-sanitize` — part of the official unified/rehype ecosystem (same org as react-markdown) — HIGH confidence
-- `rehype-slug` + `rehype-autolink-headings` — standard unified ecosystem plugins for TOC anchor support — HIGH confidence
-- PostgreSQL `TEXT` vs `JSONB` for string content — `TEXT` is correct for flat strings; `JSONB` parsing overhead with no query benefit — HIGH confidence
-
----
-
-*Stack research for: Hatchin v2.0 deliverable/artifact system — rich artifact panel, PDF export, versioning, cross-agent chains*
-*Researched: 2026-03-25*
+- [pg-boss Cron Scheduling (DeepWiki v10.1)](https://deepwiki.com/timgit/pg-boss/10.1-cron-based-scheduling)
+- [Drizzle Transactions docs](https://orm.drizzle.team/docs/transactions)
+- [Drizzle SELECT FOR UPDATE issue #2875](https://github.com/drizzle-team/drizzle-orm/issues/2875)
+- [Drizzle locks — community answer](https://www.answeroverflow.com/m/1202652683492925544)
+- [chrono-node on npm](https://www.npmjs.com/package/chrono-node)
+- [cronstrue on npm](https://www.npmjs.com/package/cronstrue)
+- [Neon pg_cron docs](https://neon.com/docs/extensions/pg_cron) (considered, not recommended)
+- [Scheduled Jobs with pg-boss in TypeScript](https://logsnag.com/blog/deep-dive-into-background-jobs-with-pg-boss-and-typescript)
