@@ -5,8 +5,9 @@
 - ✅ **v1.0 Text-Perfect, Human-First** — Phases 1-5 (shipped 2026-03-19) — [archive](milestones/v1.0-ROADMAP.md)
 - ✅ **v1.1 Autonomous Execution Loop** — Phases 6-9 (shipped 2026-03-23) — [archive](milestones/v1.1-ROADMAP.md)
 - ✅ **v1.2 Billing + LLM Intelligence** — Phase 10 (shipped 2026-03-23) — [archive](milestones/v1.2-ROADMAP.md)
-- 🚧 **v1.3 Autonomy Visibility & Right Sidebar Revamp** — Phases 11-15 (in progress)
-- 📋 **v2.0 Hatches That Deliver** — Phases 16-21 (planned)
+- ✅ **v1.3 Autonomy Visibility & Right Sidebar Revamp** — Phases 11-15 (shipped 2026-03-29)
+- ✅ **v2.0 Hatches That Deliver** — Phases 16-21 (shipped 2026-03-30)
+- 🚧 **v3.0 Reliable Autonomy** — Phases 22-27 (in progress)
 
 ---
 
@@ -50,7 +51,7 @@ See archived roadmap: [milestones/v1.2-ROADMAP.md](milestones/v1.2-ROADMAP.md)
 
 ---
 
-## 🚧 v1.3 Autonomy Visibility & Right Sidebar Revamp (In Progress)
+## ✅ v1.3 Autonomy Visibility & Right Sidebar Revamp (SHIPPED 2026-03-29)
 
 **Milestone Goal:** Make the autonomy backend visible and controllable from the frontend — tabbed sidebar shell, real-time activity feed, handoff visualization, agent working-state avatar animation, pending approvals hub, task pipeline, project brain file upload, and autonomy settings dial.
 
@@ -64,18 +65,35 @@ See archived roadmap: [milestones/v1.2-ROADMAP.md](milestones/v1.2-ROADMAP.md)
 
 ---
 
-## 📋 v2.0 Hatches That Deliver (Planned)
+## ✅ v2.0 Hatches That Deliver (SHIPPED 2026-03-30)
 
 **Milestone Goal:** Transform Hatchin from "AI chatroom" to "AI team that ships coordinated work" — split-panel artifact viewer, schema-enforced deliverable generation, cross-agent document chains, project packages, organic detection, professional PDF export, and zero-friction onboarding.
 
 ### Phases
 
-- [ ] **Phase 16: Database Foundation + Artifact Panel Shell** - Three new DB tables, CRUD API, artifact panel shell, deliverable chat card, coordination attribution
-- [ ] **Phase 17: Deliverable Generation + Schema Enforcement** - Type registry, deliverable generator, streaming into panel, version history, deliverable browser
-- [ ] **Phase 18: Cross-Agent Deliverable Chains** - Chain orchestrator, upstream context injection, stale reference warnings, visual chain diagram, async notifications
-- [ ] **Phase 19: Organic Detection + Iteration UX** - Two-stage intent detection, confirmation card, section-level iteration, diff highlighting
-- [ ] **Phase 20: Project Packages + Background Production** - Package templates, package UI, agent-missing recovery, background package execution
-- [ ] **Phase 21: Zero-Friction Onboarding + PDF Export** - Project type classifier, first-deliverable onboarding, branded PDF export, package PDF export
+- [x] **Phase 16: Database Foundation + Artifact Panel Shell**
+- [x] **Phase 17: Deliverable Generation + Schema Enforcement**
+- [x] **Phase 18: Cross-Agent Deliverable Chains**
+- [x] **Phase 19: Organic Detection + Iteration UX**
+- [x] **Phase 20: Project Packages + Background Production**
+- [x] **Phase 21: Zero-Friction Onboarding + PDF Export**
+
+---
+
+## 🚧 v3.0 Reliable Autonomy (In Progress)
+
+**Milestone Goal:** Harden the autonomous execution loop so users can trust it. Close the check-then-act budget race via atomic enforcement, then layer scheduled routines ("every Monday 9am, Kai drafts the growth update") on top of a now-correct budget ledger — chat-native creation, never a cron UI.
+
+**Ordering constraint (hard):** Phase 22 (atomic budget) must land before Phase 24 (scheduler). Scheduling multiplies concurrency pressure; a racy budget under a scheduler is the exact runaway-spend scenario this milestone exists to prevent.
+
+### Phases
+
+- [ ] **Phase 22: Atomic Budget Enforcement** — Ledger table + reserve/release + pipeline rewire + daily reconciliation
+- [ ] **Phase 23: Budget UX Surfaces** — UsageBar autonomy extension, 80% warn, in-character hard-stop, blocked events in feed, Free-tier upgrade path
+- [ ] **Phase 24: Scheduler Foundation** — scheduled_routines table, pg-boss cron wrapper, pipeline hook, auto-pause, REST API, tier gating
+- [ ] **Phase 25: Chat-Native Routine Creation** — SCHEDULE_REQUEST intent, NL → cron parser, in-character confirmation card, injection defense
+- [ ] **Phase 26: Routines Management Panel** — Sidebar tab, routine cards, pause/resume/run-now/delete, past-run history, return-briefing + tab-badge integration
+- [ ] **Phase 27: Polish + Integration Hardening** — Concurrency verify, DST tests, multi-replica single-fire, red-team injection suite
 
 ---
 
@@ -121,9 +139,6 @@ Plans:
   3. When an approval expires, user sees a clear "expired" state on that item instead of a broken approve button or silent failure
   4. When no approvals are pending, the Approvals tab shows an engaging empty state explaining what the tab is for and how approvals are created
 **Plans**: 2 plans
-Plans:
-- [ ] 13-01-PLAN.md — Approval leaf components: expiry utility, ApprovalItem card, ApprovalsEmptyState, unit tests
-- [ ] 13-02-PLAN.md — TaskPipelineView, ApprovalsTab container, RightSidebar wiring with live badge + WS invalidation
 
 ### Phase 14: Brain Redesign + Autonomy Settings
 **Goal**: Users can build a real knowledge base by uploading documents to the project brain, and can configure how autonomously their Hatches operate
@@ -135,9 +150,6 @@ Plans:
   3. User can configure autonomy behavior via a settings panel: toggle autonomous execution on/off, set the inactivity trigger, and choose an autonomy level from a four-position dial (Observe / Propose / Confirm / Autonomous)
   4. User can browse completed work outputs from background agents in an expandable card view without scrolling through full chat history
 **Plans**: 2 plans
-Plans:
-- [ ] 14-01-PLAN.md — Backend: schema extension, multer upload endpoint, text extraction, delete endpoint, tests
-- [ ] 14-02-PLAN.md — Frontend: BrainDocsTab with upload zone, document cards, autonomy settings, work outputs, RightSidebar wiring
 
 ### Phase 15: Polish
 **Goal**: All new sidebar components feel premium and visually consistent with Hatchin's established design system
@@ -147,77 +159,112 @@ Plans:
   1. All new sidebar tab components use designs generated via Stitch/Magic MCPs and are visually indistinguishable from the quality level of existing Hatchin components
   2. New components are consistent in spacing, color usage, typography, and animation style with the established Tailwind design tokens and Framer Motion patterns across the app
 **Plans**: 6 plans
-Plans:
-- [x] 15-01-PLAN.md — Top-level sidebar polish: SidebarTabBar mobile touch targets, ApprovalsEmptyState floating animation, AutonomyStatsCard premium card
-- [x] 15-02-PLAN.md — Activity tab content polish: ActivityFeedItem premium card, FeedFilters Shadcn Select, HandoffChainTimeline staggered animation
-- [x] 15-03-PLAN.md — Approvals tab polish: ApprovalItem touch targets and premium card, TaskPipelineView stage colors and hover
-- [x] 15-04-PLAN.md — Brain tab content polish: DocumentCard hover lift, DocumentUploadZone Tailwind migration, AutonomySettingsPanel section dividers
-- [x] 15-05-PLAN.md — Remaining content polish: WorkOutputSection prose rendering, BrainDocsTab section dividers, ActivityTab shimmer skeleton
-- [x] 15-06-PLAN.md — Cross-cutting polish: avatar working animation enhancement, AutonomousApprovalCard normalization, Sheet drawer frosted glass + visual audit checkpoint
+
+### Phase 16: Database Foundation + Artifact Panel Shell
+**Goal**: Users can open a split-panel artifact viewer beside chat that displays deliverables with attribution
+**Depends on**: Phase 15
+**Requirements**: ARTF-01, ARTF-02, ARTF-03, ARTF-04, COORD-01
+**Plans**: Shipped
+
+### Phase 17: Deliverable Generation + Schema Enforcement
+**Goal**: Users can request a structured deliverable and watch it stream into the artifact panel
+**Depends on**: Phase 16
+**Requirements**: DLVR-01, DLVR-02, DLVR-03, DLVR-04, DLVR-05
+**Plans**: Shipped
+
+### Phase 18: Cross-Agent Deliverable Chains
+**Goal**: Downstream Hatches produce linked documents that reference upstream content substantively
+**Depends on**: Phase 17
+**Requirements**: CHAIN-01, CHAIN-02, CHAIN-03, CHAIN-04, COORD-02
+**Plans**: Shipped
+
+### Phase 19: Organic Detection + Iteration UX
+**Goal**: Hatches propose deliverables when conversation has sufficient context; iteration is surgical
+**Depends on**: Phase 17
+**Requirements**: DTCT-01, DTCT-02
+**Plans**: Shipped
+
+### Phase 20: Project Packages + Background Production
+**Goal**: Users can trigger a coordinated multi-agent deliverable package and track progress
+**Depends on**: Phase 18
+**Requirements**: PKG-01, PKG-02, PKG-03
+**Plans**: Shipped
+
+### Phase 21: Zero-Friction Onboarding + PDF Export
+**Goal**: First deliverable within 3 minutes of signup; any deliverable exportable as branded PDF
+**Depends on**: Phases 19, 17
+**Requirements**: ONBD-01, ONBD-02, XPRT-01, XPRT-02
+**Plans**: Shipped
 
 ---
 
-### Phase 16: Database Foundation + Artifact Panel Shell
-**Goal**: Users can open a split-panel artifact viewer beside chat that displays deliverables with attribution — the data and UI foundation that every v2.0 feature requires
-**Depends on**: Phase 15 (v1.3 must ship first; v1.3 sidebar provides the shell this overlays)
-**Requirements**: ARTF-01, ARTF-02, ARTF-03, ARTF-04, COORD-01
+### Phase 22: Atomic Budget Enforcement
+**Goal**: Concurrent background tasks can never bypass the per-project daily autonomy budget — the check-then-act race at `taskExecutionPipeline.ts:543-560` is closed by a transactional reserve/release ledger that is the single source of truth
+**Depends on**: Nothing (first phase of v3.0; blocks Phase 24)
+**Requirements**: BUDG-01, BUDG-02, BUDG-03
 **Success Criteria** (what must be TRUE):
-  1. User can open any deliverable and see a split-panel view — chat remains fully visible and usable on the left, the document opens in a panel on the right without covering the conversation
-  2. Each open deliverable shows which Hatch produced it (avatar, name, role), handoff notes where relevant, and a status badge (Draft / In Review / Complete)
-  3. User can navigate back and forward through up to 20 saved versions of a deliverable and restore any previous version with one click
-  4. User can copy the full deliverable content to clipboard or download it as a .md file from within the panel using a single button click
+  1. When N concurrent autonomous tasks race for the last budget slot at a limit of K, exactly K succeed and N-K are blocked — verified by a concurrency integration test (e.g. 10 concurrent, K=5 → 5 pass, 5 blocked)
+  2. When an autonomous task fails, is cancelled, or throws mid-execution, its reserved budget slot is released (idempotent by task_id) so no project can be permanently locked out by crashed jobs
+  3. A daily reconciliation job runs and logs any drift between `autonomy_daily_counters.reserved_count` and the authoritative count from `autonomy_events` for that project+date
+  4. The duplicate budget check in `chat.ts` inactivity trigger is removed — the pipeline helper is the only budget authority in the codebase
 **Plans**: TBD
 
-### Phase 17: Deliverable Generation + Schema Enforcement
-**Goal**: Users can request a structured deliverable from any Hatch, see it stream into the artifact panel in real time, and browse all project deliverables from a list view
-**Depends on**: Phase 16
-**Requirements**: DLVR-01, DLVR-02, DLVR-03, DLVR-04, DLVR-05
+### Phase 23: Budget UX Surfaces
+**Goal**: Users see their autonomy budget in real time, receive a soft warning before exhaustion, and get an in-character hard-stop (not a silent failure) when the cap hits — with the Free-tier upgrade path surfaced at the moment of friction
+**Depends on**: Phase 22
+**Requirements**: BUDG-04, BUDG-05, BUDG-06, BUDG-07, BUDG-08
 **Success Criteria** (what must be TRUE):
-  1. User can say "write me a PRD" (or tech spec, design brief, GTM plan, blog post, project plan) and the appropriate Hatch generates a document with the correct canonical sections — the document renders in the artifact panel as it streams, not after completion
-  2. Each role reliably produces documents with consistent section structure across regenerations — the PM always produces Executive Summary, Problem, Goals, User Stories, Success Metrics, Timeline; the Engineer always produces Overview, Architecture, Implementation Plan, Dependencies, Risks, Testing Strategy
-  3. User can browse all deliverables for a project in a list or grid view and filter them by deliverable type, the Hatch that produced them, or current status
-  4. User can say "make the timeline more aggressive" or "add a risks section" while a deliverable is open and the Hatch updates only the relevant section in-place — not the whole document
+  1. User sees autonomy budget consumption displayed alongside message budget in the existing UsageBar, updating in real time as autonomous tasks complete
+  2. User receives a visible soft warning (toast or inline notice) at 80% autonomy budget consumption, distinct from the hard-stop at 100%
+  3. When a user's autonomy budget is exhausted, Maya delivers an in-character message explaining the stop (no raw "quota exceeded" error) and the next unblock condition
+  4. Every `budget_blocked` event appears in the Activity feed with timestamp, the task that was blocked, and the triggering agent
+  5. A Free-tier user hitting the autonomy cap sees the existing UpgradeModal with autonomy-specific upgrade framing
 **Plans**: TBD
 
-### Phase 18: Cross-Agent Deliverable Chains
-**Goal**: When one Hatch finishes a deliverable, downstream Hatches can produce linked documents that genuinely reference the upstream content — not generic placeholder text
-**Depends on**: Phase 17
-**Requirements**: CHAIN-01, CHAIN-02, CHAIN-03, CHAIN-04, COORD-02
+### Phase 24: Scheduler Foundation
+**Goal**: The system can reliably fire recurring autonomous tasks on a cron schedule across restarts and multi-node deploys — reusing the existing execution pipeline (budget, safety, peer review, handoffs, events) with zero duplicate code paths
+**Depends on**: Phase 22 (budget must be atomic before scheduling multiplies concurrency)
+**Requirements**: SCHED-01, SCHED-02, SCHED-03, SCHED-04, SCHED-05, SCHED-06, SCHED-07, SCHED-08, SCHED-09
 **Success Criteria** (what must be TRUE):
-  1. After a PM produces a PRD, the Engineer Hatch can produce a tech spec that explicitly references sections, decisions, and requirements from that PRD — the reference is substantive, not generic
-  2. When a user iterates an upstream deliverable (PRD revised from v1 to v2), all downstream deliverables (tech spec, design brief) show a visible "may be outdated" warning with a one-click update action
-  3. User sees a visual chain diagram in the artifact panel showing the relationship between linked deliverables (PRD → Tech Spec → Design Brief → GTM Plan) with the current status shown at each step
-  4. When background deliverable production completes overnight, the user receives a Maya return briefing in chat ("Your team produced 4 documents. Review when ready.") rather than having to discover the work by browsing
+  1. A developer/API consumer can create a scheduled routine via `POST /api/routines` with agent, cron expression, IANA timezone, and instruction — and see it fire at the next cron tick
+  2. When a scheduled fire occurs, the routine enqueues a row into `tasks` and hands off to the existing `autonomous_task_execution` pg-boss queue — there is no parallel execution pipeline
+  3. After each run, `last_run_status` and `last_run_task_id` on the routine are updated; after 3 consecutive failures the routine auto-pauses with `paused_reason` populated
+  4. Deleting an agent or project cascades to remove the associated scheduled routines (no dangling pg-boss schedules)
+  5. Only Pro-tier users can create routines (enforced by existing `tierGate` middleware); each project is capped at 10 active routines; on server boot all active routines re-register with pg-boss
 **Plans**: TBD
 
-### Phase 19: Organic Detection + Iteration UX
-**Goal**: Hatches recognize when a conversation has enough context to produce a deliverable and propose it — never auto-creating — and iteration through chat updates documents with surgical precision
-**Depends on**: Phase 17
-**Requirements**: DTCT-01, DTCT-02
+### Phase 25: Chat-Native Routine Creation
+**Goal**: Users create routines by talking to a Hatch in plain English ("Kai, draft the growth update every Monday at 9am") — no cron UI, no settings panel, just a conversation that returns an in-character confirmation card and resists prompt-injection attacks through the scheduled phrase
+**Depends on**: Phase 24
+**Requirements**: CHAT-01, CHAT-02, CHAT-03, CHAT-04, CHAT-05, CHAT-06
 **Success Criteria** (what must be TRUE):
-  1. When a conversation reaches sufficient context for a deliverable (a PRD-worthy product discussion, a GTM-worthy launch conversation), the relevant Hatch offers a confirmation card ("Ready to write this up as a PRD?") — the user must click to confirm before generation starts
-  2. Organic detection never fires on a casual or exploratory conversation — a brainstorm or question-and-answer exchange does not trigger a deliverable proposal
+  1. When a user messages an agent with a natural-language schedule phrase, the agent responds with an in-character confirmation card showing the parsed cron, timezone, and task template — no routine is created until the user confirms
+  2. The `intentClassifier` emits `SCHEDULE_REQUEST` before `EXPLICIT_TASK_REQUEST` on ambiguous phrases like "create a task to send the update every Monday" (schedule intent wins)
+  3. `schedulePhraseParser` converts supported NL phrases ("every Monday", "daily at 9am", "every weekday morning") into valid cron expressions plus an IANA timezone string
+  4. User can dismiss the confirmation card inline and no routine is persisted, no pg-boss schedule is registered
+  5. NL instructions passed into downstream LLM prompts are capped at 500 characters and wrapped in delimited untrusted-data framing so adversarial schedule text cannot escape the data boundary
 **Plans**: TBD
 
-### Phase 20: Project Packages + Background Production
-**Goal**: Users can trigger a coordinated multi-agent deliverable package and track its progress as Hatches produce linked documents in the background
-**Depends on**: Phase 18
-**Requirements**: PKG-01, PKG-02, PKG-03
+### Phase 26: Routines Management Panel
+**Goal**: Users can see, manage, and trust their scheduled routines from a dedicated sidebar surface — visibility on next run, recent history, cost, and clear controls (pause/resume/run-now/delete) without digging through chat
+**Depends on**: Phase 24
+**Requirements**: MGMT-01, MGMT-02, MGMT-03, MGMT-04, MGMT-05, MGMT-06, MGMT-07, MGMT-08
 **Success Criteria** (what must be TRUE):
-  1. User can trigger a named package ("Launch Package", "Content Sprint", "Research Package") and the system coordinates the appropriate chain of Hatches to produce all required deliverables in sequence
-  2. While a package is running, user sees a progress indicator showing which deliverables are complete, which Hatch is currently working, and how many remain — not just a spinner
-  3. If a package requires a Hatch type not present in the project, the user sees a clear "Agent missing" status for that step and a direct link to add the required Hatch — the package does not silently stall on that step
+  1. User opens the right sidebar and finds a Routines tab listing every active routine for the project, each card showing agent avatar, human-readable schedule, next run time, and last run status
+  2. User can pause, resume, manually trigger ("Run now"), or delete any routine directly from its card — state changes reflect immediately in the UI and in pg-boss
+  3. User can expand a routine card to see the last 30 runs with per-run status and cost
+  4. Failed routine runs appear in Maya's return briefing when the user re-opens the app after being away; unread completions surface as a badge on the Routines tab
 **Plans**: TBD
 
-### Phase 21: Zero-Friction Onboarding + PDF Export
-**Goal**: New users receive their first deliverable offer within 3 minutes of signup, and any deliverable or package can be exported as a professionally branded PDF
-**Depends on**: Phases 19, 17
-**Requirements**: ONBD-01, ONBD-02, XPRT-01, XPRT-02
+### Phase 27: Polish + Integration Hardening
+**Goal**: The correctness guarantees v3.0 promises are backed by mechanical tests — concurrency under load, DST transitions, multi-replica single-fire, and a red-team prompt-injection suite — so we ship with proof, not hope
+**Depends on**: Phases 22-26
+**Requirements**: VER-01, VER-02, VER-03, VER-04
 **Success Criteria** (what must be TRUE):
-  1. A new user completing onboarding receives a contextually relevant first-deliverable offer within 3 minutes — a product startup gets a PRD offer, a marketer gets a content brief offer, a solo developer gets a project plan offer
-  2. The first deliverable is explicitly framed as a starting point ("Here's a first draft — tell me what to change") so new users immediately understand they can iterate through conversation
-  3. User can export any single deliverable as a PDF with a cover page, table of contents, agent attribution section, page numbers, and Hatchin branding — the PDF is professional enough to share with external stakeholders
-  4. User can export an entire package (Launch Package, Content Sprint) as a single combined PDF containing all linked deliverables in logical reading order
+  1. A concurrent-execution test spins up 10 parallel jobs against a budget limit of 5 and the test asserts exactly 5 pass and 5 are blocked — test is part of CI
+  2. A fixed-date DST transition test (spring-forward and fall-back) proves routines fire at the correct wall-clock time in the configured IANA timezone
+  3. A multi-replica test proves pg-boss fires each scheduled routine exactly once across N replicas — no double execution
+  4. A red-team prompt-injection suite of ≥15 adversarial NL schedule phrases runs in CI and none escape the delimited framing introduced in Phase 25
 **Plans**: TBD
 
 ---
@@ -240,18 +287,25 @@ Plans:
 | 12. Handoff Visualization | v1.3 | 2/2 | Complete | 2026-03-25 |
 | 13. Approvals Hub + Task Pipeline | v1.3 | 2/2 | Complete | 2026-03-26 |
 | 14. Brain Redesign + Autonomy Settings | v1.3 | 2/2 | Complete | 2026-03-26 |
-| 15. Polish | v1.3 | 0/6 | Not started | - |
-| 16. Database Foundation + Artifact Panel Shell | v2.0 | 0/? | Not started | - |
-| 17. Deliverable Generation + Schema Enforcement | v2.0 | 0/? | Not started | - |
-| 18. Cross-Agent Deliverable Chains | v2.0 | 0/? | Not started | - |
-| 19. Organic Detection + Iteration UX | v2.0 | 0/? | Not started | - |
-| 20. Project Packages + Background Production | v2.0 | 0/? | Not started | - |
-| 21. Zero-Friction Onboarding + PDF Export | v2.0 | 0/? | Not started | - |
+| 15. Polish | v1.3 | 6/6 | Complete | 2026-03-30 |
+| 16. Database Foundation + Artifact Panel Shell | v2.0 | — | Complete | 2026-03-30 |
+| 17. Deliverable Generation + Schema Enforcement | v2.0 | — | Complete | 2026-03-30 |
+| 18. Cross-Agent Deliverable Chains | v2.0 | — | Complete | 2026-03-30 |
+| 19. Organic Detection + Iteration UX | v2.0 | — | Complete | 2026-03-30 |
+| 20. Project Packages + Background Production | v2.0 | — | Complete | 2026-03-30 |
+| 21. Zero-Friction Onboarding + PDF Export | v2.0 | — | Complete | 2026-03-30 |
+| 22. Atomic Budget Enforcement | v3.0 | 0/? | Not started | - |
+| 23. Budget UX Surfaces | v3.0 | 0/? | Not started | - |
+| 24. Scheduler Foundation | v3.0 | 0/? | Not started | - |
+| 25. Chat-Native Routine Creation | v3.0 | 0/? | Not started | - |
+| 26. Routines Management Panel | v3.0 | 0/? | Not started | - |
+| 27. Polish + Integration Hardening | v3.0 | 0/? | Not started | - |
 
 ---
 *Roadmap created: 2026-03-17*
 *v1.0 shipped: 2026-03-19*
 *v1.1 shipped: 2026-03-23*
 *v1.2 shipped: 2026-03-23*
-*v1.3 roadmap added: 2026-03-24*
-*v2.0 roadmap added: 2026-03-25*
+*v1.3 shipped: 2026-03-29*
+*v2.0 shipped: 2026-03-30*
+*v3.0 roadmap added: 2026-04-13*
