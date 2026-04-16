@@ -38,8 +38,8 @@ export function registerTaskRoutes(app: Express, deps: RegisterTaskDeps): void {
   const getSessionUserId = (req: Request): string => (req.session as any).userId as string;
 
   const getOwnedProjectIds = async (userId: string): Promise<Set<string>> => {
-    const projects = await storage.getProjects();
-    return new Set(projects.filter((project: any) => project.userId === userId).map((project) => project.id));
+    const projects = await storage.getProjectsByUserId(userId);
+    return new Set(projects.map((project) => project.id));
   };
 
   const getOwnedProject = async (projectId: string, userId: string) => {

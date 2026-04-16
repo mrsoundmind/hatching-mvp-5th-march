@@ -3,7 +3,30 @@ import { useState, useEffect, useRef } from "react";
 import { ProjectTree } from "@/components/ProjectTree";
 import { ChevronDown, Search, LogOut, X, CreditCard } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useIsFetching } from "@tanstack/react-query";
 import type { Project, Team, Agent } from "@shared/schema";
+
+/** Skeleton placeholder shown while project data is loading */
+function ProjectTreeSkeleton() {
+  return (
+    <div className="space-y-3 px-1">
+      {[1, 2, 3].map((i) => (
+        <div key={i} className="space-y-2">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg bg-hatchin-surface animate-pulse" />
+            <div className="h-4 rounded bg-hatchin-surface animate-pulse flex-1" />
+          </div>
+          {i === 1 && (
+            <div className="pl-9 space-y-1.5">
+              <div className="h-3 rounded bg-hatchin-surface animate-pulse w-3/4" />
+              <div className="h-3 rounded bg-hatchin-surface animate-pulse w-1/2" />
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
 
 // Interface for complete undo data
 interface DeletedEntityData {
@@ -84,6 +107,7 @@ export function LeftSidebar({
   onUpdateAgent,
 }: LeftSidebarProps) {
   const { user, signOut } = useAuth();
+  const projectsFetching = useIsFetching({ queryKey: ['/api/projects'] });
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -487,7 +511,7 @@ export function LeftSidebar({
 
   return (
     <aside
-      className="w-[260px] h-[calc(100vh-20px)] min-h-0 premium-column-bg overflow-hidden p-3 pl-6 rounded-r-2xl rounded-l-none ml-[-10px] my-2.5 relative flex flex-col"
+      className="w-[260px] h-[calc(100vh-20px)] min-h-0 premium-column-bg overflow-hidden p-3 rounded-2xl ml-2.5 my-2.5 relative flex flex-col"
       onWheel={handleSidebarWheel}
     >
       <div className="ambient-glow-top" />
@@ -608,6 +632,8 @@ export function LeftSidebar({
                 Clear search
               </button>
             </div>
+          ) : projectsFetching > 0 ? (
+            <ProjectTreeSkeleton />
           ) : (
             <div className="flex flex-col items-center py-6 px-3 text-center">
               <div className="w-10 h-10 rounded-xl bg-hatchin-blue/15 border border-hatchin-blue/20 flex items-center justify-center mb-3">

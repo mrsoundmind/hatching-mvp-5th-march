@@ -1,0 +1,62 @@
+{
+  "name": "Zoe Park",
+  "role": "Student / first-time productivity tool user",
+  "goal": "Just understand what Hatchin does and use it for something real",
+  "background": "21 years old. Comfortable with apps and social media. Never used a \"workspace\" or project management tool. Has no mental model for \"AI teammates.\"",
+  "thoughts": [
+    {
+      "section": "Landing — Headline",
+      "quote": "\"Every dream needs a team. We built yours.\" — okay, that's poetic? I think this is about... building a startup with AI helpers? I'm not 100% sure yet but I'm curious.",
+      "sentiment": "neutral"
+    },
+    {
+      "section": "Landing — Subtitle",
+      "quote": "\"AI teammates with real personalities\" — OH. So it's like having AI coworkers who actually have different personalities. That's wild. I want to know what their personalities are.",
+      "sentiment": "positive"
+    },
+    {
+      "section": "Landing — Maya Widget",
+      "quote": "There's a chat widget on the landing page and someone called Maya is already there. She's talking to me before I signed up. That's kind of surprising. Like walking into a store and someone says hi immediately.",
+      "sentiment": "delighted"
+    },
+    {
+      "section": "Landing — Name Input",
+      "quote": "It wants to know my name! Before I even have an account. That's different from every app I've used. I'd feel weird but also weirdly flattered?",
+      "sentiment": "neutral"
+    },
+    {
+      "section": "App — First Look",
+      "quote": "I'm in! There's a sidebar on the left, a chat in the middle, and something on the right. I'm drawn to the chat immediately — it's the most familiar thing on the screen.",
+      "sentiment": "positive"
+    },
+    {
+      "section": "Right Panel — Tabs",
+      "quote": "There are tabs on the right: \"ACTIVITY TASKS BRAIN\". I don't know what most of these mean yet. I'd probably ignore this whole panel until I figure out the basics.",
+      "sentiment": "confused"
+    },
+    {
+      "section": "Left Sidebar",
+      "quote": "There are 5 things in the sidebar. I can see names — are these the AI teammates? I'm not sure if I should click on them or just chat in the middle. A tooltip or hint would help.",
+      "sentiment": "neutral"
+    },
+    {
+      "section": "First Message",
+      "quote": "Typing exactly how I'd actually type to someone. Casual, a bit uncertain. Not a formal request. Let's see how it responds.",
+      "sentiment": "neutral"
+    },
+    {
+      "section": "First Response — Tone",
+      "quote": "The response feels like a person talking to me, not a chatbot output. It's not starting with \"Certainly! Here's a comprehensive list...\" which is what I expected.",
+      "sentiment": "delighted"
+    },
+    {
+      "section": "First Response — Relevance",
+      "quote": "It actually talked about my dog app idea! Not generic advice. This feels real. I'm going to keep talking.",
+      "sentiment": "delighted"
+    }
+  ],
+  "goalAchieved": true,
+  "goalNote": "First-timer successfully sent a casual message and got a response. Natural language input worked perfectly.",
+  "verdict": "The landing page is actually good for first-timers — Maya talking immediately removes the \"what do I do?\" paralysis. The app's learning curve is real: three panels is a lot to take in. The chat is instantly familiar. My recommendation: add a \"start here\" nudge in the center panel for new users. The core experience works — I just needed one hint to get started.",
+  "npsScore": 8
+}

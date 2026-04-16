@@ -1,5 +1,6 @@
 /* C4.1: Syntax highlighting for code blocks */
 @import 'highlight.js/styles/github.css';
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -9,7 +10,7 @@
   --background: hsl(0, 0%, 100%);
   --foreground: hsl(20, 14.3%, 4.1%);
   --muted: hsl(60, 4.8%, 95.9%);
-  --muted-foreground: hsl(25, 5.3%, 44.7%);
+  --muted-foreground: hsl(25, 5.3%, 38%);
   --popover: hsl(0, 0%, 100%);
   --popover-foreground: hsl(20, 14.3%, 4.1%);
   --card: hsl(0, 0%, 100%);
@@ -37,9 +38,10 @@
   --hatchin-border: hsl(220, 16%, 82%);
   --hatchin-border-subtle: hsl(220, 14%, 86%);
   --hatchin-text: hsl(220, 20%, 12%);
-  --hatchin-text-muted: hsl(220, 10%, 35%);
+  --hatchin-text-muted: hsl(220, 12%, 28%);
   --hatchin-text-bright: hsl(220, 20%, 8%);
   --hatchin-blue: #6C82FF;
+  --hatchin-purple: #9F7BFF;
   --hatchin-green: hsl(158, 66%, 47%);
   --hatchin-orange: hsl(25, 100%, 60%);
 
@@ -50,11 +52,11 @@
   --premium-line-opacity: 0.35;
 
   /* Glass effects */
-  --glass-bg: rgba(255, 255, 255, 0.7);
-  --glass-border: rgba(0, 0, 0, 0.10);
-  --glass-shadow: rgba(0, 0, 0, 0.06);
-  --glass-hover-bg: rgba(255, 255, 255, 0.85);
-  --glass-hover-border: rgba(0, 0, 0, 0.15);
+  --glass-bg: rgba(235, 238, 245, 0.72);
+  --glass-border: rgba(0, 0, 0, 0.12);
+  --glass-shadow: rgba(0, 0, 0, 0.08);
+  --glass-hover-bg: rgba(228, 232, 242, 0.85);
+  --glass-hover-border: rgba(0, 0, 0, 0.18);
 
   /* Panel depth */
   --panel-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 16px rgba(0, 0, 0, 0.06);
@@ -62,9 +64,9 @@
   --panel-border: 1px solid rgba(0, 0, 0, 0.08);
 
   /* Frosted glass layers */
-  --glass-frosted: rgba(255, 255, 255, 0.65);
-  --glass-frosted-strong: rgba(255, 255, 255, 0.82);
-  --glass-frosted-border: rgba(255, 255, 255, 0.9);
+  --glass-frosted: rgba(235, 238, 245, 0.65);
+  --glass-frosted-strong: rgba(230, 234, 244, 0.82);
+  --glass-frosted-border: rgba(210, 216, 230, 0.9);
   --glass-inner-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
   --glass-outer-glow: 0 8px 32px rgba(108, 130, 255, 0.06);
 
@@ -148,6 +150,14 @@
     background-color: var(--hatchin-dark);
     color: var(--hatchin-text);
     font-family: 'Inter', system-ui, sans-serif;
+  }
+  :root {
+    --gradient-color: #8350e8;
+    --sparkles-color: #8350e8;
+  }
+  .dark {
+    --gradient-color: #8350e8;
+    --sparkles-color: #ffffff;
   }
 }
 
@@ -773,4 +783,162 @@
 }
 .streaming-cursor {
   animation: cursor-blink 1s step-end infinite;
+}
+
+/* ── Velorah Hero Utilities ── */
+.liquid-glass {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+.liquid-glass::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1.4px;
+  background: linear-gradient(180deg,
+    rgba(255,255,255,0.45) 0%, rgba(255,255,255,0.15) 20%,
+    rgba(255,255,255,0) 40%, rgba(255,255,255,0) 60%,
+    rgba(255,255,255,0.15) 80%, rgba(255,255,255,0.45) 100%);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+@keyframes fade-rise {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-rise         { animation: fade-rise 0.8s ease-out both; }
+.animate-fade-rise-delay   { animation: fade-rise 0.8s ease-out 0.2s both; }
+.animate-fade-rise-delay-2 { animation: fade-rise 0.8s ease-out 0.4s both; }
+.animate-fade-rise-delay-3 { animation: fade-rise 0.8s ease-out 0.6s both; }
+
+/* Scroll-triggered reveal */
+.scroll-reveal {
+  opacity: 0;
+  transform: translateY(32px);
+  transition: opacity 0.7s ease, transform 0.7s ease;
+}
+.scroll-reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Floating white card — arched top AND bottom (card cutout) */
+.bright-section-start {
+  background: #ffffff;
+  border-radius: 56px 56px 56px 56px;
+  margin-top: -48px;
+  margin-bottom: -56px;
+  padding-bottom: 72px;
+  position: relative;
+  z-index: 20;
+  box-shadow: 0 40px 80px -30px rgba(0, 0, 0, 0.35);
+  will-change: transform;
+}
+
+/* Dark section rises from under the white card — card cutout + parallax */
+.dark-section-start {
+  background: #0A0C13;
+  border-radius: 56px 56px 0 0;
+  position: relative;
+  z-index: 10;
+  overflow: hidden;
+}
+
+.dark-section-start::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 80% 40% at 50% 0%, rgba(255, 255, 255, 0.04) 0%, transparent 70%),
+    radial-gradient(ellipse 60% 30% at 50% 100%, rgba(251, 146, 60, 0.06) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+/* Waitlister-style animated footer layers */
+@keyframes waitlister-aurora-drift {
+  0% {
+    transform: translate(-50%, 0) scale(0.95);
+    opacity: 0.45;
+  }
+  50% {
+    transform: translate(-49%, -18px) scale(1.08);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-51%, 6px) scale(0.98);
+    opacity: 0.55;
+  }
+}
+
+@keyframes waitlister-horizon-breathe {
+  0%,
+  100% {
+    opacity: 0.9;
+    filter: blur(0px);
+  }
+  50% {
+    opacity: 1;
+    filter: blur(0.35px);
+  }
+}
+
+@keyframes waitlister-rise-pop {
+  0% {
+    opacity: 0.001;
+    transform: perspective(1200px) translateY(100px) scale(0.9);
+  }
+  70% {
+    opacity: 1;
+    transform: perspective(1200px) translateY(-4px) scale(1.01);
+  }
+  100% {
+    opacity: 1;
+    transform: perspective(1200px) translateY(0) scale(1);
+  }
+}
+
+@keyframes waitlister-fade-in {
+  from { opacity: 0.001; }
+  to { opacity: 1; }
+}
+
+.waitlister-aurora-layer {
+  animation: waitlister-aurora-drift 5.8s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+.waitlister-horizon-layer {
+  animation: waitlister-horizon-breathe 5.5s ease-in-out infinite;
+  will-change: opacity, filter;
+}
+
+.waitlister-enter-pop {
+  animation: waitlister-rise-pop 0.95s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.waitlister-enter-fade {
+  animation: waitlister-fade-in 0.8s ease-out both;
+}
+
+.waitlister-delay-1 { animation-delay: 0.1s; }
+.waitlister-delay-2 { animation-delay: 0.3s; }
+.waitlister-delay-3 { animation-delay: 0.5s; }
+.waitlister-delay-4 { animation-delay: 0.7s; }
+
+.waitlister-preenter {
+  opacity: 0.001;
+  transform: perspective(1200px) translateY(100px) scale(0.9);
+}
+
+.waitlister-preenter-fade {
+  opacity: 0.001;
 }

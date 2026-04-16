@@ -136,11 +136,6 @@ async function handlePaymentFailed(invoice: Stripe.Invoice) {
 }
 
 async function findUserByCustomerId(customerId: string): Promise<string | null> {
-  // Look up user by stripe_customer_id
-  const { pool: dbPool } = await import('../db.js');
-  const result = await dbPool.query(
-    'SELECT id FROM users WHERE stripe_customer_id = $1 LIMIT 1',
-    [customerId],
-  );
-  return result.rows[0]?.id ?? null;
+  const user = await storage.getUserByStripeCustomerId(customerId);
+  return user?.id ?? null;
 }

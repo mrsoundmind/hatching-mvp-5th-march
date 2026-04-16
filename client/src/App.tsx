@@ -102,11 +102,13 @@ function Router() {
           <AccountPage />
         </AuthGuard>
       </Route>
-      <Route path="/dev/autonomy">
-        <AuthGuard>
-          <AutonomyDashboard />
-        </AuthGuard>
-      </Route>
+      {import.meta.env.DEV && (
+        <Route path="/dev/autonomy">
+          <AuthGuard>
+            <AutonomyDashboard />
+          </AuthGuard>
+        </Route>
+      )}
       <Route component={NotFound} />
     </Switch>
   );

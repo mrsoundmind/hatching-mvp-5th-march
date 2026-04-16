@@ -23,7 +23,7 @@ export function SidebarTabBar({
   hasPendingApprovals = false,
 }: SidebarTabBarProps) {
   return (
-    <div className="mb-4 grid grid-cols-3 gap-1 rounded-xl border border-[var(--hatchin-border-subtle)] bg-[var(--hatchin-surface)] p-1 relative">
+    <div role="tablist" aria-label="Sidebar tabs" className="mb-4 grid grid-cols-3 gap-1 rounded-xl border border-[var(--hatchin-border-subtle)] bg-[var(--hatchin-surface)] p-1 relative">
       {TABS.map((tab) => {
         const Icon = tab.icon;
         const isActive = activeTab === tab.id;
@@ -31,6 +31,11 @@ export function SidebarTabBar({
         return (
           <button
             key={tab.id}
+            role="tab"
+            id={`sidebar-tab-${tab.id}`}
+            aria-selected={isActive}
+            aria-controls={`sidebar-tabpanel-${tab.id}`}
+            tabIndex={isActive ? 0 : -1}
             onClick={() => onTabChange(tab.id)}
             className={`relative z-10 flex items-center justify-center gap-2 rounded-lg px-2 py-2 min-h-[44px] lg:min-h-auto text-[11px] uppercase tracking-wider font-bold transition-colors duration-200 ${
               isActive

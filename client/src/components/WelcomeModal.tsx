@@ -31,7 +31,7 @@ export function WelcomeModal({ isOpen, onClose, onGetStarted }: WelcomeModalProp
             className="relative w-24 h-28 mx-auto flex items-center justify-center pt-4"
           >
             {/* Outer glow ring */}
-            <div className="absolute inset-x-0 inset-y-4 rounded-full blur-2xl opacity-40 bg-gradient-to-br from-hatchin-blue to-[#9F7BFF]" />
+            <div className="absolute inset-x-0 inset-y-4 rounded-full blur-2xl opacity-40 bg-gradient-to-br from-hatchin-blue to-hatchin-purple" />
 
             {/* Main orb — pearl highlight shape */}
             <div className="relative w-20 h-24 rounded-full overflow-hidden"

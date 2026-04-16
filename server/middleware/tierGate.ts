@@ -29,7 +29,15 @@ const TIER_LIMITS = {
 
 type TierName = keyof typeof TIER_LIMITS;
 
-// In-memory per-minute tracker (lightweight, no DB hit)
+// In-memory per-minute tracker (lightweight, no DB hit).
+//
+// SCALING LIMITATION (P1-6): This Map is per-process. When running multiple
+// Node.js instances behind a load balancer, each instance tracks independently.
+// A user could send `messagesPerMinute` to EACH instance, bypassing the limit
+// by a factor of N (number of instances). The Map also resets on server restart.
+//
+// Before scaling horizontally, migrate this to Redis (INCR + EXPIRE pattern)
+// or a shared rate-limit store. For single-node MVP this is acceptable.
 const minuteTracker = new Map<string, { count: number; windowStart: number }>();
 
 /**

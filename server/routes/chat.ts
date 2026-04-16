@@ -73,6 +73,10 @@ import { compactConversation, getCompactedContext } from "../ai/conversationComp
 import { recordUsage } from "../billing/usageTracker.js";
 import { checkAutonomyAccess, checkMessageSafetyCap } from "../middleware/tierGate.js";
 
+// ═══════════════════════════════════════════════════════════════
+// SECTION 1: Autonomy Trigger Detection (~lines 76-136)
+// Pre-check for background autonomy execution based on user messages.
+// ═══════════════════════════════════════════════════════════════
 async function checkForAutonomyTrigger(
   userMessage: string,
   projectId: string,
@@ -135,6 +139,11 @@ export interface RegisterChatDeps {
   }) => void;
 }
 
+// ═══════════════════════════════════════════════════════════════
+// SECTION 2: Chat Route Registration & Utility Helpers (~lines 142-375)
+// Error payloads, fallback messages, brain patch derivation,
+// ownership helpers, REST endpoints.
+// ═══════════════════════════════════════════════════════════════
 export function registerChatRoutes(
   app: Express,
   httpServer: Server,
@@ -377,9 +386,21 @@ export function registerChatRoutes(
   });
 
   // WebSocket Server Setup
-  const wss = new WebSocketServer({
-    server: httpServer,
-    path: '/ws'
+  // ═══════════════════════════════════════════════════════════════
+  // SECTION 3: WebSocket Server Setup & Connection Lifecycle (~lines 384-1086)
+  // WS server creation, session binding, connection/disconnection,
+  // message dispatch (join, send_message_streaming, cancel, typing).
+  // ═══════════════════════════════════════════════════════════════
+  // Use manual upgrade routing so non-/ws upgrades (for example Vite HMR)
+  // can pass through to other listeners instead of being rejected with 400.
+  const wss = new WebSocketServer({ noServer: true });
+  httpServer.on("upgrade", (req, socket, head) => {
+    if (!req.url?.startsWith("/ws")) {
+      return;
+    }
+    wss.handleUpgrade(req, socket, head, (ws) => {
+      wss.emit("connection", ws, req);
+    });
   });
 
   const applySessionToWsRequest = async (req: any): Promise<void> => {
@@ -695,6 +716,19 @@ export function registerChatRoutes(
             const validatedProjectId = validationResult.projectId!;
             const validatedContextId = validationResult.contextId;
             const addressedAgentId = validationResult.addressedAgentId;
+
+            // P1-8: Re-verify conversation ownership on every message (not just join).
+            // Prevents sending messages after project deletion/transfer.
+            {
+              const canSendToConversation = await conversationOwnedByUser(envelope.conversationId, ws.__userId!);
+              if (!canSendToConversation) {
+                sendWsError(ws, {
+                  code: "FORBIDDEN",
+                  message: "Conversation not accessible.",
+                });
+                break;
+              }
+            }
 
             // Phase 1.2: Production-safe invariant assertions (never rethrow)
             try {
@@ -1081,6 +1115,11 @@ export function registerChatRoutes(
     });
   });
 
+  // ═══════════════════════════════════════════════════════════════
+  // SECTION 4: Broadcasting & Multi-Agent Response (~lines 1088-1370)
+  // Broadcast helpers, multi-agent orchestration, team consensus.
+  // ═══════════════════════════════════════════════════════════════
+
   // Helper function to broadcast to all connections in a conversation
   function broadcastToConversation(
     conversationId: string,
@@ -1368,6 +1407,13 @@ export function registerChatRoutes(
 
     return consensusResponse;
   }
+
+  // ═══════════════════════════════════════════════════════════════
+  // SECTION 5: Streaming AI Response Pipeline (~lines 1377-3170)
+  // Core streaming handler: agent routing, LLM call, safety scoring,
+  // peer review, action parsing, brain updates, task detection,
+  // deliverable detection, autonomy triggers, usage tracking.
+  // ═══════════════════════════════════════════════════════════════
 
   // B1.1 & B1.2: Streaming AI colleague response handler
   async function handleStreamingColleagueResponse(
@@ -3172,6 +3218,11 @@ export function registerChatRoutes(
   }
 
   // B3: Extract and store conversation memory from user messages
+  // ═══════════════════════════════════════════════════════════════
+  // SECTION 6: Memory Extraction & User Name Detection (~lines 3185-3260)
+  // Post-response memory extraction and user name parsing.
+  // ═══════════════════════════════════════════════════════════════
+
   async function extractAndStoreMemory(userMessage: any, agentResponse: any, conversationId: string, projectId: string) {
     try {
       const userContent = userMessage.content.toLowerCase();

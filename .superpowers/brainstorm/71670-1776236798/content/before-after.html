@@ -1,0 +1,332 @@
+<h2>Hatchin Chat — Before vs After</h2>
+<p class="subtitle">Same 13" laptop viewport. Notice how much conversation you actually see.</p>
+
+<style>
+  .chat-frame {
+    background: #fafaf8;
+    border-radius: 10px;
+    overflow: hidden;
+    font-family: -apple-system, system-ui, sans-serif;
+    color: #1a1a1a;
+    height: 560px;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid #e5e5e0;
+  }
+  .lbl-strip {
+    background: #fff3cd;
+    color: #8a6d00;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 4px 10px;
+    font-weight: 600;
+    border-bottom: 1px solid #f0e5b0;
+  }
+  .lbl-ok {
+    background: #d4f4dd;
+    color: #1e6b3a;
+    border-bottom-color: #b5e5c3;
+  }
+  .mobile-bar {
+    height: 44px;
+    background: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 12px;
+    border-bottom: 1px solid #eee;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .chat-header {
+    padding: 14px 20px;
+    border-bottom: 1px solid #eee;
+    background: #fff;
+  }
+  .chat-header .title { font-size: 15px; font-weight: 600; }
+  .chat-header .sub { font-size: 11px; color: #888; margin-top: 2px; }
+  .chat-header .chips { display: flex; gap: 6px; margin-top: 8px; }
+  .chip {
+    background: #f0ebe1;
+    border-radius: 10px;
+    padding: 3px 8px;
+    font-size: 10px;
+    color: #555;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .conn-banner {
+    background: #fef3c7;
+    color: #92400e;
+    font-size: 10px;
+    padding: 5px 20px;
+    text-align: center;
+  }
+  .msg-area {
+    flex: 1;
+    padding: 16px 20px;
+    overflow: hidden;
+    background: #fafaf8;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .msg {
+    display: flex;
+    gap: 10px;
+    max-width: 85%;
+  }
+  .msg.me { align-self: flex-end; flex-direction: row-reverse; }
+  .msg .avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: #e8d8f0;
+    flex-shrink: 0;
+    font-size: 11px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    color: #6b4080;
+  }
+  .msg.me .avatar { background: #d0e8ff; color: #1e5aa8; }
+  .msg .bubble {
+    background: #fff;
+    padding: 8px 12px;
+    border-radius: 10px;
+    font-size: 12px;
+    line-height: 1.45;
+    border: 1px solid #ececea;
+  }
+  .msg.me .bubble { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
+  .msg .sender { font-size: 10px; font-weight: 600; color: #666; margin-bottom: 2px; }
+  .typing-bar {
+    font-size: 10px;
+    color: #888;
+    padding: 4px 20px;
+    background: #fff;
+    border-top: 1px solid #eee;
+  }
+  .input-area {
+    padding: 20px;
+    background: #fff;
+    border-top: 1px solid #eee;
+  }
+  .input-box {
+    background: #f5f2ec;
+    border-radius: 10px;
+    padding: 14px 14px;
+    font-size: 12px;
+    color: #999;
+    min-height: 56px;
+  }
+  .input-actions {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 8px;
+    font-size: 10px;
+    color: #aaa;
+  }
+
+  /* AFTER variations */
+  .thin-bar {
+    height: 44px;
+    background: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+    border-bottom: 1px solid #eee;
+  }
+  .thin-bar .title { font-size: 14px; font-weight: 600; }
+  .thin-bar .avatars {
+    display: flex;
+  }
+  .thin-bar .avatars .a {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #e8d8f0;
+    border: 2px solid #fff;
+    margin-left: -6px;
+    font-size: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    color: #6b4080;
+  }
+  .thin-bar .avatars .a:first-child { margin-left: 0; }
+  .thin-bar .avatars .count {
+    background: #f0ebe1;
+    color: #555;
+  }
+  .input-slim {
+    padding: 10px 16px 14px;
+    background: #fff;
+    border-top: 1px solid #f0f0ed;
+  }
+  .input-slim .box {
+    background: #f5f2ec;
+    border-radius: 10px;
+    padding: 10px 12px;
+    font-size: 12px;
+    color: #999;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 0;
+  }
+  .measure {
+    position: absolute;
+    right: 8px;
+    top: 8px;
+    background: #1a1a1a;
+    color: #fff;
+    font-size: 10px;
+    padding: 3px 7px;
+    border-radius: 4px;
+    font-weight: 600;
+  }
+  .frame-wrap { position: relative; }
+  .caption {
+    text-align: center;
+    font-size: 12px;
+    color: #666;
+    margin-top: 10px;
+    font-weight: 500;
+  }
+  .caption b { color: #1a1a1a; }
+</style>
+
+<div class="split">
+  <!-- BEFORE -->
+  <div>
+    <div class="frame-wrap">
+      <div class="chat-frame">
+        <div class="lbl-strip">Before — current</div>
+        <div class="mobile-bar">
+          <span>☰</span>
+          <span>zyxware design</span>
+          <span>⋯</span>
+        </div>
+        <div class="chat-header">
+          <div class="title">KRA task document review</div>
+          <div class="sub">Team chat · 4 participants · last active 2m ago</div>
+          <div class="chips">
+            <span class="chip">🧑 Alex PM</span>
+            <span class="chip">🛠 Dev</span>
+            <span class="chip">🎨 Cleo</span>
+            <span class="chip">+1</span>
+          </div>
+        </div>
+        <div class="conn-banner">● Reconnecting to live updates…</div>
+        <div class="msg-area">
+          <div class="msg">
+            <div class="avatar">A</div>
+            <div>
+              <div class="sender">Alex · 2m</div>
+              <div class="bubble">Need the actual audit tier pricing from T042.</div>
+            </div>
+          </div>
+          <div class="msg me">
+            <div class="avatar">Y</div>
+            <div class="bubble">yes you are true</div>
+          </div>
+        </div>
+        <div class="typing-bar">Cleo is typing…</div>
+        <div class="input-area">
+          <div class="input-box">Reply…</div>
+          <div class="input-actions"><span>+ 📎 🎤</span><span>Opus 4.6</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="caption"><b>~2 messages visible.</b> 5 stacked bars before the conversation.</div>
+  </div>
+
+  <!-- AFTER -->
+  <div>
+    <div class="frame-wrap">
+      <div class="chat-frame">
+        <div class="lbl-strip lbl-ok">After — proposed</div>
+        <div class="thin-bar">
+          <div class="title">KRA task document review</div>
+          <div class="avatars">
+            <div class="a">A</div>
+            <div class="a" style="background:#d0e8ff;color:#1e5aa8">D</div>
+            <div class="a" style="background:#ffe0d0;color:#a8501e">C</div>
+            <div class="a count">+1</div>
+          </div>
+        </div>
+        <div class="msg-area">
+          <div class="msg">
+            <div class="avatar">A</div>
+            <div>
+              <div class="sender">Alex · 2m</div>
+              <div class="bubble">Need the actual audit tier pricing from T042.</div>
+            </div>
+          </div>
+          <div class="msg me">
+            <div class="avatar">Y</div>
+            <div class="bubble">yes you are true</div>
+          </div>
+          <div class="msg">
+            <div class="avatar">C</div>
+            <div>
+              <div class="sender">Cleo · now</div>
+              <div class="bubble">Three tiers: Quick Scan, Deep Dive, Full Engagement. I'll pull the numbers.</div>
+            </div>
+          </div>
+          <div class="msg">
+            <div class="avatar">D</div>
+            <div>
+              <div class="sender">Dev · now</div>
+              <div class="bubble">Cool — I'll wire the pricing into the demo script after Cleo confirms.</div>
+            </div>
+          </div>
+          <div class="msg me">
+            <div class="avatar">Y</div>
+            <div class="bubble">perfect, thanks team</div>
+          </div>
+        </div>
+        <div class="input-slim">
+          <div class="box">
+            <span>Reply…</span>
+            <span style="color:#aaa">📎 🎤 ↑</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="caption"><b>~5 messages visible.</b> One thin bar. Canvas breathes.</div>
+  </div>
+</div>
+
+<h3 style="margin-top: 32px;">What changed</h3>
+<div class="pros-cons">
+  <div class="pros">
+    <h4>Removed / collapsed</h4>
+    <ul>
+      <li>Double header (mobile bar + ChatHeader) → one 44px bar</li>
+      <li>Subtitle line ("Team chat · 4 participants · last active 2m")</li>
+      <li>Participant chips row → overlapping avatar stack</li>
+      <li>Persistent connection banner → toast on error only</li>
+      <li>Persistent typing bar → inline in message stream</li>
+      <li>Input padding <code>p-6</code> (~120px) → <code>p-3</code> (~56px)</li>
+    </ul>
+  </div>
+  <div class="cons">
+    <h4>Kept (Hatchin identity)</h4>
+    <ul>
+      <li>Avatar stack — "there are people here" signal</li>
+      <li>Sender name + time on each message</li>
+      <li>Warm off-white canvas (not pure Claude grey)</li>
+      <li>Agent color identity via avatar tint</li>
+      <li>Handoff cards, deliverables — appear <em>inline</em> as events</li>
+    </ul>
+  </div>
+</div>
+
+<p class="subtitle" style="text-align:center; margin-top: 24px;">Does this direction feel right, or do you want to push back on anything?</p>

@@ -115,6 +115,12 @@ function resolveCharacterName(
   return null;
 }
 
+const NOTIONISTS_BG = "fef3c7,fed7aa,fde68a,fee2e2,e0e7ff,dbeafe,dcfce7,fce7f3";
+
+function notionistsUrl(seed: string): string {
+  return `https://api.dicebear.com/7.x/notionists/svg?seed=${encodeURIComponent(seed)}&backgroundColor=${NOTIONISTS_BG}&radius=50&scale=140&translateY=10`;
+}
+
 const AgentAvatar = memo(function AgentAvatar({
   characterName,
   role,
@@ -124,9 +130,9 @@ const AgentAvatar = memo(function AgentAvatar({
   className = "",
 }: AgentAvatarProps) {
   const resolvedName = resolveCharacterName(characterName, role, agentName);
-  const AvatarComponent = resolvedName ? CHARACTER_AVATAR_MAP[resolvedName] : null;
+  const seed = resolvedName || role || agentName;
 
-  if (!AvatarComponent) {
+  if (!seed) {
     return (
       <FallbackAvatar
         role={role}
@@ -137,21 +143,24 @@ const AgentAvatar = memo(function AgentAvatar({
     );
   }
 
+  const colors = getAgentColors(role);
+  const isWorking = state === "thinking" || state === "working";
+
   return (
-    <React.Suspense
-      fallback={
-        <FallbackAvatar
-          role={role}
-          agentName={agentName}
-          size={size}
-          className={className}
-        />
-      }
-    >
-      <AvatarComponent state={state} size={size} className={className} />
-    </React.Suspense>
+    <img
+      src={notionistsUrl(seed)}
+      alt={agentName || resolvedName || "Agent"}
+      width={size}
+      height={size}
+      className={`inline-block rounded-full object-cover select-none ${colors.avatarRing ?? ""} ${isWorking ? "ring-2 animate-pulse" : ""} ${className}`}
+      style={{ width: size, height: size, minWidth: size, minHeight: size }}
+      draggable={false}
+    />
   );
 });
+
+// Silence unused warnings for lazy character components retained for future use
+void CHARACTER_AVATAR_MAP;
 
 export default AgentAvatar;
 export type { AvatarState };

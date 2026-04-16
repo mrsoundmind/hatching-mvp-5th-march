@@ -4,6 +4,7 @@ import FocusTrap from 'focus-trap-react';
 import { X, Search, Users, User, Sparkles, ArrowLeft } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { Project, Agent, Team } from '@shared/schema';
+import AgentAvatar from '@/components/avatars/AgentAvatar';
 
 interface TeamTemplate {
   id: string;
@@ -670,7 +671,7 @@ export function AddHatchModal({ isOpen, onClose, onAddAgent, activeProject, exis
                             {/* Pack Header */}
                             <div className="relative z-10 flex items-start justify-between mb-3">
                               <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-hatchin-blue/20 to-[#9F7BFF]/20 border border-hatchin-blue/30 flex items-center justify-center text-xl shadow-[0_0_15px_rgba(108,130,255,0.15)] group-hover:shadow-[0_0_25px_rgba(108,130,255,0.25)] transition-shadow">
+                                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-hatchin-blue/20 to-hatchin-purple/20 border border-hatchin-blue/30 flex items-center justify-center text-xl shadow-[0_0_15px_rgba(108,130,255,0.15)] group-hover:shadow-[0_0_25px_rgba(108,130,255,0.25)] transition-shadow">
                                   {template.icon}
                                 </div>
                                 <div className="flex-1">
@@ -745,8 +746,8 @@ export function AddHatchModal({ isOpen, onClose, onAddAgent, activeProject, exis
                             {/* Pack Header */}
                             <div className="relative z-10 flex items-start justify-between mb-3">
                               <div className="flex items-center gap-3">
-                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold shadow-[0_0_15px_rgba(108,130,255,0.1)] group-hover:shadow-[0_0_25px_rgba(108,130,255,0.25)] transition-shadow ${getColorClasses(agent.color)}`}>
-                                  {agent.initials}
+                                <div className="w-10 h-10 rounded-xl overflow-hidden shadow-[0_0_15px_rgba(108,130,255,0.1)] group-hover:shadow-[0_0_25px_rgba(108,130,255,0.25)] transition-shadow flex items-center justify-center bg-[var(--hatchin-surface)]">
+                                  <AgentAvatar agentName={agent.name} role={agent.role} size={40} />
                                 </div>
                                 <div className="flex-1">
                                   <h3 className="text-hatchin-text-bright text-sm mb-1">{agent.name}</h3>

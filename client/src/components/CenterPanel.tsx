@@ -1,11 +1,8 @@
-import { Send, PauseCircle, PlayCircle, ArrowRightLeft, ArrowUpIcon } from "lucide-react";
-import { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useToast } from "@/hooks/use-toast";
 import type { Project, Team, Agent } from "@shared/schema";
 import { getRoleDefinition } from "@shared/roleRegistry";
 import { useWebSocket, getWebSocketUrl, getConnectionStatusConfig } from '@/lib/websocket';
-import { MessageBubble } from './MessageBubble';
-import { MessageSkeleton } from './MessageSkeleton';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { AddHatchModal } from './AddHatchModal';
@@ -14,17 +11,16 @@ import { buildConversationId } from '@/lib/conversationId';
 import { devLog } from '@/lib/devLog';
 import { deriveChatMode, type ChatMode } from '@/lib/chatMode';
 import { useAuth } from "@/hooks/useAuth";
-import { motion, AnimatePresence } from 'framer-motion';
-import { AutonomousApprovalCard } from './AutonomousApprovalCard';
 import UpgradeModal from './UpgradeModal';
-import { HandoffCard } from './chat/HandoffCard';
-import { DeliberationCard } from './chat/DeliberationCard';
 import { DeliverableProposalCard } from '@/components/DeliverableChatCard';
 import { dispatchAutonomyEvent, AUTONOMY_EVENTS } from '@/lib/autonomyEvents';
 import type { HandoffAnnouncedPayload } from '@/lib/autonomyEvents';
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
-import AgentAvatar from '@/components/avatars/AgentAvatar';
-// UsageBar removed — will redesign as notification-only in v1.2 billing
+import { useChatStreaming } from '@/hooks/useChatStreaming';
+import { useChatMessages } from '@/hooks/useChatMessages';
+import { ChatHeader } from './chat/ChatHeader';
+import { ChatMessageList } from './chat/ChatMessageList';
+import { ChatInput } from './chat/ChatInput';
+
 
 interface ChatContext {
   mode: ChatMode;
@@ -81,55 +77,21 @@ export function CenterPanel({
   };
 
   // === EMPTY STATE LOGIC ===
-
-  // Debug logging
   devLog('CenterPanel: projects.length =', projects.length);
   devLog('CenterPanel: projects =', projects);
 
-
-  // === SUBTASK 2.1.1: Core State Integration ===
-
-  // Chat mode state management
+  // === Core State ===
   const [chatMode, setChatMode] = useState<ChatMode>('project');
   const [currentChatContext, setCurrentChatContext] = useState<ChatContext | null>(null);
-
-  // Add Hatch Modal state
   const [showAddHatchModal, setShowAddHatchModal] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [upgradeReason, setUpgradeReason] = useState<string | undefined>();
-
-  // Message input state (for deterministic send gating)
   const [inputValue, setInputValue] = useState('');
-  const messageInputRef = useRef<HTMLTextAreaElement | null>(null);
-
-  // Message state management - persistent across conversations
-  const [allMessages, setAllMessages] = useState<Record<string, Array<{
-    id: string;
-    content: string;
-    senderId: string;
-    senderName: string;
-    messageType: 'user' | 'agent';
-    timestamp: string;
-    conversationId: string;
-    status: 'sending' | 'sent' | 'delivered' | 'failed' | 'streaming';
-    // Legacy thread fields kept for backward compatibility with stored messages.
-    threadRootId?: string;
-    threadDepth?: number;
-    metadata?: any;
-    isStreaming?: boolean;
-  }>>>({});
   const [messageQueue, setMessageQueue] = useState<Array<any>>([]);
-  const [isLoadingMessages, setIsLoadingMessages] = useState(false);
-  // D1.2 Pagination state: earlier messages loaded via "Load earlier messages" button
-  const [earlierMessages, setEarlierMessages] = useState<any[]>([]);
-  const [loadingEarlier, setLoadingEarlier] = useState(false);
-  const [hasMoreMessages, setHasMoreMessages] = useState(false);
-  const [nextMessageCursor, setNextMessageCursor] = useState<string | null>(null);
   const [typingColleagues, setTypingColleagues] = useState<string[]>([]);
   const [isTeamWorking, setIsTeamWorking] = useState(false);
   const [teamWorkingTaskCount, setTeamWorkingTaskCount] = useState(0);
   const [isAutonomyPaused, setIsAutonomyPaused] = useState(false);
-  // UX-01: Inline approval cards for high-risk autonomous tasks
   const [approvalRequests, setApprovalRequests] = useState<Array<{
     taskId: string;
     agentName: string;
@@ -138,7 +100,7 @@ export function CenterPanel({
   }>>([]);
   const lastSendRef = useRef<{ conversationId: string; content: string; at: number } | null>(null);
 
-  // Deliberation state for multi-agent coordination indicator
+  // Deliberation state
   const [deliberationState, setDeliberationState] = useState<{
     sessionId: string;
     agentNames: string[];
@@ -154,128 +116,66 @@ export function CenterPanel({
     confidence: number; conversationId: string; projectId: string;
   } | null>(null);
 
-  const resizeComposer = (el: HTMLTextAreaElement | null) => {
-    if (!el) return;
-    el.style.height = '0px';
-    const nextHeight = Math.min(el.scrollHeight, 180);
-    el.style.height = `${Math.max(48, nextHeight)}px`;
-  };
-
-  // B1: Streaming state management
-  const [isStreaming, setIsStreaming] = useState(false);
-  const streamingMessageId = useRef<string | null>(null);
-  const [streamingContent, setStreamingContent] = useState('');
-  const [streamingAgent, setStreamingAgent] = useState<string | null>(null);
-  const [streamingConversationId, setStreamingConversationId] = useState<string | null>(null);
-  const [isThinking, setIsThinking] = useState(false);
-  // Task 10: Cycling thinking state text
-  const thinkingPhrases = ['Thinking...', 'Reviewing context...', 'Forming a response...'];
-  const [thinkingPhraseIdx, setThinkingPhraseIdx] = useState(0);
-  const thinkingPhraseTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  useEffect(() => {
-    if (isThinking) {
-      setThinkingPhraseIdx(0);
-      thinkingPhraseTimerRef.current = setInterval(() => {
-        setThinkingPhraseIdx((prev) => (prev + 1) % thinkingPhrases.length);
-      }, 1800);
-    } else {
-      if (thinkingPhraseTimerRef.current) clearInterval(thinkingPhraseTimerRef.current);
-    }
-    return () => { if (thinkingPhraseTimerRef.current) clearInterval(thinkingPhraseTimerRef.current); };
-  }, [isThinking]);
-  const streamingTimeoutRef = useRef<number | null>(null);
-  const pendingResponseTimeoutRef = useRef<number | null>(null);
-  // UX-05: Flash interval ref for tab title flashing
-  const flashIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  const clearStreamingTimeout = () => {
-    if (streamingTimeoutRef.current) {
-      clearTimeout(streamingTimeoutRef.current);
-      streamingTimeoutRef.current = null;
-    }
-  };
-
-  const resetStreamingTimeout = () => {
-    clearStreamingTimeout();
-    streamingTimeoutRef.current = window.setTimeout(() => {
-      devLog('⏳ Streaming watchdog timeout - clearing streaming state');
-      // Mark placeholder as failed if still present
-      if (currentChatContext && streamingMessageId.current) {
-        updateMessageInConversation(currentChatContext.conversationId, streamingMessageId.current, {
-          status: 'failed',
-          metadata: { isStreaming: false }
-        });
-      }
-      setIsStreaming(false);
-      streamingMessageId.current = null;
-      setStreamingContent('');
-      setStreamingAgent(null);
-      setStreamingConversationId(null);
-    }, 45000); // 45s watchdog — server does post-processing (peer review, AKL, task detection) after last chunk
-  };
-
-  const clearPendingResponseTimeout = () => {
-    if (pendingResponseTimeoutRef.current) {
-      clearTimeout(pendingResponseTimeoutRef.current);
-      pendingResponseTimeoutRef.current = null;
-    }
-  };
-
-  const resetPendingResponseTimeout = (conversationId: string, tempMessageId: string) => {
-    clearPendingResponseTimeout();
-    pendingResponseTimeoutRef.current = window.setTimeout(() => {
-      devLog('⏳ Pending response timeout - no streaming start received');
-      updateMessageInConversation(conversationId, tempMessageId, {
-        status: 'failed',
-        metadata: { responseTimeout: true }
-      });
-      setIsThinking(false);
-      setIsStreaming(false);
-      setStreamingAgent(null);
-      setStreamingContent('');
-      setStreamingConversationId(null);
-      streamingMessageId.current = null;
-    }, 15000);
-  };
-
-  useEffect(() => {
-    return () => {
-      clearPendingResponseTimeout();
-      clearStreamingTimeout();
-      if (deliberationTimeoutRef.current) {
-        clearTimeout(deliberationTimeoutRef.current);
-      }
-    };
-  }, []);
-
-  // C1: Reply state management
+  // C1: Reply state
   const [replyingTo, setReplyingTo] = useState<{
     id: string;
     content: string;
     senderName: string;
   } | null>(null);
 
+  // Task suggestion state
+  const [suggestedTasks, setSuggestedTasks] = useState<any[]>([]);
+  const [taskSuggestionContext, setTaskSuggestionContext] = useState<{
+    conversationId: string;
+    projectId: string;
+  } | null>(null);
+  const [isApprovingTasks, setIsApprovingTasks] = useState(false);
+  const [showTaskApprovalModal, setShowTaskApprovalModal] = useState(false);
+
+  // === Extracted Hooks ===
+
+  const streaming = useChatStreaming({
+    getCurrentConversationId: () => currentChatContext?.conversationId,
+    onStreamingTimeout: (conversationId, messageId) => {
+      messages.updateMessageInConversation(conversationId, messageId, {
+        status: 'failed',
+        metadata: { isStreaming: false }
+      });
+    },
+    onPendingResponseTimeout: (conversationId, messageId) => {
+      messages.updateMessageInConversation(conversationId, messageId, {
+        status: 'failed',
+        metadata: { responseTimeout: true }
+      });
+    },
+  });
+
+  const messages = useChatMessages({
+    conversationId: currentChatContext?.conversationId,
+    activeProjectAgents,
+  });
+
+  // Cleanup deliberation timeout on unmount
   useEffect(() => {
-    resizeComposer(messageInputRef.current);
-  }, [inputValue, replyingTo, isStreaming, isThinking]);
+    return () => {
+      if (deliberationTimeoutRef.current) {
+        clearTimeout(deliberationTimeoutRef.current);
+      }
+    };
+  }, []);
 
-  // === SUBTASK 3.1.1: Connect WebSocket to Chat UI ===
-
-  // WebSocket connection for real-time messaging
-  // Compute URL once per mount to prevent initialization instability
+  // === WebSocket Connection ===
   const webSocketUrl = useMemo(() => {
     const url = getWebSocketUrl();
-    // Validate URL is not empty or invalid
     if (!url || url.includes(':undefined') || url.trim() === '') {
       console.error('[WebSocket] Invalid URL generated:', url);
-      // Return a safe fallback URL
       const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
       return `${protocol}//${window.location.host}/ws`;
     }
     return url;
-  }, []); // Empty deps: compute once per mount only
+  }, []);
 
-  const { socket, connectionStatus, sendMessage: sendWebSocketMessage, lastMessage } = useWebSocket(webSocketUrl, {
+  const { socket, connectionStatus, sendMessage: sendWebSocketMessage } = useWebSocket(webSocketUrl, {
     onMessage: (message) => {
       devLog('Received WebSocket message:', message);
       handleIncomingMessage(message);
@@ -292,34 +192,22 @@ export function CenterPanel({
     },
     onDisconnect: () => {
       devLog('Chat disconnected from real-time messaging');
-      clearPendingResponseTimeout();
-      clearStreamingTimeout();
-      setIsThinking(false);
-      setIsStreaming(false);
-      setStreamingAgent(null);
-      setStreamingContent('');
-      setStreamingConversationId(null);
-      streamingMessageId.current = null;
+      streaming.clearPendingResponseTimeout();
+      streaming.clearStreamingTimeout();
+      streaming.clearAllStreamingState();
     },
     onError: (error) => {
       console.error('Chat messaging error:', error);
-      clearPendingResponseTimeout();
-      clearStreamingTimeout();
-      setIsThinking(false);
-      setIsStreaming(false);
-      setStreamingAgent(null);
-      setStreamingContent('');
-      setStreamingConversationId(null);
-      streamingMessageId.current = null;
+      streaming.clearPendingResponseTimeout();
+      streaming.clearStreamingTimeout();
+      streaming.clearAllStreamingState();
     }
   });
 
-  // Connection status configuration for UI display
   const connectionConfig = getConnectionStatusConfig(connectionStatus);
 
-  // === SUBTASK 3.1.2: Real-time Message Sending ===
+  // === Message Sending Helpers ===
 
-  // Shared helper: server only accepts project-/team-/agent- format
   const getValidConversationIdForSend = (
     conversationId: string | undefined,
     activeProject: { id: string } | null | undefined
@@ -333,46 +221,32 @@ export function CenterPanel({
   const isDuplicateSendAttempt = (conversationId: string, rawContent: string): boolean => {
     const normalized = rawContent.trim();
     if (!normalized) return false;
-
     const now = Date.now();
     const last = lastSendRef.current;
-    if (
-      last &&
-      last.conversationId === conversationId &&
-      last.content === normalized &&
-      (now - last.at) < 1200
-    ) {
+    if (last && last.conversationId === conversationId && last.content === normalized && (now - last.at) < 1200) {
       return true;
     }
-
-    lastSendRef.current = {
-      conversationId,
-      content: normalized,
-      at: now
-    };
+    lastSendRef.current = { conversationId, content: normalized, at: now };
     return false;
   };
 
-  // Message queuing for offline scenarios
   const queueMessage = (messageData: any) => {
     setMessageQueue(prev => [...prev, messageData]);
   };
 
-  // Process queued messages when connection is restored (uses socket ref to avoid stale state)
   const processMessageQueue = (openSocket?: WebSocket) => {
     const ws = openSocket ?? socket;
     if (ws?.readyState === WebSocket.OPEN && messageQueue.length > 0) {
       messageQueue.forEach(messageData => {
         sendWebSocketMessage(messageData);
         if (currentChatContext) {
-          updateMessageInConversation(currentChatContext.conversationId, messageData.tempId, { status: 'sent' });
+          messages.updateMessageInConversation(currentChatContext.conversationId, messageData.tempId, { status: 'sent' });
         }
       });
       setMessageQueue([]);
     }
   };
 
-  // Enhanced message sending: use socket.readyState (not connectionStatus) to avoid stale React state
   const sendMessageWithConfirmation = async (messageData: any, tempMessageId: string) => {
     try {
       if (socket?.readyState === WebSocket.OPEN) {
@@ -380,7 +254,7 @@ export function CenterPanel({
         const currentConversationId = currentChatContext?.conversationId;
 
         if (messageConversationId !== currentConversationId) {
-          console.warn('🚫 Preventing message send - conversation context mismatch:', {
+          console.warn('Preventing message send - conversation context mismatch:', {
             messageConversation: messageConversationId,
             currentConversation: currentConversationId
           });
@@ -388,150 +262,86 @@ export function CenterPanel({
         }
 
         sendWebSocketMessage(messageData);
-
         await saveMessageToStorage(messageData.message);
-
         if (currentChatContext) {
-          updateMessageInConversation(currentChatContext.conversationId, tempMessageId, { status: 'sent' });
+          messages.updateMessageInConversation(currentChatContext.conversationId, tempMessageId, { status: 'sent' });
         }
-
         devLog('Message sent successfully:', messageData);
       } else {
         queueMessage({ ...messageData, tempId: tempMessageId });
-
         if (currentChatContext) {
-          updateMessageInConversation(currentChatContext.conversationId, tempMessageId, { status: 'sending' });
+          messages.updateMessageInConversation(currentChatContext.conversationId, tempMessageId, { status: 'sending' });
         }
-
         devLog('Message queued for delivery:', messageData);
       }
     } catch (error) {
       console.error('Failed to send message:', error);
-
-      // Update message status to failed
       if (currentChatContext) {
-        updateMessageInConversation(currentChatContext.conversationId, tempMessageId, { status: 'failed' });
+        messages.updateMessageInConversation(currentChatContext.conversationId, tempMessageId, { status: 'failed' });
       }
     }
   };
 
-  // === SUBTASK 3.1.3: Real-time Message Receiving ===
-
-  // Track processed message IDs to prevent duplicates
-  const [, setProcessedMessageIds] = useState<Set<string>>(new Set());
-  const processedMessageIdsRef = useRef<Set<string>>(new Set());
-
-  // Task suggestion state (inline approval)
-  const [suggestedTasks, setSuggestedTasks] = useState<any[]>([]);
-  const [taskSuggestionContext, setTaskSuggestionContext] = useState<{
-    conversationId: string;
-    projectId: string;
-  } | null>(null);
-  const [isApprovingTasks, setIsApprovingTasks] = useState(false);
-  const [showTaskApprovalModal, setShowTaskApprovalModal] = useState(false);
-
-  // UX-05: Flashing tab title utility functions
-  const startFlashingTitle = useCallback((count: number, label: string) => {
-    if (flashIntervalRef.current) clearInterval(flashIntervalRef.current);
-    const notifText = `(${count}) ${label} | Hatchin`;
-    let toggle = true;
-    flashIntervalRef.current = setInterval(() => {
-      document.title = toggle ? notifText : 'Hatchin';
-      toggle = !toggle;
-    }, 1500); // 1.5s — midpoint of user's 1-2s discretion range
-  }, []);
-
-  const stopFlashingTitle = useCallback(() => {
-    if (flashIntervalRef.current) {
-      clearInterval(flashIntervalRef.current);
-      flashIntervalRef.current = null;
-    }
-    document.title = 'Hatchin';
-  }, []);
-
-  // UX-05: Notification API helpers
-  const requestNotificationPermission = useCallback(() => {
-    if (!('Notification' in window)) return;
-    if (Notification.permission === 'default') {
-      Notification.requestPermission();
-    }
-  }, []);
-
-  const fireCompletionNotification = useCallback((projectName: string, summary: string) => {
-    if (!('Notification' in window)) return;
-    if (Notification.permission !== 'granted') return;
-    try {
-      const n = new Notification(projectName, {
-        body: summary,
-        icon: '/favicon.ico',
-      });
-      n.onclick = () => {
-        window.focus();
-        n.close();
-      };
-    } catch {
-      // Non-critical — some browsers may block programmatic notifications
-    }
-  }, []);
-
-  // UX-05: Reset tab title when user returns
+  // === Streaming state truth-enforcer ===
+  // isStreaming=true must imply a placeholder message with status='streaming' exists.
+  // Events can be lost (mobile flaky WS, server emitting chat_message instead of
+  // streaming_completed). If the placeholder is gone but isStreaming is still true,
+  // clear it — the stop button has no valid thing to stop.
   useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (!document.hidden) {
-        stopFlashingTitle(); // was just: document.title = 'Hatchin'
-      }
-    };
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      // Cleanup flash interval on unmount
-      if (flashIntervalRef.current) {
-        clearInterval(flashIntervalRef.current);
-        flashIntervalRef.current = null;
-      }
-    };
-  }, [stopFlashingTitle]);
+    if (!streaming.isStreaming) return;
+    const convId = currentChatContext?.conversationId;
+    if (!convId) return;
+    const msgs = messages.allMessages[convId] || [];
+    const hasLiveStream = msgs.some(m =>
+      m.status === 'streaming' ||
+      (m.metadata && (m.metadata as any).isStreaming === true)
+    );
+    if (hasLiveStream) return;
+    // Give React a tick to settle — streaming_started sets isStreaming(true) and
+    // adds the placeholder in the same pass; the effect then sees both.
+    const t = window.setTimeout(() => {
+      streaming.setIsStreaming(false);
+      streaming.streamingMessageId.current = null;
+    }, 300);
+    return () => window.clearTimeout(t);
+  }, [messages.allMessages, currentChatContext?.conversationId, streaming.isStreaming]);
 
+  // === WebSocket Message Handler ===
 
-  // Handle incoming WebSocket messages
   const handleIncomingMessage = (message: any) => {
-    devLog('🔔 Received WebSocket message:', message.type, message);
-    devLog('🔍 Current chat context:', currentChatContext?.conversationId);
+    devLog('Received WebSocket message:', message.type, message);
+    devLog('Current chat context:', currentChatContext?.conversationId);
 
-    if (message.type === 'new_message') {
-      clearPendingResponseTimeout();
-      setIsThinking(false);
+    if (message.type === 'new_message' || message.type === 'chat_message') {
+      streaming.clearPendingResponseTimeout();
+      streaming.setIsThinking(false);
       const messageId = message.message.id;
       const isUserMessage = message.message.messageType === 'user';
+      const isAgentMessage = message.message.messageType === 'agent' || message.message.messageType === 'system';
+      const matchesActiveStream = streaming.isStreaming &&
+        streaming.streamingMessageId.current === messageId;
+      if (isAgentMessage && matchesActiveStream) {
+        streaming.clearAllStreamingState();
+      }
+      // Non-streaming agent reply arrived while we're still marked as streaming
+      // (e.g. canned/fallback message that skipped streaming lifecycle) — clear state.
+      else if (isAgentMessage && streaming.isStreaming) {
+        streaming.clearAllStreamingState();
+      }
 
       // Enhanced duplicate prevention
       if (messageId) {
-        // Skip if already processed
-        if (processedMessageIdsRef.current.has(messageId)) {
-          devLog('❌ Skipping already processed message:', messageId);
+        if (messages.isMessageProcessed(messageId)) {
+          devLog('Skipping already processed message:', messageId);
           return;
         }
-
-        // Skip if this is an echo of our own message
         if (messageId.startsWith('temp-')) {
           devLog('Ignoring temp message echo:', messageId);
           return;
         }
-
-        // Mark as processed immediately to prevent race conditions
-        setProcessedMessageIds(prev => {
-          const next = new Set(prev);
-          next.add(messageId);
-          if (next.size > 200) {
-            const firstVal = next.values().next().value;
-            if (firstVal) next.delete(firstVal);
-          }
-          processedMessageIdsRef.current = next;
-          return next;
-        });
+        messages.markMessageProcessed(messageId);
       }
 
-      // Get the actual agent name instead of defaulting to 'Colleague'
       const getActualAgentName = (agentId: string) => {
         const agent = activeProjectAgents.find(a => a.id === agentId);
         return agent ? agent.name : agentId.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase());
@@ -552,7 +362,6 @@ export function CenterPanel({
         timestamp: message.message.timestamp || new Date().toISOString(),
         conversationId: message.message.conversationId,
         status: 'delivered' as const,
-        // C1.3: Thread support for new messages
         parentMessageId: message.message.parentMessageId || undefined,
         threadRootId: message.message.threadRootId || undefined,
         threadDepth: message.message.threadDepth || 0,
@@ -575,11 +384,9 @@ export function CenterPanel({
         });
       }
 
-      // Validate conversation context - only process messages for current context
       const isCurrentConversation = currentChatContext?.conversationId === newMessage.conversationId;
-
       if (!isCurrentConversation) {
-        devLog('⚠️ Ignoring message from different conversation:', {
+        devLog('Ignoring message from different conversation:', {
           messageConversation: newMessage.conversationId,
           currentConversation: currentChatContext?.conversationId
         });
@@ -590,7 +397,7 @@ export function CenterPanel({
         ? message.message.metadata.clientTempId
         : undefined;
 
-      setAllMessages(prev => {
+      messages.setAllMessages(prev => {
         const conversationMessages = prev[newMessage.conversationId] || [];
 
         if (isUserMessage) {
@@ -606,7 +413,7 @@ export function CenterPanel({
           const optimisticMessage = optimisticByClientId || optimisticByContent;
 
           if (optimisticMessage) {
-            devLog('✅ Reconciled optimistic user message to persisted id:', newMessage.id);
+            devLog('Reconciled optimistic user message to persisted id:', newMessage.id);
             return {
               ...prev,
               [newMessage.conversationId]: conversationMessages.map(msg =>
@@ -619,7 +426,7 @@ export function CenterPanel({
         }
 
         if (conversationMessages.some(msg => msg.id === newMessage.id)) {
-          devLog('❌ Skipped duplicate message by id:', newMessage.id);
+          devLog('Skipped duplicate message by id:', newMessage.id);
           return prev;
         }
 
@@ -636,14 +443,14 @@ export function CenterPanel({
         });
 
         if (hasRecentEquivalent) {
-          devLog('❌ Skipped recent equivalent duplicate message', {
+          devLog('Skipped recent equivalent duplicate message', {
             id: newMessage.id,
             conversationId: newMessage.conversationId
           });
           return prev;
         }
 
-        devLog('✅ Added new message to conversation:', newMessage.conversationId);
+        devLog('Added new message to conversation:', newMessage.conversationId);
         return {
           ...prev,
           [newMessage.conversationId]: [...conversationMessages, newMessage]
@@ -656,59 +463,51 @@ export function CenterPanel({
         console.warn('Failed to dispatch project_brain_updated event', error);
       }
     } else if (message.type === 'message_delivered') {
-      // Update message status to delivered in appropriate conversation
       const conversationId = message.conversationId;
       if (conversationId) {
-        updateMessageInConversation(conversationId, message.messageId, { status: 'delivered' });
+        messages.updateMessageInConversation(conversationId, message.messageId, { status: 'delivered' });
       }
     }
     // B1.2: Handle streaming messages
     else if (message.type === 'streaming_started') {
-      clearPendingResponseTimeout();
-      // Intentionally DO NOT call setIsThinking(false) here. 
-      // We want the primary thinking indicator to persist until the first real chunk arrives.
-      devLog('🟢 Streaming started:', message.messageId, message.agentName);
+      streaming.clearPendingResponseTimeout();
+      devLog('Streaming started:', message.messageId, message.agentName);
 
-      // Guard against duplicate placeholders for the same streaming message
-      if (streamingMessageId.current === message.messageId) {
-        devLog('⏭️ Skipping duplicate streaming_started for same messageId');
+      if (streaming.streamingMessageId.current === message.messageId) {
+        devLog('Skipping duplicate streaming_started for same messageId');
         return;
       }
 
       const convId = currentChatContext?.conversationId;
       if (!convId) {
-        devLog('⏭️ Skipping streaming_started — no active conversation');
+        devLog('Skipping streaming_started — no active conversation');
         return;
       }
-      const convMsgs = allMessages[convId] || [];
+      const convMsgs = messages.allMessages[convId] || [];
       const hasDuplicate = convMsgs.some(m =>
         m.id === message.messageId ||
         (m.status === 'streaming' && m.senderId === (message.agentId || 'ai-agent'))
       );
       if (hasDuplicate) {
-        devLog('⏭️ Skipping streaming placeholder; duplicate detected');
+        devLog('Skipping streaming placeholder; duplicate detected');
         return;
       }
 
-      setIsThinking(false);
-      setIsStreaming(true);
-      setTypingColleagues([]);  // clear WS-driven indicator — streaming has begun
-      streamingMessageId.current = message.messageId;
-      setStreamingContent('');
-      setStreamingConversationId(currentChatContext?.conversationId || null);
-      // Broadcast streaming state to sibling components (RightSidebar brain glow, etc.)
+      streaming.setIsThinking(false);
+      streaming.setIsStreaming(true);
+      setTypingColleagues([]);
+      streaming.streamingMessageId.current = message.messageId;
+      streaming.setStreamingContent('');
+      streaming.setStreamingConversationId(currentChatContext?.conversationId || null);
       window.dispatchEvent(new CustomEvent('ai_streaming_active', { detail: { active: true } }));
 
-      // Get actual agent name for streaming and set it for the typing indicator
       const getActualAgentName = (agentId: string) => {
         const agent = activeProjectAgents.find(a => a.id === agentId);
         return agent ? agent.name : agentId.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase());
       };
 
-      // Use agentName directly from backend or fallback to processed agent name
-      setStreamingAgent(message.agentName || getActualAgentName(message.agentId || 'ai-agent'));
+      streaming.setStreamingAgent(message.agentName || getActualAgentName(message.agentId || 'ai-agent'));
 
-      // Create placeholder message for streaming
       const streamingMessage = {
         id: message.messageId,
         content: '',
@@ -719,7 +518,6 @@ export function CenterPanel({
         conversationId: currentChatContext?.conversationId || '',
         status: 'streaming' as const,
         isStreaming: true,
-        // C1.3: Thread support for streaming messages
         parentMessageId: message.parentMessageId || undefined,
         threadRootId: message.threadRootId || undefined,
         threadDepth: message.threadDepth || 0,
@@ -733,47 +531,36 @@ export function CenterPanel({
       };
 
       devLog('Creating streaming placeholder message:', message.messageId, 'for agent:', message.agentName);
-      addMessageToConversation(currentChatContext?.conversationId || '', streamingMessage);
-      resetStreamingTimeout();
+      messages.addMessageToConversation(currentChatContext?.conversationId || '', streamingMessage);
+      streaming.resetStreamingTimeout();
     }
     else if (message.type === 'streaming_chunk') {
-      clearPendingResponseTimeout();
-      setIsThinking(false);
-      devLog('📦 Streaming chunk:', message.chunk);
-      if (message.messageId === streamingMessageId.current) {
-        setStreamingContent(message.accumulatedContent ?? '');
+      streaming.clearPendingResponseTimeout();
+      streaming.setIsThinking(false);
+      devLog('Streaming chunk:', message.chunk);
+      if (message.messageId === streaming.streamingMessageId.current) {
+        streaming.setStreamingContent(message.accumulatedContent ?? '');
 
-        // Update the streaming message content with create-or-merge logic
-        setAllMessages(prev => {
-          // Use streamingConversationId if available, fallback to currentChatContext
-          const conversationId = streamingConversationId || currentChatContext?.conversationId || '';
-          devLog('📦 Updating streaming chunk for conversation:', conversationId, 'current context:', currentChatContext?.conversationId);
-          const messages = prev[conversationId] || [];
-
-          // Find existing message
-          const messageIndex = messages.findIndex(msg => msg.id === message.messageId);
+        messages.setAllMessages(prev => {
+          const conversationId = streaming.streamingConversationId || currentChatContext?.conversationId || '';
+          devLog('Updating streaming chunk for conversation:', conversationId, 'current context:', currentChatContext?.conversationId);
+          const msgs = prev[conversationId] || [];
+          const messageIndex = msgs.findIndex(msg => msg.id === message.messageId);
 
           if (messageIndex >= 0) {
-            // Update existing message
-            const updatedMessages = [...messages];
+            const updatedMessages = [...msgs];
             updatedMessages[messageIndex] = {
               ...updatedMessages[messageIndex],
               content: message.accumulatedContent
             };
-            devLog('✅ Updated existing streaming message:', message.messageId, 'content length:', message.accumulatedContent.length);
+            devLog('Updated existing streaming message:', message.messageId, 'content length:', message.accumulatedContent.length);
             return { ...prev, [conversationId]: updatedMessages };
           } else {
-            // Create placeholder if message doesn't exist (handles race conditions)
-            const getActualAgentName = (agentId: string) => {
-              const agent = activeProjectAgents.find(a => a.id === agentId);
-              return agent ? agent.name : agentId.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase());
-            };
-
             const placeholderMessage = {
               id: message.messageId,
               content: message.accumulatedContent,
               senderId: 'ai-agent',
-              senderName: streamingAgent || 'AI',
+              senderName: streaming.streamingAgent || 'AI',
               messageType: 'agent' as const,
               timestamp: new Date().toISOString(),
               conversationId,
@@ -781,62 +568,38 @@ export function CenterPanel({
               isStreaming: true,
               metadata: { isStreaming: true }
             };
-
-            return { ...prev, [conversationId]: [...messages, placeholderMessage] };
+            return { ...prev, [conversationId]: [...msgs, placeholderMessage] };
           }
         });
-        resetStreamingTimeout();
+        streaming.resetStreamingTimeout();
       }
     }
     else if (message.type === 'streaming_completed') {
-      clearPendingResponseTimeout();
-      devLog('✅ Streaming completed');
-      clearStreamingTimeout();
-      setStreamingConversationId(null);
-      // Signal sibling components that streaming has ended
+      streaming.clearPendingResponseTimeout();
+      devLog('Streaming completed');
+      streaming.clearStreamingTimeout();
       window.dispatchEvent(new CustomEvent('ai_streaming_active', { detail: { active: false } }));
 
-      // Add the completed message to conversation
       if (message.message) {
         const getActualAgentName = (agentId: string) => {
           const agent = activeProjectAgents.find(a => a.id === agentId);
           return agent ? agent.name : agentId.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase());
         };
 
-        const completedMessage = {
-          id: message.message.id,
-          content: message.message.content,
-          senderId: message.message.agentId,
-          senderName: getActualAgentName(message.message.agentId),
-          messageType: 'agent' as const,
-          timestamp: new Date().toISOString(),
-          conversationId: message.message.conversationId,
-          status: 'delivered' as const,
-          parentMessageId: undefined,
-          threadRootId: undefined,
-          threadDepth: 0,
-          metadata: {}
-        };
-
-        // CRITICAL FIX: Only update existing streaming message, never add new ones
-        setAllMessages(prev => {
+        messages.setAllMessages(prev => {
           const conversationId = message.message.conversationId;
-          const messages = prev[conversationId] || [];
+          const msgs = prev[conversationId] || [];
 
-          // Find the existing streaming message to update
           devLog('Looking for streaming message with ID:', message.messageId);
-          devLog('Current messages:', messages.map(m => ({ id: m.id, isStreaming: m.metadata?.isStreaming })));
-
-          const messageIndex = messages.findIndex(msg =>
+          const messageIndex = msgs.findIndex(msg =>
             msg.id === message.messageId && msg.metadata?.isStreaming
           );
 
           if (messageIndex >= 0) {
-            // Update existing streaming message with final content
-            const updatedMessages = [...messages];
+            const updatedMessages = [...msgs];
             updatedMessages[messageIndex] = {
               ...updatedMessages[messageIndex],
-              id: message.message.id, // Update to final message ID  
+              id: message.message.id,
               content: message.message.content,
               senderName: getActualAgentName(message.message.agentId),
               status: 'delivered' as const,
@@ -844,39 +607,38 @@ export function CenterPanel({
             };
             return { ...prev, [conversationId]: updatedMessages };
           } else {
-            // Log warning - this shouldn't happen if streaming started properly
             console.warn('Streaming completed but no streaming message found to update');
             return prev;
           }
         });
 
-        // CRITICAL: Only clear streaming state AFTER message is updated
-        setIsStreaming(false);
-        streamingMessageId.current = null;
-        setStreamingContent('');
-        setStreamingAgent(null);
-        setStreamingConversationId(null);
-
         devLog('Updated streaming message with final content:', message.message.conversationId);
       }
+
+      streaming.setIsStreaming(false);
+      streaming.setIsThinking(false);
+      streaming.streamingMessageId.current = null;
+      streaming.setStreamingContent('');
+      streaming.setStreamingAgent(null);
+      streaming.setStreamingConversationId(null);
     }
     else if (message.type === 'streaming_cancelled') {
-      clearPendingResponseTimeout();
-      devLog('🛑 Streaming cancelled');
-      setIsThinking(false);
-      clearStreamingTimeout();
-      setIsStreaming(false);
-      streamingMessageId.current = null;
-      setStreamingContent('');
-      setStreamingAgent(null);
-      setStreamingConversationId(null);
+      streaming.clearPendingResponseTimeout();
+      devLog('Streaming cancelled');
+      streaming.setIsThinking(false);
+      streaming.clearStreamingTimeout();
+      streaming.setIsStreaming(false);
+      streaming.streamingMessageId.current = null;
+      streaming.setStreamingContent('');
+      streaming.setStreamingAgent(null);
+      streaming.setStreamingConversationId(null);
     }
     else if (message.type === 'streaming_error') {
-      clearPendingResponseTimeout();
-      devLog('❌ Streaming error received');
-      setIsThinking(false);
-      clearStreamingTimeout();
-      const failedStreamingId = streamingMessageId.current;
+      streaming.clearPendingResponseTimeout();
+      devLog('Streaming error received');
+      streaming.setIsThinking(false);
+      streaming.clearStreamingTimeout();
+      const failedStreamingId = streaming.streamingMessageId.current;
       const normalizedErrorCode = typeof message.code === 'string' ? message.code : 'STREAMING_GENERATION_FAILED';
       const fallbackErrorMessageByCode: Record<string, string> = {
         OPENAI_NOT_CONFIGURED: "Hmm, I couldn't connect to my brain for a second there. Give it another try?",
@@ -890,20 +652,20 @@ export function CenterPanel({
         ? message.error
         : (fallbackErrorMessageByCode[normalizedErrorCode] || "Something tripped me up - try sending that again?");
 
-      setIsStreaming(false);
-      streamingMessageId.current = null;
-      setStreamingContent('');
-      setStreamingAgent(null);
-      setStreamingConversationId(null);
+      streaming.setIsStreaming(false);
+      streaming.streamingMessageId.current = null;
+      streaming.setStreamingContent('');
+      streaming.setStreamingAgent(null);
+      streaming.setStreamingConversationId(null);
 
-      const targetConversationId = message.conversationId || streamingConversationId || currentChatContext?.conversationId;
+      const targetConversationId = message.conversationId || streaming.streamingConversationId || currentChatContext?.conversationId;
       if (targetConversationId) {
-        setAllMessages(prev => {
+        messages.setAllMessages(prev => {
           const conversationId = targetConversationId;
-          const messages = prev[conversationId] || [];
+          const msgs = prev[conversationId] || [];
           const now = Date.now();
 
-          const cleanedMessages = messages
+          const cleanedMessages = msgs
             .map(msg => {
               if (failedStreamingId && msg.id === failedStreamingId) {
                 return {
@@ -915,7 +677,6 @@ export function CenterPanel({
               return msg;
             })
             .filter(msg => {
-              // Remove visual ghost bubbles from failed streams with no content
               if (!failedStreamingId || msg.id !== failedStreamingId) return true;
               return (msg.content || '').trim().length > 0;
             });
@@ -940,25 +701,17 @@ export function CenterPanel({
             });
           }
 
-          return {
-            ...prev,
-            [conversationId]: cleanedMessages
-          };
+          return { ...prev, [conversationId]: cleanedMessages };
         });
       }
     }
     else if (message.type === 'error') {
-      clearPendingResponseTimeout();
-      clearStreamingTimeout();
-      setIsThinking(false);
-      setIsStreaming(false);
-      setStreamingContent('');
-      setStreamingAgent(null);
-      setStreamingConversationId(null);
-      streamingMessageId.current = null;
+      streaming.clearPendingResponseTimeout();
+      streaming.clearStreamingTimeout();
+      streaming.clearAllStreamingState();
 
       if (currentChatContext) {
-        setAllMessages(prev => ({
+        messages.setAllMessages(prev => ({
           ...prev,
           [currentChatContext.conversationId]: (prev[currentChatContext.conversationId] || []).map(msg =>
             msg.status === 'sending'
@@ -973,7 +726,6 @@ export function CenterPanel({
     else if (message.type === 'typing_started') {
       const agentName = message.agentName || message.agentId || 'Agent';
       setTypingColleagues(prev => prev.includes(agentName) ? prev : [...prev, agentName]);
-      // Auto-clear after estimated duration + buffer
       const clearAfter = (message.estimatedDuration || 3000) + 500;
       setTimeout(() => {
         setTypingColleagues(prev => prev.filter(n => n !== agentName));
@@ -984,11 +736,9 @@ export function CenterPanel({
       setTypingColleagues(prev => prev.filter(n => n !== agentName));
     }
     else if (message.type === 'assistant_message') {
-      // Final completed assistant message (alternative to streaming_completed)
-      clearPendingResponseTimeout();
-      devLog('✅ Assistant message completed:', message.messageId);
-      clearStreamingTimeout();
-      setStreamingConversationId(null);
+      streaming.clearPendingResponseTimeout();
+      devLog('Assistant message completed:', message.messageId);
+      streaming.clearStreamingTimeout();
 
       if (message.message) {
         const getActualAgentName = (agentId: string) => {
@@ -1011,18 +761,17 @@ export function CenterPanel({
           metadata: {}
         };
 
-        // Replace streaming message with final message
-        setAllMessages(prev => {
+        messages.setAllMessages(prev => {
           const conversationId = completedMessage.conversationId;
-          const messages = prev[conversationId] || [];
+          const msgs = prev[conversationId] || [];
 
-          const messageIndex = messages.findIndex(msg =>
+          const messageIndex = msgs.findIndex(msg =>
             (msg.id === message.messageId || msg.id === completedMessage.id) &&
             (msg.isStreaming || msg.status === 'streaming')
           );
 
           if (messageIndex >= 0) {
-            const updatedMessages = [...messages];
+            const updatedMessages = [...msgs];
             updatedMessages[messageIndex] = {
               ...updatedMessages[messageIndex],
               ...completedMessage,
@@ -1032,32 +781,31 @@ export function CenterPanel({
             };
             return { ...prev, [conversationId]: updatedMessages };
           } else {
-            // Add as new message if streaming message not found
-            return { ...prev, [conversationId]: [...messages, completedMessage] };
+            return { ...prev, [conversationId]: [...msgs, completedMessage] };
           }
         });
 
-        setIsStreaming(false);
-        streamingMessageId.current = null;
-        setStreamingContent('');
-        setStreamingAgent(null);
-        setStreamingConversationId(null);
-
-        devLog('✅ Replaced streaming message with final assistant message');
+        devLog('Replaced streaming message with final assistant message');
       }
+
+      streaming.setIsStreaming(false);
+      streaming.setIsThinking(false);
+      streaming.streamingMessageId.current = null;
+      streaming.setStreamingContent('');
+      streaming.setStreamingAgent(null);
+      streaming.setStreamingConversationId(null);
     }
     else if (message.type === 'connection_confirmed') {
-      devLog('🔌 WebSocket connection confirmed for:', message.conversationId);
+      devLog('WebSocket connection confirmed for:', message.conversationId);
     }
     else if (message.type === 'task_suggestions') {
-      devLog('🎯 Received task suggestions:', message.tasks);
+      devLog('Received task suggestions:', message.tasks);
       setSuggestedTasks(message.tasks);
       setTaskSuggestionContext({
         conversationId: message.conversationId,
         projectId: message.projectId
       });
       setShowTaskApprovalModal(true);
-      // Inline approval UI will render at the bottom of message list
     }
     else if (message.type === 'task_created') {
       try {
@@ -1072,10 +820,8 @@ export function CenterPanel({
         toast({ title: 'Task created', description: taskTitle });
       }
     }
-    // ─── 🆕 Chat Intelligence Events ─────────────────────────────────────────
     else if (message.type === 'teams_auto_hatched') {
-      devLog('✨ [AutoHatch] Teams created from chat:', message.teams, message.agents);
-      // Refresh teams and agents in the sidebar
+      devLog('[AutoHatch] Teams created from chat:', message.teams, message.agents);
       queryClient.invalidateQueries({ queryKey: ['/api/teams'] });
       queryClient.invalidateQueries({ queryKey: ['/api/agents'] });
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${message.projectId}/agents`] });
@@ -1083,22 +829,16 @@ export function CenterPanel({
       if (agentCount > 0) {
         toast({ title: 'Team assembled', description: `${agentCount} AI teammate${agentCount !== 1 ? 's' : ''} added to your project` });
       }
-      // Dispatch event to show animated notification
       try {
         window.dispatchEvent(new CustomEvent('teams_auto_hatched', {
-          detail: {
-            teams: message.teams,
-            agents: message.agents,
-            projectId: message.projectId,
-          }
+          detail: { teams: message.teams, agents: message.agents, projectId: message.projectId }
         }));
       } catch (e) {
         console.warn('Failed to dispatch teams_auto_hatched event');
       }
     }
     else if (message.type === 'task_created_from_chat') {
-      devLog('✅ [ChatIntelligence] Task created from chat:', message.task);
-      // Refresh tasks in the right sidebar
+      devLog('[ChatIntelligence] Task created from chat:', message.task);
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${message.projectId}/tasks`] });
       queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
       try {
@@ -1110,8 +850,7 @@ export function CenterPanel({
       }
     }
     else if (message.type === 'task_lifecycle_result') {
-      devLog('📋 [TaskLifecycle] Result:', message.result);
-      // Refresh tasks
+      devLog('[TaskLifecycle] Result:', message.result);
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${message.projectId}/tasks`] });
       queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
       if (message.result?.success && message.result?.message) {
@@ -1119,8 +858,7 @@ export function CenterPanel({
       }
     }
     else if (message.type === 'task_completion_suggested') {
-      devLog('✅ [TaskCompletion] Suggested:', message.task, message.phrase);
-      // Auto-mark the task complete and notify
+      devLog('[TaskCompletion] Suggested:', message.task, message.phrase);
       fetch(`/api/tasks/${message.task.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -1132,7 +870,7 @@ export function CenterPanel({
       }).catch(() => { /* non-critical */ });
     }
     else if (message.type === 'deliverable_proposal') {
-      devLog('📄 [Deliverable] Proposal received:', message);
+      devLog('[Deliverable] Proposal received:', message);
       setDeliverableProposal({
         type: message.proposalType,
         title: message.title,
@@ -1144,9 +882,8 @@ export function CenterPanel({
       });
     }
     else if (message.type === 'deliverable_created') {
-      devLog('📄 [Deliverable] Created:', message);
+      devLog('[Deliverable] Created:', message);
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${message.deliverable?.projectId || activeProject?.id}/deliverables`] });
-      // Open the artifact panel
       window.dispatchEvent(new CustomEvent('open_deliverable', { detail: { deliverableId: message.deliverable?.id } }));
       setDeliverableProposal(null);
     }
@@ -1155,15 +892,11 @@ export function CenterPanel({
       if (message.taskCount != null) {
         setTeamWorkingTaskCount(message.taskCount);
       }
-      // UX-04: execution started means not paused — reset pause state
       setIsAutonomyPaused(false);
-      // UX-05: Request notification permission contextually
-      requestNotificationPermission();
-      // UX-05: Tab notification badge
+      streaming.requestNotificationPermission();
       if (document.hidden) {
         document.title = '\u2728 Team working... | Hatchin';
       }
-      // Bridge to sidebar: dispatch TASK_EXECUTING + AGENT_WORKING_STATE
       dispatchAutonomyEvent(AUTONOMY_EVENTS.TASK_EXECUTING, {
         agentId: message.agentId ?? '',
         agentName: message.agentName ?? 'Agent',
@@ -1182,19 +915,16 @@ export function CenterPanel({
     else if (message.type === 'background_execution_completed' || message.type === 'task_execution_completed') {
       setIsTeamWorking(false);
       setTeamWorkingTaskCount(0);
-      // UX-05: Flashing tab title (Slack/Gmail pattern)
       if (document.hidden) {
         const count = message.completedCount ?? message.taskCount ?? 1;
-        startFlashingTitle(count, 'Work complete');
-        // UX-05: OS notification
+        streaming.startFlashingTitle(count, 'Work complete');
         const projectName = activeProject?.name ?? 'Hatchin';
         const pendingCount = (message as any).pendingApprovalCount ?? 0;
         const summary = pendingCount > 0
           ? `${count} task${count > 1 ? 's' : ''} completed, ${pendingCount} need${pendingCount > 1 ? '' : 's'} review`
           : `${count} task${count > 1 ? 's' : ''} completed`;
-        fireCompletionNotification(projectName, summary);
+        streaming.fireCompletionNotification(projectName, summary);
       }
-      // Bridge to sidebar: dispatch TASK_COMPLETED + clear AGENT_WORKING_STATE
       dispatchAutonomyEvent(AUTONOMY_EVENTS.TASK_COMPLETED, {
         agentId: message.agentId ?? '',
         agentName: message.agentName ?? 'Agent',
@@ -1211,10 +941,9 @@ export function CenterPanel({
       }
     }
     else if (message.type === 'task_requires_approval') {
-      // UX-01: High-risk autonomous task — show inline approval card instead of toast
-      devLog('⚠️ [Autonomy] Task requires approval:', message.taskId, message.riskReasons);
+      devLog('[Autonomy] Task requires approval:', message.taskId, message.riskReasons);
       const currentProjectId = activeProject?.id;
-      if (!currentProjectId) return; // Skip if no active project — card would be non-functional
+      if (!currentProjectId) return;
       queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
       setApprovalRequests((prev) => [
         ...prev.filter((r) => r.taskId !== message.taskId),
@@ -1225,7 +954,6 @@ export function CenterPanel({
           projectId: currentProjectId,
         },
       ]);
-      // Bridge to sidebar: dispatch APPROVAL_REQUIRED for activity feed + approvals tab
       dispatchAutonomyEvent(AUTONOMY_EVENTS.APPROVAL_REQUIRED, {
         traceId: message.traceId ?? '',
         agentId: message.agentId ?? '',
@@ -1236,12 +964,10 @@ export function CenterPanel({
       });
     }
     else if (message.type === 'task_approval_rejected') {
-      // Remove rejected approval card (handles multi-tab sync)
       setApprovalRequests((prev) => prev.filter((r) => r.taskId !== message.taskId));
       queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
     }
     else if (message.type === 'task_execution_failed') {
-      // Notify user when an autonomous task fails
       setIsTeamWorking(false);
       toast({
         title: 'Task failed',
@@ -1250,13 +976,11 @@ export function CenterPanel({
       });
     }
     else if (message.type === 'brain_updated_from_chat') {
-      devLog('🧠 [ChatIntelligence] Project Brain updated from chat:', message.field, message.value);
-      // Refresh project data in the right sidebar overview
+      devLog('[ChatIntelligence] Project Brain updated from chat:', message.field, message.value);
       queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${message.projectId}`] });
       toast({ title: 'Project memory updated', description: `Captured: ${message.field || 'new insight'}` });
       try {
-        // Dispatch project_brain_updated so home.tsx cache + useRightSidebarState pick it up
         window.dispatchEvent(new CustomEvent('project_brain_updated', {
           detail: {
             projectId: message.projectId,
@@ -1271,28 +995,21 @@ export function CenterPanel({
         console.warn('Failed to dispatch project_brain_updated event');
       }
     }
-    // ─── END Chat Intelligence Events ────────────────────────────────────────
-    // ─── Billing Events ─────────────────────────────────────────────────────
     else if (message.type === 'upgrade_required') {
       if (message.reason === 'rate_limit') {
-        // Rate limit — just show a toast, no upgrade modal
         toast({ title: 'Slow down', description: message.message || 'You\'re sending messages too fast.', duration: 4000 });
       } else {
-        // Daily cap or feature gate — show upgrade modal
         setUpgradeReason(message.reason);
         setShowUpgradeModal(true);
       }
     }
-    // ─── END Billing Events ─────────────────────────────────────────────────
     else if (message.type === 'conductor_decision') {
       const payload = message as any;
-      // Only show deliberation card when review is required (mid/high risk)
       if (payload.reviewRequired || (payload.reviewerCount && payload.reviewerCount >= 1)) {
         const agentNames: string[] = [];
         if (payload.selectedAgent) agentNames.push(payload.selectedAgent);
         if (payload.reviewers) agentNames.push(...(payload.reviewers as string[]));
 
-        // Clear any existing timeout
         if (deliberationTimeoutRef.current) {
           clearTimeout(deliberationTimeoutRef.current);
         }
@@ -1304,7 +1021,6 @@ export function CenterPanel({
           status: 'ongoing',
         }));
 
-        // Auto-resolve after 30 seconds
         deliberationTimeoutRef.current = setTimeout(() => {
           setDeliberationState(prev => prev ? { ...prev, status: 'resolved' } : null);
         }, 30000);
@@ -1321,12 +1037,9 @@ export function CenterPanel({
     }
   };
 
-  // === SUBTASK 3.1.4: Message Persistence Integration ===
-
-  // Save message to storage
+  // === Message Persistence ===
   const saveMessageToStorage = async (messageData: any) => {
     try {
-      // TODO: optional API persistence for messages
       devLog('Message saved to storage:', messageData);
     } catch (error) {
       console.error('Failed to save message to storage:', error);
@@ -1334,74 +1047,12 @@ export function CenterPanel({
     }
   };
 
-  // Get current conversation messages - memoized for reactivity
-  const getCurrentMessages = () => {
-    if (!currentChatContext) return [];
-    return allMessages[currentChatContext.conversationId] || [];
-  };
-
-  // Memoized current messages for reactivity - ensure it updates when messages change
-  // D1.2: Prepend earlierMessages (from cursor pagination) before the API window
-  const currentMessages = useMemo(() => {
-    const apiWindow = getCurrentMessages();
-    // Transform earlierMessages to the same shape as allMessages entries
-    const transformed = earlierMessages.map((msg: any) => {
-      const agentRoleFromId = msg.agentId
-        ? activeProjectAgents.find((a: any) => a.id === msg.agentId)?.role
-        : undefined;
-      return {
-        id: msg.id,
-        content: msg.content,
-        senderId: msg.messageType === 'system' ? 'maya-fallback' : (msg.agentId || msg.userId || 'unknown'),
-        senderName: msg.messageType === 'system' ? 'Maya' : (msg.agentId ? (() => {
-          const agent = activeProjectAgents.find((a: any) => a.id === msg.agentId);
-          return agent ? agent.name : msg.agentId.replace('-', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase());
-        })() : 'You'),
-        messageType: msg.messageType,
-        timestamp: msg.createdAt,
-        conversationId: msg.conversationId,
-        status: 'delivered' as const,
-        isStreaming: false,
-        metadata: { ...(msg.metadata || {}), agentRole: msg.metadata?.agentRole ?? agentRoleFromId ?? null },
-      };
-    });
-    const messages = [...transformed, ...apiWindow];
-    // Log for debugging
-    if (messages.length > 0) {
-      const lastMsg = messages[messages.length - 1];
-      devLog('🔄 Current messages updated:', messages.length, 'last:', lastMsg.id, lastMsg.content?.slice(0, 30));
-    }
-    return messages;
-  }, [currentChatContext?.conversationId, allMessages, earlierMessages, activeProjectAgents]);
-
-  // D1.1 & D1.2: Enhanced message loading with pagination
-  const { data: apiMessagesResponse, isLoading: messagesLoading } = useQuery<{
-    messages: any[];
-    hasMore: boolean;
-    nextCursor: string | null;
-  }>({
-    queryKey: [`/api/conversations/${currentChatContext?.conversationId}/messages`],
-    enabled: !!currentChatContext?.conversationId,
-    staleTime: 0, // D1.x Fix: Show messages instantly instead of caching for 30s
-    refetchOnWindowFocus: false, // Don't refetch when window gains focus
-    select: (data: any) => {
-      // Handle both old format (bare array) and new format (envelope)
-      if (Array.isArray(data)) {
-        return { messages: data, hasMore: false, nextCursor: null };
-      }
-      return data;
-    },
-  });
-  // Flatten for backward-compatible use in the rest of the component
-  const apiMessages = apiMessagesResponse?.messages;
-
+  // Runtime health check
   const { data: runtimeHealth } = useQuery({
     queryKey: ['/health'],
     queryFn: async () => {
       const response = await fetch('/health', { credentials: 'include' });
-      if (!response.ok) {
-        throw new Error('Failed to fetch runtime health');
-      }
+      if (!response.ok) throw new Error('Failed to fetch runtime health');
       return response.json();
     },
     refetchInterval: 30000,
@@ -1416,164 +1067,12 @@ export function CenterPanel({
         ? 'Mock'
         : runtimeHealth?.provider?.resolvedProvider || 'Test Provider';
 
-  // Process API messages when they load
-  useEffect(() => {
-    if (apiMessagesResponse && currentChatContext) {
-      const apiMessages = apiMessagesResponse.messages;
-      if (!apiMessages || !Array.isArray(apiMessages)) return;
-      // Guard: if activeProject has no agents loaded yet, defer transform to avoid
-      // rendering all messages with null agentRole (green flash).
-      // The effect will re-run when activeProjectAgents populates.
-      if (activeProjectAgents.length === 0) return;
-
-      // Sync pagination state from response envelope
-      setHasMoreMessages(apiMessagesResponse.hasMore);
-      setNextMessageCursor(apiMessagesResponse.nextCursor);
-      // Reset earlier messages on conversation change
-      setEarlierMessages([]);
-
-      devLog(`📥 Loaded ${apiMessages.length} messages from API for ${currentChatContext.conversationId}`);
-      // Transform API messages to match our format
-      const transformedMessages = apiMessages.map((msg: any) => {
-        const agentRoleFromId = msg.agentId
-          ? activeProjectAgents.find((a: any) => a.id === msg.agentId)?.role
-          : undefined;
-        return {
-          id: msg.id,
-          content: msg.content,
-          senderId: msg.messageType === 'system' ? 'system' : (msg.agentId || msg.userId || 'unknown'),
-          senderName: msg.messageType === 'system' ? 'System' : (msg.agentId ? (() => {
-            const agent = activeProjectAgents.find(a => a.id === msg.agentId);
-            return agent ? agent.name : msg.agentId.replace('-', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase());
-          })() : 'You'),
-          messageType: msg.messageType,
-          timestamp: msg.createdAt,
-          conversationId: msg.conversationId,
-          status: 'delivered' as const,
-          parentMessageId: msg.parentMessageId,
-          threadRootId: msg.threadRootId,
-          threadDepth: msg.threadDepth || 0,
-          metadata: { ...(msg.metadata || {}), agentRole: msg.metadata?.agentRole ?? agentRoleFromId ?? null }
-        };
-      });
-
-      // Merge messages instead of replacing to preserve in-flight streaming
-      setAllMessages(prev => {
-        const convoId = currentChatContext.conversationId;
-        const existing = prev[convoId] || [];
-
-        // Find existing messages that are streaming or sending
-        const activeMessages = existing.filter(m => m.status === 'streaming' || m.status === 'sending');
-        const activeIds = new Set(activeMessages.map(m => m.id));
-
-        // Filter out API messages whose IDs are currently actively streaming/sending locally
-        const newMessages = transformedMessages.filter(m => !activeIds.has(m.id));
-
-        // Merge without losing active ones that might exist local-only
-        const merged = [...newMessages, ...activeMessages].sort(
-          (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-        );
-
-        return {
-          ...prev,
-          [convoId]: merged
-        };
-      });
-    }
-  }, [apiMessagesResponse, currentChatContext, activeProjectAgents]);
-
-  // Cleanup processed message IDs when conversation changes
-  useEffect(() => {
-    setProcessedMessageIds(new Set());
-    devLog('🧹 Cleaned up processed message IDs for new conversation');
-  }, [currentChatContext?.conversationId]);
-
-  // TEST: Log message structure for debugging
-  devLog('📊 Current messages in linear timeline:', currentMessages.length);
-  devLog('💾 API Messages loaded:', apiMessages ? apiMessages.length : 0);
-
-
-
-  // D1.2: Load earlier messages via cursor pagination
-  const loadEarlierMessages = async () => {
-    if (!nextMessageCursor || !currentChatContext?.conversationId || loadingEarlier) return;
-    setLoadingEarlier(true);
-    try {
-      const response = await fetch(
-        `/api/conversations/${currentChatContext.conversationId}/messages?before=${encodeURIComponent(nextMessageCursor)}&limit=50`,
-        { credentials: 'include' }
-      );
-      if (!response.ok) throw new Error('Failed to load earlier messages');
-      const data = await response.json();
-      const olderMsgs: any[] = Array.isArray(data) ? data : (data.messages || []);
-      const olderHasMore: boolean = Array.isArray(data) ? false : (data.hasMore ?? false);
-      const olderCursor: string | null = Array.isArray(data) ? null : (data.nextCursor ?? null);
-      setEarlierMessages(prev => [...olderMsgs, ...prev]);
-      setHasMoreMessages(olderHasMore);
-      setNextMessageCursor(olderCursor);
-    } catch (err) {
-      console.error('Failed to load earlier messages:', err);
-    } finally {
-      setLoadingEarlier(false);
-    }
-  };
-
-  // Add message to specific conversation
-  const addMessageToConversation = (conversationId: string, message: any) => {
-    setAllMessages(prev => {
-      const existing = prev[conversationId] || [];
-
-      // Hard id-based dedupe.
-      if (message?.id && existing.some(msg => msg.id === message.id)) {
-        return prev;
-      }
-
-      // Soft dedupe for local race conditions (same content, same type, near-identical time).
-      const normalizedIncoming = (message?.content || '').trim();
-      if (normalizedIncoming) {
-        const incomingTime = new Date(message?.timestamp || Date.now()).getTime();
-        const hasEquivalent = existing.some(msg => {
-          if ((msg.messageType || '') !== (message?.messageType || '')) return false;
-          if ((msg.content || '').trim() !== normalizedIncoming) return false;
-
-          // For user echoes, tolerate senderId differences between temp local user and persisted user id.
-          if (message?.messageType !== 'user' && (msg.senderId || '') !== (message?.senderId || '')) {
-            return false;
-          }
-
-          const msgTime = new Date(msg.timestamp || 0).getTime();
-          if (!Number.isFinite(msgTime)) return false;
-          return Math.abs(msgTime - incomingTime) < 10000;
-        });
-
-        if (hasEquivalent) {
-          return prev;
-        }
-      }
-
-      return {
-        ...prev,
-        [conversationId]: [...existing, message]
-      };
-    });
-  };
-
-  // Update message status in specific conversation
-  const updateMessageInConversation = (conversationId: string, messageId: string, updates: any) => {
-    setAllMessages(prev => ({
-      ...prev,
-      [conversationId]: (prev[conversationId] || []).map(msg =>
-        msg.id === messageId ? { ...msg, ...updates } : msg
-      )
-    }));
-  };
+  // === Selection Normalization ===
 
   const normalizeSelectionId = (id: string | null | undefined): string | null => {
     if (typeof id !== 'string') return null;
     const normalized = id.trim();
-    if (!normalized || normalized === 'undefined' || normalized === 'null') {
-      return null;
-    }
+    if (!normalized || normalized === 'undefined' || normalized === 'null') return null;
     return normalized;
   };
 
@@ -1588,42 +1087,30 @@ export function CenterPanel({
   const hasValidTeamSelection = Boolean(selectedTeam);
   const hasValidAgentSelection = Boolean(selectedAgent);
 
+  // === Approval/Autonomy Effects ===
 
-  // === END TASK 3.1 ===
-
-  // UX-01: Clear approval requests that belong to the old project when switching
   useEffect(() => {
     if (activeProject?.id) {
-      setApprovalRequests((prev) =>
-        prev.filter((r) => r.projectId === activeProject.id),
-      );
+      setApprovalRequests((prev) => prev.filter((r) => r.projectId === activeProject.id));
     } else {
       setApprovalRequests([]);
     }
   }, [activeProject?.id]);
 
-  // UX-04: Sync pause state from project data when project changes
   useEffect(() => {
     setIsAutonomyPaused((activeProject?.executionRules as any)?.autonomyPaused ?? false);
   }, [activeProject?.id, activeProject?.executionRules]);
 
-  // useEffect to listen to activeProjectId, activeTeamId, activeAgentId changes
+  // === Chat Context Effect ===
+
   useEffect(() => {
     if (!activeProject) {
       setCurrentChatContext(null);
       return;
     }
 
-    // CRITICAL: Reset streaming/thinking state when changing conversation context
-    // This prevents state leaks (e.g., "Thinking..." persisting) between projects
-    setIsStreaming(false);
-    setIsThinking(false);
-    streamingMessageId.current = null;
-    setStreamingContent('');
-    setStreamingAgent(null);
-    setStreamingConversationId(null);
-    clearStreamingTimeout();
-    clearPendingResponseTimeout();
+    // Reset streaming state when changing conversation context
+    streaming.clearAllStreamingState();
 
     devLog('CHAT_CONTEXT_COMPUTING', {
       activeProjectId: activeProject.id,
@@ -1631,7 +1118,6 @@ export function CenterPanel({
       activeAgentId
     });
 
-    // Derive mode only from selections that are valid in the active project.
     const newMode: ChatMode = deriveChatMode({
       activeAgentId: hasValidAgentSelection ? normalizedAgentId : null,
       activeTeamId: hasValidTeamSelection ? normalizedTeamId : null
@@ -1640,17 +1126,14 @@ export function CenterPanel({
     let conversationId: string;
 
     if (newMode === 'agent' && selectedAgent) {
-      // Agent mode: Talk to specific agent (1-on-1)
       participantIds = [selectedAgent.id];
       conversationId = buildConversationId('agent', activeProject.id, selectedAgent.id);
     } else if (newMode === 'team' && selectedTeam) {
-      // Team mode: Talk to all agents under specific team
       participantIds = activeProjectAgents
         .filter(agent => agent.teamId === selectedTeam.id)
         .map(agent => agent.id);
       conversationId = buildConversationId('team', activeProject.id, selectedTeam.id);
     } else {
-      // Project mode: Talk to all teams and agents under project
       participantIds = activeProjectAgents.map(agent => agent.id);
       conversationId = buildConversationId('project', activeProject.id);
     }
@@ -1663,7 +1146,6 @@ export function CenterPanel({
       agentId: selectedAgent?.id || null
     });
 
-    // Update chat mode and context
     setChatMode(newMode);
     const newChatContext = {
       mode: newMode,
@@ -1672,19 +1154,16 @@ export function CenterPanel({
       projectId: activeProject.id
     };
 
-    // Initialize conversation if it doesn't exist
-    if (!allMessages[conversationId]) {
-      setAllMessages(prev => ({
+    if (!messages.allMessages[conversationId]) {
+      messages.setAllMessages(prev => ({
         ...prev,
         [conversationId]: []
       }));
     }
 
     setCurrentChatContext(newChatContext);
-    // Clear input when switching conversations to prevent state leaking
     setInputValue('');
 
-    // Join new conversation room via WebSocket when connected
     if (connectionStatus === 'connected') {
       sendWebSocketMessage({
         type: 'join_conversation',
@@ -1692,7 +1171,6 @@ export function CenterPanel({
       });
     }
 
-    // Debug logging for development
     devLog('Chat context updated with persistence:', {
       mode: newMode,
       participants: participantIds.length,
@@ -1711,133 +1189,110 @@ export function CenterPanel({
     activeProjectAgents
   ]);
 
-  // === END SUBTASK 2.1.1 ===
+  // === Context Calculation ===
 
-  // === SUBTASK 2.1.2: Context Calculation Logic ===
-
-  // Get participants for current chat context
   const getCurrentChatParticipants = (): Agent[] => {
     if (!activeProject || !currentChatContext) return [];
-
     switch (currentChatContext.mode) {
-      case 'project':
-        // Project mode: Return all agents under activeProject
-        return activeProjectAgents;
-
-      case 'team':
-        // Team mode: Return all agents under activeTeam
-        return selectedTeam
-          ? activeProjectAgents.filter(agent => agent.teamId === selectedTeam.id)
-          : [];
-
-      case 'agent':
-        // Agent mode: Return single activeAgent
-        return selectedAgent ? [selectedAgent] : [];
-
-      default:
-        return [];
+      case 'project': return activeProjectAgents;
+      case 'team': return selectedTeam ? activeProjectAgents.filter(agent => agent.teamId === selectedTeam.id) : [];
+      case 'agent': return selectedAgent ? [selectedAgent] : [];
+      default: return [];
     }
   };
 
-  // Get shared project memory context
   const getSharedProjectMemory = () => {
     if (!activeProject) return null;
-
     return {
       projectId: activeProject.id,
       projectName: activeProject.name,
       projectGoal: activeProject.description || '',
       teams: activeProjectTeams,
       agents: activeProjectAgents,
-      // All participants share this memory regardless of chat mode
       sharedContext: `Project: ${activeProject.name}`,
-      memoryScope: 'project-wide' // Same memory for all team/agent chats
+      memoryScope: 'project-wide'
     };
   };
 
-  // Generate conversation ID based on chat context (already implemented in useEffect)
-  const generateConversationId = (mode: ChatMode, projectId: string, contextId?: string): string => {
-    switch (mode) {
-      case 'project':
-        return `project:${projectId}`;
-      case 'team':
-        return `team:${projectId}:${contextId}`;
-      case 'agent':
-        return `agent:${projectId}:${contextId}`;
-      default:
-        return `project:${projectId}`;
-    }
+  const getCurrentMemoryContext = () => {
+    const sharedMemory = getSharedProjectMemory();
+    if (!sharedMemory || !currentChatContext) return null;
+    return {
+      ...sharedMemory,
+      currentMode: currentChatContext.mode,
+      conversationId: currentChatContext.conversationId,
+      activeParticipants: getCurrentChatParticipants(),
+      memoryAccess: {
+        canRead: sharedMemory.projectId ? true : false,
+        canWrite: sharedMemory.projectId ? true : false,
+        scope: 'project-wide'
+      }
+    };
   };
 
-  // === END SUBTASK 2.1.2 ===
+  const chatMemoryContext = getCurrentMemoryContext();
 
-  // === SUBTASK 2.1.3: Automatic Mode Switching ===
+  // === Context Display ===
 
-  // Get chat context display information
   const getChatContextDisplay = () => {
-    if (!currentChatContext) return { title: 'Loading...', subtitle: '', participants: [] };
+    if (!currentChatContext) return { title: 'Loading...', subtitle: '', participants: [] as Agent[] };
 
     const participants = getCurrentChatParticipants();
 
     switch (currentChatContext.mode) {
       case 'project':
         return {
-          // Header identity in project mode is hard-locked to Maya
-          // and derived ONLY from mode (not from agents list).
           title: 'Maya',
           subtitle: 'Idea Partner',
           participants,
           placeholder: "Message your team...",
           welcomeTitle: 'Talk to your entire project team',
           welcomeSubtitle: 'Get insights and coordination across all teams and roles.',
-          welcomeIcon: '🚀'
+          welcomeIcon: '\uD83D\uDE80'
         };
-
-      case 'team':
+      case 'team': {
         const teamName = toDisplayText(selectedTeam?.name, 'Team');
         return {
           title: teamName,
-          subtitle: `Team Chat • ${participants.length} Colleagues`,
+          subtitle: `Team Chat \u2022 ${participants.length} Colleagues`,
           participants,
           placeholder: `Message ${teamName} team...`,
           welcomeTitle: `Collaborate with ${teamName}`,
           welcomeSubtitle: 'Focus on team-specific goals and coordination.',
-          welcomeIcon: selectedTeam?.emoji || '👥'
+          welcomeIcon: selectedTeam?.emoji || '\uD83D\uDC65'
         };
-
+      }
       case 'agent': {
         const agentRole = toDisplayText(selectedAgent?.role, 'Product Manager');
-        // Show character name (e.g. "Alex") from registry, not the DB name field
         const agentName = getRoleDefinition(selectedAgent?.role)?.characterName
           ?? toDisplayText(selectedAgent?.name, agentRole);
         const isMaya = selectedAgent?.isSpecialAgent || selectedAgent?.name === 'Maya';
         return {
           title: isMaya ? (activeProject?.name || agentName) : agentName,
-          subtitle: `1-on-1 Chat • ${agentRole}`,
+          subtitle: `1-on-1 Chat \u2022 ${agentRole}`,
           participants,
           placeholder: `Message ${agentName}...`,
           welcomeTitle: `Chat with ${agentName}`,
           welcomeSubtitle: `Get specialized help with ${agentRole.toLowerCase()} tasks.`,
-          welcomeIcon: getRoleDefinition(selectedAgent?.role)?.emoji ?? '🤖'
+          welcomeIcon: getRoleDefinition(selectedAgent?.role)?.emoji ?? '\uD83E\uDD16'
         };
       }
-
       default:
         return {
           title: 'Loading...',
           subtitle: '',
-          participants: [],
+          participants: [] as Agent[],
           placeholder: 'Loading...',
           welcomeTitle: 'Loading...',
           welcomeSubtitle: '',
-          welcomeIcon: '⏳'
+          welcomeIcon: '\u23F3'
         };
     }
   };
 
   const contextDisplay = getChatContextDisplay();
 
-  // Dev-only UI invariant check: in project mode, header must be Maya (PM)
+  // Dev-only UI invariant check
   useEffect(() => {
     if (
       import.meta.env.DEV &&
@@ -1855,101 +1310,32 @@ export function CenterPanel({
     }
   }, [currentChatContext?.mode, contextDisplay.title, contextDisplay.subtitle]);
 
-  // Get chat context color for bubble styling
   const getChatContextColor = () => {
     if (!currentChatContext) return 'blue';
-
     switch (currentChatContext.mode) {
-      case 'project':
-        // Use project color from schema
-        return activeProject?.color || 'blue';
-      case 'team':
-        // Teams use green color (as per sidebar specification)
-        return 'green';
-      case 'agent':
-        // Use agent color from schema
-        return selectedAgent?.color || 'purple';
-      default:
-        return 'blue';
+      case 'project': return activeProject?.color || 'blue';
+      case 'team': return 'green';
+      case 'agent': return selectedAgent?.color || 'purple';
+      default: return 'blue';
     }
   };
 
   const chatContextColor = getChatContextColor();
 
-  // === END SUBTASK 2.1.3 ===
+  // === Message Routing ===
 
-  // === SUBTASK 2.1.4: Memory Architecture Setup ===
-
-  // Get memory context for current chat
-  const getCurrentMemoryContext = () => {
-    const sharedMemory = getSharedProjectMemory();
-    if (!sharedMemory || !currentChatContext) return null;
-
-    return {
-      ...sharedMemory,
-      // Chat-specific context
-      currentMode: currentChatContext.mode,
-      conversationId: currentChatContext.conversationId,
-      activeParticipants: getCurrentChatParticipants(),
-      // Memory scope - all participants share the same project memory
-      memoryAccess: {
-        canRead: sharedMemory.projectId ? true : false,
-        canWrite: sharedMemory.projectId ? true : false,
-        scope: 'project-wide'
-      }
-    };
-  };
-
-  // Connect chat context to memory system
-  const chatMemoryContext = getCurrentMemoryContext();
-
-  // Memory persistence check
-  const isMemoryContextValid = () => {
-    return chatMemoryContext &&
-      chatMemoryContext.projectId &&
-      chatMemoryContext.activeParticipants.length > 0;
-  };
-
-  // === END SUBTASK 2.1.4 ===
-
-  // === TASK 2.3: Message Context Filtering & Participant Logic ===
-
-  // Filter messages by current chat context
-  const getFilteredMessages = () => {
-    if (!currentChatContext) return [];
-
-    // For now, return empty array - will be populated with actual messages from storage
-    // Messages will be filtered by conversationId which already encodes the context
-    const conversationId = currentChatContext.conversationId;
-
-    // Future implementation will fetch from storage:
-    // return messages.filter(msg => msg.conversationId === conversationId);
-    return [];
-  };
-
-  // Message routing logic - determines who receives the message
   const getMessageRecipients = () => {
-    if (!currentChatContext) return {
-      type: 'unknown',
-      recipients: [],
-      scope: '',
-      conversationId: ''
-    };
-
+    if (!currentChatContext) return { type: 'unknown', recipients: [] as Agent[], scope: '', conversationId: '' };
     const participants = getCurrentChatParticipants();
-
     switch (currentChatContext.mode) {
       case 'project':
-        // Project chat: message goes to all teams and agents under project
         return {
           type: 'project',
           recipients: participants,
           scope: `All ${activeProjectTeams.length} teams in ${activeProject?.name}`,
           conversationId: currentChatContext.conversationId
         };
-
-      case 'team':
-        // Team chat: message goes to all agents under specific team
+      case 'team': {
         const activeTeam = activeProjectTeams.find(t => t.id === activeTeamId);
         return {
           type: 'team',
@@ -1957,9 +1343,8 @@ export function CenterPanel({
           scope: `${activeTeam?.name} team (${participants.length} colleagues)`,
           conversationId: currentChatContext.conversationId
         };
-
-      case 'agent':
-        // Agent chat: message goes to specific agent only
+      }
+      case 'agent': {
         const activeAgent = activeProjectAgents.find(a => a.id === activeAgentId);
         return {
           type: 'agent',
@@ -1967,51 +1352,14 @@ export function CenterPanel({
           scope: `1-on-1 with ${activeAgent?.name}`,
           conversationId: currentChatContext.conversationId
         };
-
+      }
       default:
-        return { type: 'unknown', recipients: [], scope: '', conversationId: '' };
+        return { type: 'unknown', recipients: [] as Agent[], scope: '', conversationId: '' };
     }
   };
 
-  // Conversation switching logic when context changes
-  const handleConversationSwitch = (newContext: typeof currentChatContext) => {
-    if (!newContext) return;
+  // === Mutations ===
 
-    // Save current conversation state if needed
-    const currentMessages = getFilteredMessages();
-
-    // Switch to new conversation
-    const newConversationId = newContext.conversationId;
-    const recipients = getMessageRecipients();
-
-    devLog('Conversation switched:', {
-      from: currentChatContext?.conversationId,
-      to: newConversationId,
-      mode: newContext.mode,
-      recipients: recipients.scope,
-      sharedMemory: chatMemoryContext?.memoryAccess?.scope
-    });
-
-    // Future: Load messages for new conversation from storage
-    // loadMessagesForConversation(newConversationId);
-  };
-
-  // Memory context validation for message routing
-  const validateMessageContext = () => {
-    const recipients = getMessageRecipients();
-    const memoryContext = getCurrentMemoryContext();
-
-    return {
-      canSendMessage: recipients.recipients.length > 0 && (memoryContext?.memoryAccess?.canWrite ?? false),
-      messageScope: recipients.scope,
-      memoryScope: memoryContext?.memoryAccess?.scope ?? 'unknown',
-      participantCount: recipients.recipients.length
-    };
-  };
-
-  // === END TASK 2.3 ===
-
-  // UX-01: Approve / reject mutations for autonomous task approval cards
   const approveMutation = useMutation({
     mutationFn: (taskId: string) => apiRequest('POST', `/api/tasks/${taskId}/approve`, {}),
     onSuccess: (_data, taskId) => {
@@ -2034,7 +1382,6 @@ export function CenterPanel({
     },
   });
 
-  // UX-04: Pause/resume autonomous execution for this project
   const pauseMutation = useMutation({
     mutationFn: (paused: boolean) =>
       apiRequest('PATCH', `/api/projects/${activeProject?.id}`, {
@@ -2046,7 +1393,6 @@ export function CenterPanel({
     },
   });
 
-  // A1.1 & A1.4: Handle message reactions for AI training
   const reactionMutation = useMutation({
     mutationFn: async ({ messageId, reactionType, agentId }: {
       messageId: string;
@@ -2065,55 +1411,40 @@ export function CenterPanel({
   });
 
   const handleMessageReaction = (messageId: string, reactionType: 'thumbs_up' | 'thumbs_down') => {
-    // Find the message to get agent ID for training
-    const conversationMessages = currentChatContext ? allMessages[currentChatContext.conversationId] || [] : [];
+    const conversationMessages = currentChatContext ? messages.allMessages[currentChatContext.conversationId] || [] : [];
     const message = conversationMessages.find(m => m.id === messageId);
     const agentId = message?.messageType === 'agent' ? message.senderId : undefined;
-
     reactionMutation.mutate({ messageId, reactionType, agentId });
   };
 
-  // C1.1: Handle reply to message
   const handleReplyToMessage = (messageId: string, content: string, senderName: string) => {
-    setReplyingTo({
-      id: messageId,
-      content,
-      senderName
-    });
-    // Focus the composer after setting reply
+    setReplyingTo({ id: messageId, content, senderName });
     setTimeout(() => {
-      const input = messageInputRef.current ?? (document.querySelector('[data-testid="input-message"]') as HTMLTextAreaElement | null);
-      if (input) {
-        input.focus();
-      }
+      const input = document.querySelector('[data-testid="input-message"]') as HTMLTextAreaElement | null;
+      if (input) input.focus();
     }, 100);
   };
 
-  // Clear reply state
-  const clearReply = () => {
-    setReplyingTo(null);
-  };
+  const clearReply = () => { setReplyingTo(null); };
 
-  // Handoff dropdown — list of agents eligible to receive a handoff
+  // Handoff
   const handoffableAgents = useMemo(() => {
-    // Get the currently-focused agent (if in agent mode)
     const focusedAgentId = currentChatContext?.mode === 'agent' ? currentChatContext?.participantIds[0] : null;
     return activeProjectAgents.filter((agent) => {
-      // Exclude Maya (special agent)
       if ((agent as unknown as { isSpecialAgent?: boolean; is_special_agent?: boolean }).isSpecialAgent ||
           (agent as unknown as { isSpecialAgent?: boolean; is_special_agent?: boolean }).is_special_agent) return false;
-      // Exclude the currently focused agent
       if (focusedAgentId && agent.id === focusedAgentId) return false;
       return true;
     });
   }, [activeProjectAgents, currentChatContext]);
 
-  // Prepopulate input with @AgentName mention for manual handoff
   const handleHandoff = (agent: { id: string; name: string; role: string }) => {
     setInputValue(`@${agent.name} `);
-    messageInputRef.current?.focus();
+    const input = document.querySelector('[data-testid="input-message"]') as HTMLTextAreaElement | null;
+    input?.focus();
   };
 
+  // === Action Click Handler ===
 
   const handleActionClick = async (action: string) => {
     if (!currentChatContext) return;
@@ -2121,7 +1452,6 @@ export function CenterPanel({
     let message = '';
     const mode = currentChatContext.mode;
 
-    // Generate context-appropriate messages
     if (action === 'generateRoadmap') {
       if (mode === 'project') {
         message = 'Can you create a comprehensive product roadmap for our SaaS startup? Include key milestones, feature priorities, and timeline recommendations.';
@@ -2149,18 +1479,12 @@ export function CenterPanel({
         const activeTeam = activeProjectTeams.find(t => t.id === activeTeamId);
         message = `What are the key tasks and priorities the ${activeTeam?.name} team should focus on right now?`;
       } else if (mode === 'agent') {
-        const activeAgent = activeProjectAgents.find(a => a.id === activeAgentId);
         message = `What tasks and priorities should I focus on? What would you recommend as the next steps in your area of expertise?`;
       }
     }
 
     if (message) {
       try {
-        // Send message through chat submit flow directly.
-        // Send gating: input + context existence.
-        // Must have: non-empty input, conversationId, and activeProject.
-        // Connection state is handled inside sendMessageWithConfirmation (queues if offline).
-        // Must NOT depend on: recipients count, agent availability, memory write permissions.
         const validConversationId = getValidConversationIdForSend(currentChatContext.conversationId, activeProject);
         if (!validConversationId) {
           console.warn('Cannot send action: no valid conversationId (select a project to chat)');
@@ -2176,12 +1500,12 @@ export function CenterPanel({
 
         if (canSend && currentChatContext) {
           if (isDuplicateSendAttempt(validConversationId, message)) {
-            devLog('🚫 Duplicate send suppressed (action click)', { conversationId: validConversationId });
+            devLog('Duplicate send suppressed (action click)', { conversationId: validConversationId });
             return;
           }
 
-          setIsThinking(true);
-          setTypingColleagues([]);  // prevent stale indicator from showing during AI response
+          streaming.setIsThinking(true);
+          setTypingColleagues([]);
           const tempMessageId = `temp-${Date.now()}`;
           const timestamp = new Date().toISOString();
 
@@ -2194,12 +1518,10 @@ export function CenterPanel({
             timestamp,
             conversationId: validConversationId,
             status: 'sending' as const,
-            metadata: {
-              clientTempId: tempMessageId
-            }
+            metadata: { clientTempId: tempMessageId }
           };
 
-          addMessageToConversation(validConversationId, userMessage);
+          messages.addMessageToConversation(validConversationId, userMessage);
 
           const wsMessage = {
             type: 'send_message_streaming',
@@ -2222,19 +1544,14 @@ export function CenterPanel({
           };
 
           sendWebSocketMessage(wsMessage);
-          resetPendingResponseTimeout(validConversationId, tempMessageId);
+          streaming.resetPendingResponseTimeout(validConversationId, tempMessageId);
           devLog(`Sent ${action} prompt:`, message);
-          devLog('SEND_DISPATCHED', {
-            mode: currentChatContext.mode,
-            conversationId: validConversationId
-          });
+          devLog('SEND_DISPATCHED', { mode: currentChatContext.mode, conversationId: validConversationId });
         } else {
-          // Dev-only log if audit flag enabled
           devLog('SEND_BLOCKED', {
             reason: !message || message.trim().length === 0 ? 'empty_input' :
               !currentChatContext?.conversationId ? 'missing_conversationId' :
-                !activeProject?.id ? 'missing_activeProjectId' :
-                  'unknown',
+                !activeProject?.id ? 'missing_activeProjectId' : 'unknown',
             connectionStatus,
             hasInput: message.trim().length > 0,
             hasConversationId: !!currentChatContext?.conversationId,
@@ -2247,11 +1564,13 @@ export function CenterPanel({
     }
   };
 
+  // === Chat Submit Handler ===
+
   const handleChatSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    devLog('📤 Form submit triggered');
+    devLog('Form submit triggered');
     const trimmed = inputValue.trim();
-    devLog('📤 Input value:', trimmed, 'Length:', trimmed.length);
+    devLog('Input value:', trimmed, 'Length:', trimmed.length);
 
     if (trimmed) {
       const recipients = getMessageRecipients();
@@ -2264,34 +1583,26 @@ export function CenterPanel({
         connectionStatus
       });
 
-      // Send gating: input + context existence.
-      // Must have: non-empty input and conversationId (or allow general chat without project).
-      // Connection state is handled inside sendMessageWithConfirmation (queues if offline).
-      // Must NOT depend on: recipients count, agent availability, memory write permissions.
-      // Allow sending in general chat (no project) OR when project + conversationId exist.
       const canSend =
         trimmed.length > 0 &&
         (
-          // General chat mode (no project) - allow sending
           (!activeProject && !currentChatContext) ||
-          // Project chat mode - require conversationId
           (currentChatContext?.conversationId && currentChatContext.conversationId.trim().length > 0)
         );
 
       if (canSend) {
-        setIsThinking(true);
-        setTypingColleagues([]);  // prevent stale indicator from showing during AI response
+        streaming.setIsThinking(true);
+        setTypingColleagues([]);
         const tempMessageId = `temp-${Date.now()}`;
         const timestamp = new Date().toISOString();
 
-        // Determine conversationId: use current context or create fallback
         let conversationId = currentChatContext?.conversationId;
         if (!conversationId && activeProject) {
           conversationId = `project:${activeProject.id}`;
-          console.warn('⚠️ Using fallback conversationId:', conversationId);
+          console.warn('Using fallback conversationId:', conversationId);
         } else if (!conversationId) {
           conversationId = 'general-chat';
-          console.warn('⚠️ Using general chat conversationId');
+          console.warn('Using general chat conversationId');
         }
 
         const validConversationId = getValidConversationIdForSend(conversationId, activeProject);
@@ -2302,11 +1613,10 @@ export function CenterPanel({
         conversationId = validConversationId;
 
         if (isDuplicateSendAttempt(conversationId, trimmed)) {
-          devLog('🚫 Duplicate send suppressed (chat submit)', { conversationId });
+          devLog('Duplicate send suppressed (chat submit)', { conversationId });
           return;
         }
 
-        // Create user message in linear chat timeline (with optional reply reference metadata)
         const userMessage = {
           id: tempMessageId,
           content: trimmed,
@@ -2328,10 +1638,8 @@ export function CenterPanel({
           }
         };
 
-        // Add message to current conversation
-        addMessageToConversation(conversationId, userMessage);
+        messages.addMessageToConversation(conversationId, userMessage);
 
-        // Prepare WebSocket message data
         const messageData = {
           type: 'send_message_streaming',
           conversationId: conversationId,
@@ -2362,42 +1670,32 @@ export function CenterPanel({
           }
         };
 
-        // No need to track sent IDs anymore - we filter by userId instead
-
-        // Send with confirmation and retry logic
-        // B1.1: Send streaming message instead of regular message
         const streamingMessageData = {
           ...messageData,
           type: 'send_message_streaming'
         };
 
         sendMessageWithConfirmation(streamingMessageData, tempMessageId);
-        resetPendingResponseTimeout(conversationId, tempMessageId);
+        streaming.resetPendingResponseTimeout(conversationId, tempMessageId);
 
         devLog('SEND_DISPATCHED', {
           mode: currentChatContext?.mode,
           conversationId: currentChatContext?.conversationId
         });
 
-        // Clear input and reply state immediately after sending
         setInputValue('');
-        resizeComposer(messageInputRef.current);
         if (replyingTo) {
           clearReply();
         }
 
-        // NOTE: AI responses are handled by WebSocket streaming from server (handleStreamingColleagueResponse)
-        // The simulateColleagueResponse fallback is DISABLED because we're using real OpenAI streaming
-        // Server will send streaming_started, streaming_chunk, and streaming_completed events
-        devLog('✅ Message sent via WebSocket - waiting for server streaming response');
+        devLog('Message sent via WebSocket - waiting for server streaming response');
       } else {
-        // Always log to console for debugging - user needs to see why send failed
         const reason = !trimmed || trimmed.length === 0 ? 'empty_input' :
           (!activeProject && !currentChatContext) ? 'general_chat_allowed_but_failed' :
             (activeProject && !currentChatContext?.conversationId) ? 'missing_conversationId' :
               'unknown';
 
-        console.error('❌ Send blocked:', reason, {
+        console.error('Send blocked:', reason, {
           hasInput: trimmed.length > 0,
           hasConversationId: !!currentChatContext?.conversationId,
           conversationId: currentChatContext?.conversationId,
@@ -2407,7 +1705,6 @@ export function CenterPanel({
           currentChatContext: currentChatContext ? 'exists' : 'null'
         });
 
-        // Dev-only log if audit flag enabled
         devLog('SEND_BLOCKED', {
           reason,
           connectionStatus,
@@ -2419,29 +1716,61 @@ export function CenterPanel({
     }
   };
 
+  // === Task Suggestion Handlers ===
+
+  const handleApproveTaskSuggestions = async () => {
+    if (!taskSuggestionContext) return;
+    setIsApprovingTasks(true);
+    try {
+      const response = await fetch('/api/task-suggestions/approve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          approvedTasks: suggestedTasks,
+          projectId: taskSuggestionContext.projectId
+        })
+      });
+      if (response.ok) {
+        try {
+          const evt = new CustomEvent('tasks_updated', { detail: { projectId: taskSuggestionContext.projectId } });
+          window.dispatchEvent(evt);
+        } catch { }
+        setSuggestedTasks([]);
+        setTaskSuggestionContext(null);
+        setShowTaskApprovalModal(false);
+      } else {
+        console.error('Failed to approve tasks');
+      }
+    } catch (e) {
+      console.error('Approve tasks error', e);
+    } finally {
+      setIsApprovingTasks(false);
+    }
+  };
+
+  const handleDismissTaskSuggestions = () => {
+    setSuggestedTasks([]);
+    setTaskSuggestionContext(null);
+    setShowTaskApprovalModal(false);
+  };
+
+  // === Render ===
+
   // Show empty state when no projects exist
   if (projects.length === 0) {
     devLog('CenterPanel: Showing empty state');
     return (
       <main className="flex-1 min-h-0 premium-column-bg rounded-2xl flex flex-col my-2.5 relative overflow-hidden">
         <div className="ambient-glow-top" />
-        {/* Empty State Content */}
         <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
           <div className="max-w-lg">
-            {/* Chicken hatching emoji */}
             <div className="text-5xl mb-4">🐣</div>
-
-            {/* Subtitle */}
             <h2 className="font-semibold hatchin-text text-lg mb-2">
               Create your first project
             </h2>
-
-            {/* Tagline */}
             <p className="hatchin-text-muted text-sm mb-8">
               Your dreams await
             </p>
-
-            {/* Add Project Button - at the bottom, no icon */}
             <button
               onClick={onAddProjectClick}
               className="hatchin-bg-blue text-white px-6 py-3 rounded-lg text-sm font-medium hover:bg-opacity-90 transition-colors"
@@ -2467,95 +1796,29 @@ export function CenterPanel({
   }
 
   return (
-    <main className="flex-1 min-h-0 premium-column-bg rounded-2xl flex flex-col my-2.5 relative overflow-hidden">
-      <div className="ambient-glow-top" />
-      {/* Enhanced Chat Header */}
-      <div className="px-6 py-4 hatchin-border border-b">
-        {/* Main Header Row */}
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-3">
-            <h1 className="font-semibold hatchin-text text-lg">
-              {contextDisplay.title}
-            </h1>
-            {currentChatContext?.mode && (
-              <span className="text-xs px-2 py-0.5 rounded-full bg-[var(--hatchin-surface)] hatchin-text-muted border border-[var(--hatchin-border-subtle)]">
-                {currentChatContext.mode === 'project' ? '🌐 Everyone' :
-                 currentChatContext.mode === 'agent' ? `💬 1-on-1` :
-                 '👥 Team chat'}
-              </span>
-            )}
-          </div>
+    <main className="flex-1 min-h-0 bg-[var(--hatchin-bg-card)] rounded-2xl flex flex-col my-2.5 relative overflow-hidden border border-[var(--hatchin-border-subtle)]">
 
-          <button
-            onClick={() => setShowAddHatchModal(true)}
-            disabled={!activeProject}
-            className="btn-primary-glow px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 btn-press disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="10" />
-              <path d="M8 12h8" />
-              <path d="M12 8v8" />
-            </svg>
-            Add Hatch
-          </button>
-        </div>
+      {/* Chat Header */}
+      <ChatHeader
+        contextDisplay={contextDisplay}
+        chatMode={currentChatContext?.mode}
+        activeProject={activeProject}
+        activeProjectTeams={activeProjectTeams}
+        activeProjectAgents={activeProjectAgents}
+        onAddHatchClick={() => setShowAddHatchModal(true)}
+      />
 
-        {/* Subtitle and Participants Row */}
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6">
-          <span className="hatchin-text-muted font-medium text-xs">
-            {contextDisplay.subtitle}
-          </span>
-
-          {/* Project Mode: Show Teams */}
-          {currentChatContext?.mode === 'project' && activeProjectTeams.length > 0 && (
-            <div className="flex flex-wrap items-center gap-3 text-xs">
-              {activeProjectTeams.map(team => {
-                const teamAgentCount = activeProjectAgents.filter(a => a.teamId === team.id).length;
-                return (
-                  <div key={team.id} className="flex items-center gap-1.5 hatchin-text text-sm bg-hatchin-bg-card px-2 py-1 rounded-md">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-hatchin-text-muted">
-                      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                      <circle cx="9" cy="7" r="4" />
-                      <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-                      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-                    </svg>
-                    <span>{team.name}</span>
-                    <span className="text-hatchin-text-muted">({teamAgentCount})</span>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
-          {/* Team Mode: Show Agents */}
-          {currentChatContext?.mode === 'team' && contextDisplay.participants.length > 0 && (
-            <div className="flex flex-wrap items-center gap-3">
-              {contextDisplay.participants.map(agent => (
-                <div key={agent.id} className="flex items-center gap-1.5 hatchin-text text-sm bg-hatchin-bg-card px-2 py-1 rounded-md">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-hatchin-text-muted">
-                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                    <circle cx="12" cy="7" r="4" />
-                  </svg>
-                  <span>{agent.name}</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
       {/* Message Display Area */}
       <div className="flex-1 flex flex-col overflow-hidden">
-
-        {getCurrentMessages().length === 0 && !isStreaming && !isThinking ? (
-          /* Welcome Screen - Show when no messages */
-          (<div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
+        {messages.currentMessages.length === 0 && !streaming.isStreaming && !streaming.isThinking ? (
+          /* Welcome Screen */
+          <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
             <div className="max-w-lg">
               <div className="text-4xl">{contextDisplay.welcomeIcon}</div>
               <h2 className="font-semibold hatchin-text mt-0.5 mb-0.5 text-base">{contextDisplay.welcomeTitle}</h2>
               <p className="hatchin-text-muted text-sm">
                 {contextDisplay.welcomeSubtitle}
               </p>
-
               <div className="flex flex-wrap gap-3 justify-center py-3">
                 <button
                   onClick={() => handleActionClick('generateRoadmap')}
@@ -2580,287 +1843,51 @@ export function CenterPanel({
                 </button>
               </div>
             </div>
-          </div>)
+          </div>
         ) : (
-          /* Message List - Show when messages exist */
-          (<>
-            <div className="relative flex-1 min-h-0">
-              {/* Connection status banner */}
-              {connectionStatus !== 'connected' && (
-                <div className={`flex items-center justify-center gap-2 py-1.5 text-xs font-medium ${
-                  connectionStatus === 'connecting' ? 'bg-yellow-500/10 text-yellow-500' :
-                  connectionStatus === 'error' ? 'bg-red-500/10 text-red-500' :
-                  'bg-gray-500/10 text-gray-400'
-                }`} role="status" aria-live="assertive">
-                  <div className={`w-2 h-2 rounded-full ${connectionConfig.bgColor}`} />
-                  {connectionConfig.text}
-                  {connectionStatus === 'disconnected' && (
-                    <span className="text-muted-foreground">— messages may not sync</span>
-                  )}
-                </div>
-              )}
-              {/* Messages Container */}
-              <div className="h-full overflow-y-auto hide-scrollbar p-6 space-y-4" role="log" aria-label="Chat messages" aria-live="polite">
-                {messagesLoading && (
-                  <div className="flex items-center justify-center py-4">
-                    <div className="hatchin-text-muted text-sm">Loading conversation...</div>
-                  </div>
-                )}
-
-                {/* D1.2: Load earlier messages button — shown when there are older messages */}
-                {hasMoreMessages && (
-                  <div className="flex justify-center py-3">
-                    <button
-                      onClick={loadEarlierMessages}
-                      disabled={loadingEarlier}
-                      className="text-sm text-slate-400 hover:text-slate-200 transition-colors px-4 py-2 rounded-lg hover:bg-slate-800/50 disabled:opacity-50"
-                    >
-                      {loadingEarlier ? 'Fetching earlier messages...' : 'Load earlier messages'}
-                    </button>
-                  </div>
-                )}
-
-                {/* Linear chat timeline (ChatGPT-style): always render chronologically */}
-                {currentMessages.map((message, index) => {
-                  const isGrouped = index > 0 &&
-                    currentMessages[index - 1].messageType === message.messageType &&
-                    currentMessages[index - 1].senderId === message.senderId &&
-                    (new Date(message.timestamp).getTime() - new Date(currentMessages[index - 1].timestamp).getTime()) < 300000;
-
-                  // Handoff announcement → render HandoffCard instead of MessageBubble
-                  const isHandoff = (message.metadata as any)?.isHandoffAnnouncement === true;
-                  if (isHandoff) {
-                    const toAgent = activeProjectAgents.find(
-                      a => a.id === (message.metadata as any)?.nextAgentId
-                    );
-                    return (
-                      <HandoffCard
-                        key={message.id}
-                        fromAgentName={message.senderName}
-                        fromAgentRole={(message.metadata as any)?.agentRole}
-                        toAgentName={toAgent?.name ?? 'Team'}
-                        toAgentRole={toAgent?.role}
-                        taskTitle={(message.metadata as any)?.taskTitle ?? message.content}
-                        timestamp={message.timestamp}
-                      />
-                    );
-                  }
-
-                  return (
-                    <div
-                      key={message.id}
-                    >
-                      <MessageBubble
-                        message={{
-                          id: message.id,
-                          content: message.content,
-                          senderId: message.senderId,
-                          senderName: message.senderName,
-                          messageType: message.messageType,
-                          timestamp: message.timestamp,
-                          isStreaming: message.isStreaming,
-                          status: message.status,
-                          replyTo: message.metadata?.replyTo,
-                          metadata: {
-                            agentRole: message.metadata?.role || message.metadata?.agentRole,
-                            isStreaming: message.isStreaming,
-                            llm: message.metadata?.llm,
-                            replyTo: message.metadata?.replyTo
-                          }
-                        }}
-                        isGrouped={isGrouped}
-                        showReactions={message.messageType === 'agent'}
-                        onReaction={handleMessageReaction}
-                        onReply={handleReplyToMessage}
-                        chatContext={{
-                          mode: currentChatContext?.mode || 'project',
-                          color: chatContextColor
-                        }}
-                      />
-                    </div>
-                  );
-                })}
-
-                {/* Typing Indicators - Show only if no streaming placeholder exists */}
-                {(() => {
-                  const currentMsgs = getCurrentMessages();
-                  const hasStreamingPlaceholder = currentMsgs.some(m => m.status === 'streaming' || m.metadata?.isStreaming);
-                  // Hide banner if a placeholder exists OR a placeholder is about to be created (streamingMessageId already set)
-                  // Also hide if bottom bar typing indicator is active to prevent dual indicators
-                  return isStreaming && streamingAgent && !hasStreamingPlaceholder && !streamingMessageId.current && !isThinking && typingColleagues.length === 0;
-                })() && (
-                    <div className="flex justify-start">
-                      <div className="flex items-start gap-3 max-w-[85%]">
-                        <div className="w-8 h-8 rounded-full bg-hatchin-text-muted flex items-center justify-center flex-shrink-0 mt-1">
-                          <span className="text-xs font-medium text-white">{streamingAgent?.charAt(0) || '?'}</span>
-                        </div>
-                        <div className="flex flex-col">
-                          <span className="text-sm font-medium hatchin-text mb-1">
-                            {streamingAgent}
-                          </span>
-                          <div className="bg-hatchin-colleague hatchin-text border hatchin-border rounded-2xl px-4 py-3 shadow-sm">
-                            <div className="flex items-center gap-1">
-                              <div className="flex gap-1">
-                                <div className="w-2 h-2 bg-hatchin-text-muted rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                                <div className="w-2 h-2 bg-hatchin-text-muted rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                                <div className="w-2 h-2 bg-hatchin-text-muted rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                {/* Inline Task Approval UI */}
-                {suggestedTasks.length > 0 && taskSuggestionContext && (
-                  <div className="mt-2 p-4 border border-hatchin-border-subtle rounded-xl bg-hatchin-surface-elevated">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="hatchin-text font-medium text-sm">Suggested tasks from this conversation</div>
-                      <span className="text-xs hatchin-text-muted">{suggestedTasks.length} item(s)</span>
-                    </div>
-                    <ul className="space-y-2 mb-3">
-                      {suggestedTasks.map((t, idx) => (
-                        <li key={idx} className="text-sm">
-                          <span className="font-medium hatchin-text">{t.title}</span>
-                          {t.description && (
-                            <span className="hatchin-text-muted"> — {t.description}</span>
-                          )}
-                        </li>
-                      ))}
-                    </ul>
-                    <div className="flex gap-2">
-                      <button
-                        disabled={isApprovingTasks}
-                        onClick={async () => {
-                          if (!taskSuggestionContext) return;
-                          setIsApprovingTasks(true);
-                          try {
-                            const response = await fetch('/api/task-suggestions/approve', {
-                              method: 'POST',
-                              headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify({
-                                approvedTasks: suggestedTasks,
-                                projectId: taskSuggestionContext.projectId
-                              })
-                            });
-                            if (response.ok) {
-                              try {
-                                const evt = new CustomEvent('tasks_updated', { detail: { projectId: taskSuggestionContext.projectId } });
-                                window.dispatchEvent(evt);
-                              } catch { }
-                              setSuggestedTasks([]);
-                              setTaskSuggestionContext(null);
-                              setShowTaskApprovalModal(false);
-                            } else {
-                              console.error('Failed to approve tasks');
-                            }
-                          } catch (e) {
-                            console.error('Approve tasks error', e);
-                          } finally {
-                            setIsApprovingTasks(false);
-                          }
-                        }}
-                        className="px-3 py-2 bg-blue-500 text-white rounded-md text-xs hover:bg-blue-600 disabled:opacity-60"
-                      >
-                        {isApprovingTasks ? 'Creating…' : 'Approve & Create'}
-                      </button>
-                      <button
-                        onClick={() => {
-                          setSuggestedTasks([]);
-                          setTaskSuggestionContext(null);
-                          setShowTaskApprovalModal(false);
-                        }}
-                        className="px-3 py-2 bg-hatchin-surface text-foreground rounded-md text-xs hover:bg-hatchin-surface-elevated"
-                      >
-                        Dismiss
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-
-                {/* Team working indicator — shown during background autonomous execution */}
-                {isTeamWorking && (
-                  <div className="flex items-center justify-between px-4 py-2 text-sm text-amber-600 bg-amber-50 rounded-lg mx-4 mb-2">
-                    <div className="flex items-center gap-2">
-                      <div className="flex gap-1">
-                        {!isAutonomyPaused && (
-                          <>
-                            <span className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                            <span className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                            <span className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                          </>
-                        )}
-                      </div>
-                      <span>
-                        {isAutonomyPaused
-                          ? 'Autonomous execution paused'
-                          : `Team is working on ${teamWorkingTaskCount} task${teamWorkingTaskCount !== 1 ? 's' : ''}...`}
-                      </span>
-                    </div>
-                    <button
-                      onClick={() => pauseMutation.mutate(!isAutonomyPaused)}
-                      disabled={pauseMutation.isPending}
-                      className="flex items-center gap-1 px-2.5 py-1 text-xs rounded-md transition-colors hover:bg-amber-100 disabled:opacity-40"
-                    >
-                      {isAutonomyPaused ? (
-                        <><PlayCircle className="w-3.5 h-3.5" /> Resume</>
-                      ) : (
-                        <><PauseCircle className="w-3.5 h-3.5" /> Pause</>
-                      )}
-                    </button>
-                  </div>
-                )}
-
-                {/* Deliberation indicator — shown when multi-agent coordination is underway */}
-                <AnimatePresence>
-                  {deliberationState && (
-                    <DeliberationCard
-                      key={deliberationState.sessionId}
-                      agentNames={deliberationState.agentNames}
-                      roundCount={deliberationState.roundCount}
-                      status={deliberationState.status}
-                      summary={deliberationState.summary}
-                      onDismiss={() => setDeliberationState(null)}
-                    />
-                  )}
-                </AnimatePresence>
-
-                {/* UX-01: Inline approval cards for high-risk autonomous tasks */}
-                <AnimatePresence>
-                  {approvalRequests
-                    .filter((r) => r.projectId === activeProject?.id)
-                    .map((req) => (
-                      <AutonomousApprovalCard
-                        key={req.taskId}
-                        taskId={req.taskId}
-                        agentName={req.agentName}
-                        riskReasons={req.riskReasons}
-                        onApprove={(id) => approveMutation.mutate(id)}
-                        onReject={(id) => rejectMutation.mutate(id)}
-                        isLoading={approveMutation.isPending || rejectMutation.isPending}
-                      />
-                    ))}
-                </AnimatePresence>
-
-                {/* Auto-scroll helper */}
-                <div ref={(el) => {
-                  if (el && (getCurrentMessages().length > 0 || typingColleagues.length > 0)) {
-                    el.scrollIntoView({ behavior: 'smooth' });
-                  }
-                }} />
-              </div>
-
-              {/* Bottom fade to separate long chat history from input composer */}
-              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[var(--premium-bg-end)] via-[var(--premium-bg-end)]/85 to-transparent" />
-            </div>
-          </>)
+          /* Message List */
+          <ChatMessageList
+            messages={messages.currentMessages}
+            messagesLoading={messages.messagesLoading}
+            hasMoreMessages={messages.hasMoreMessages}
+            loadingEarlier={messages.loadingEarlier}
+            onLoadEarlier={messages.loadEarlierMessages}
+            isStreaming={streaming.isStreaming}
+            streamingAgent={streaming.streamingAgent}
+            streamingMessageId={streaming.streamingMessageId.current}
+            isThinking={streaming.isThinking}
+            typingColleagues={typingColleagues}
+            connectionStatus={connectionStatus}
+            connectionConfig={connectionConfig}
+            chatMode={currentChatContext?.mode}
+            chatContextColor={chatContextColor}
+            activeProjectAgents={activeProjectAgents}
+            activeProjectId={activeProject?.id}
+            onReaction={handleMessageReaction}
+            onReply={handleReplyToMessage}
+            isTeamWorking={isTeamWorking}
+            teamWorkingTaskCount={teamWorkingTaskCount}
+            isAutonomyPaused={isAutonomyPaused}
+            onTogglePause={() => pauseMutation.mutate(!isAutonomyPaused)}
+            pauseLoading={pauseMutation.isPending}
+            deliberationState={deliberationState}
+            onDismissDeliberation={() => setDeliberationState(null)}
+            approvalRequests={approvalRequests}
+            onApprove={(id) => approveMutation.mutate(id)}
+            onReject={(id) => rejectMutation.mutate(id)}
+            approvalLoading={approveMutation.isPending || rejectMutation.isPending}
+            suggestedTasks={suggestedTasks}
+            taskSuggestionContext={taskSuggestionContext}
+            isApprovingTasks={isApprovingTasks}
+            onApproveTaskSuggestions={handleApproveTaskSuggestions}
+            onDismissTaskSuggestions={handleDismissTaskSuggestions}
+          />
         )}
       </div>
+
       {/* Deliverable Proposal Card */}
       {deliverableProposal && (
-        <div className="px-6 py-2">
+        <div className="px-3 py-1.5">
           <DeliverableProposalCard
             type={deliverableProposal.type}
             title={deliverableProposal.title}
@@ -2893,132 +1920,47 @@ export function CenterPanel({
           />
         </div>
       )}
-      {/* Typing Indicator Bar */}
-      {typingColleagues.length > 0 && !isStreaming && (
-        <div className="flex items-center gap-2 px-6 py-1.5 text-xs text-muted-foreground border-t hatchin-border">
-          <div className="flex gap-0.5">
-            <span className="animate-bounce" style={{ animationDelay: '0ms' }}>·</span>
-            <span className="animate-bounce" style={{ animationDelay: '75ms' }}>·</span>
-            <span className="animate-bounce" style={{ animationDelay: '150ms' }}>·</span>
-          </div>
-          <span>
-            {typingColleagues.join(', ')} {typingColleagues.length === 1 ? 'is' : 'are'} typing...
-          </span>
-        </div>
-      )}
-      {/* Chat Input */}
-      <div className="p-6">
-        {/* C1.2: Reply preview */}
-        {replyingTo && (
-          <div className="mb-3 rounded-lg border border-blue-500/30 bg-blue-500/10 px-3 py-2.5">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0 flex-1">
-                <div className="text-[11px] uppercase tracking-wide text-blue-300">Replying to {replyingTo.senderName}</div>
-                <div className="mt-1 text-sm text-foreground truncate">
-                  {replyingTo.content.length > 100 ? `${replyingTo.content.substring(0, 100)}...` : replyingTo.content}
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={clearReply}
-                className="rounded-md p-1 text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors"
-                aria-label="Clear reply target"
-              >
-                ×
-              </button>
-            </div>
-          </div>
-        )}
 
-        <form onSubmit={handleChatSubmit} className="relative bg-[var(--hatchin-surface)]/60 backdrop-blur-md rounded-xl border border-[var(--hatchin-border)]">
-          {/* Hand off to... dropdown — only shown when a project is active and there are eligible agents */}
-          {activeProject && handoffableAgents.length > 0 && (
-            <div className="flex items-center px-3 pt-2">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button
-                    type="button"
-                    className="flex items-center gap-1 px-2 py-1 text-[11px] text-[var(--hatchin-text-muted)] hover:text-[var(--hatchin-text)] hover:bg-[var(--hatchin-surface-elevated)] rounded-md transition-colors"
-                  >
-                    <ArrowRightLeft className="w-3 h-3" />
-                    Hand off to...
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="min-w-[200px]">
-                  {handoffableAgents.map((agent) => (
-                    <DropdownMenuItem
-                      key={agent.id}
-                      onClick={() => handleHandoff(agent)}
-                      className="flex items-center gap-2 cursor-pointer"
-                    >
-                      <AgentAvatar agentName={agent.name} role={agent.role} size={20} />
-                      <span className="text-sm">{agent.name}</span>
-                      <span className="text-xs text-[var(--hatchin-text-muted)]">{agent.role}</span>
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          )}
-          <textarea
-            ref={messageInputRef}
-            data-testid="input-message"
-            name="message"
-            placeholder={contextDisplay.placeholder}
-            autoComplete="off"
-            value={inputValue}
-            rows={1}
-            onChange={(e) => {
-              setInputValue(e.target.value);
-              resizeComposer(e.target);
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                e.currentTarget.form?.requestSubmit();
-              }
-            }}
-            aria-label="Message input"
-            className="w-full bg-transparent px-4 py-4 text-sm text-[var(--hatchin-text)] placeholder:text-[var(--hatchin-text-muted)] focus:outline-none focus-visible:ring-0 resize-none min-h-[64px] max-h-[200px] overflow-y-auto border-none"
-            style={{ overflow: 'hidden' }}
-          />
-          {/* Footer with send/stop */}
-          <div className="flex items-center justify-end p-3 pt-0">
-            {isStreaming ? (
-              <button
-                type="button"
-                onClick={() => {
-                  if (streamingMessageId.current) {
-                    sendWebSocketMessage({
-                      type: 'cancel_streaming',
-                      messageId: streamingMessageId.current
-                    });
-                  }
-                }}
-                className="flex items-center gap-1 px-3 py-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-500 transition-colors"
-                aria-label="Stop generating"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="6" y="6" width="12" height="12" />
-                </svg>
-              </button>
-            ) : (
-              <button
-                type="submit"
-                disabled={!inputValue.trim()}
-                aria-label="Send message"
-                className={`flex items-center gap-1 px-3 py-2 rounded-lg transition-colors ${
-                  inputValue.trim()
-                    ? 'bg-[var(--hatchin-surface-elevated)] text-[var(--hatchin-text)] hover:bg-[var(--hatchin-border)]'
-                    : 'bg-[var(--hatchin-surface-elevated)] text-[var(--hatchin-text-muted)] cursor-not-allowed opacity-50'
-                }`}
-              >
-                <ArrowUpIcon className="w-4 h-4" />
-              </button>
-            )}
-          </div>
-        </form>
-      </div>
+      {/* Chat Input Area */}
+      <ChatInput
+        inputValue={inputValue}
+        onInputChange={setInputValue}
+        onSubmit={handleChatSubmit}
+        placeholder={contextDisplay.placeholder || 'Message your team...'}
+        isStreaming={(() => {
+          // Derived: the button can only show "stop" if a message in the active
+          // conversation is literally streaming right now. No amount of event
+          // loss or state drift can leave this stuck.
+          const convId = currentChatContext?.conversationId;
+          if (!convId) return false;
+          const msgs = messages.allMessages[convId] || [];
+          return streaming.isStreaming && msgs.some(m =>
+            m.status === 'streaming' ||
+            (m.metadata && (m.metadata as any).isStreaming === true)
+          );
+        })()}
+        streamingMessageId={streaming.streamingMessageId.current}
+        onCancelStreaming={() => {
+          const msgId = streaming.streamingMessageId.current;
+          if (msgId) {
+            sendWebSocketMessage({
+              type: 'cancel_streaming',
+              messageId: msgId
+            });
+          }
+          // Optimistic local reset — don't wait for server ack (mobile networks drop it)
+          streaming.clearAllStreamingState();
+          streaming.setIsStreaming(false);
+          streaming.setIsThinking(false);
+        }}
+        replyingTo={replyingTo}
+        onClearReply={clearReply}
+        activeProject={activeProject}
+        handoffableAgents={handoffableAgents}
+        onHandoff={handleHandoff}
+        typingColleagues={typingColleagues}
+      />
+
       {/* Add Hatch Modal */}
       <AddHatchModal
         isOpen={showAddHatchModal}
@@ -3047,30 +1989,24 @@ export function CenterPanel({
         tasks={suggestedTasks}
         onApproveTasks={async (approvedTasks) => {
           try {
-            // Create tasks via API
             const response = await fetch('/api/task-suggestions/approve', {
               method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
+              headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 approvedTasks,
                 projectId: taskSuggestionContext?.projectId
               })
             });
-
             if (response.ok) {
-              devLog('✅ Tasks created successfully');
-              // Notify RightSidebar of new tasks
+              devLog('Tasks created successfully');
               try {
                 window.dispatchEvent(new CustomEvent('tasks_updated', { detail: { projectId: taskSuggestionContext?.projectId } }));
               } catch { }
-              // Close modal
               setShowTaskApprovalModal(false);
               setSuggestedTasks([]);
               setTaskSuggestionContext(null);
             } else {
-              console.error('❌ Failed to create tasks');
+              console.error('Failed to create tasks');
             }
           } catch (error) {
             console.error('Error creating tasks:', error);
@@ -3078,7 +2014,6 @@ export function CenterPanel({
         }}
         projectName={activeProject?.name || 'Project'}
       />
-
     </main>
   );
 }

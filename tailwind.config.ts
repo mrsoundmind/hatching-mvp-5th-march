@@ -78,6 +78,7 @@ export default {
   			'hatchin-text': 'var(--hatchin-text)',
   			'hatchin-text-muted': 'var(--hatchin-text-muted)',
   			'hatchin-blue': 'var(--hatchin-blue)',
+  			'hatchin-purple': 'var(--hatchin-purple)',
   			'hatchin-green': 'var(--hatchin-green)',
   			'hatchin-orange': 'var(--hatchin-orange)',
   			'hatchin-surface': 'var(--hatchin-surface)',

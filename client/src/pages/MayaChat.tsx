@@ -72,6 +72,9 @@ export function MayaChat({ projectId }: MayaChatProps) {
   });
 
   // Streaming State
+  // TODO: Consider migrating to useChatStreaming hook (client/src/hooks/useChatStreaming.ts)
+  // to reduce duplication with CenterPanel. Current inline version is simpler but diverges
+  // from CenterPanel on watchdog timeout (20s vs 45s) and lacks thinking-state cycling.
   const [streamingContent, setStreamingContent] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);

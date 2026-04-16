@@ -56,8 +56,8 @@ export function registerAutonomyRoutes(app: Express): void {
   const getSessionUserId = (req: Request): string | undefined => (req.session as any)?.userId as string | undefined;
 
   const getOwnedProjectIds = async (userId: string): Promise<Set<string>> => {
-    const projects = await storage.getProjects();
-    return new Set(projects.filter((project: any) => project.userId === userId).map((project) => project.id));
+    const projects = await storage.getProjectsByUserId(userId);
+    return new Set(projects.map((project) => project.id));
   };
 
   const requireOwnedProject = async (projectId: string, userId: string) => {

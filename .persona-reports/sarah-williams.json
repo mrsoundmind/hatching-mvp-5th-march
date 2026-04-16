@@ -1,0 +1,62 @@
+{
+  "name": "Sarah Williams",
+  "role": "Freelance Designer",
+  "goal": "Find a Designer agent and get a creative brief started for a sustainable coffee brand",
+  "background": "32 years old. Non-technical but highly design-literate. Uses Figma, Notion, Linear. Looking for a tool that replaces her chaotic client project management.",
+  "thoughts": [
+    {
+      "section": "Landing — Visual Design",
+      "quote": "The background is too generic. I'm immediately less interested — if the product can't design its own landing page well, what does that say about its design agents?",
+      "sentiment": "negative"
+    },
+    {
+      "section": "Landing — Typography",
+      "quote": "Headline at ~48px. Strong visual hierarchy. The type scale is doing its job.",
+      "sentiment": "positive"
+    },
+    {
+      "section": "Landing — Footer",
+      "quote": "Clean minimal footer with just legal links. No cluttered sitemap. Good restraint — most SaaS products ruin their footers.",
+      "sentiment": "positive"
+    },
+    {
+      "section": "Landing — Mobile Layout",
+      "quote": "No horizontal overflow. The mobile layout holds. I check this on everything I evaluate — broken mobile is a dealbreaker for client demos.",
+      "sentiment": "positive"
+    },
+    {
+      "section": "App — Agent Names",
+      "quote": "I don't immediately see a Designer agent by name. The agents might be there but labeled differently. I'd need to click around to find the right person.",
+      "sentiment": "confused"
+    },
+    {
+      "section": "Brain Tab",
+      "quote": "There's a \"Brain\" tab for project context. This is where I'd store the client brief, brand guidelines, and mood board references. The whole team can reference it. Notion can't do this for AI collaboration.",
+      "sentiment": "positive"
+    },
+    {
+      "section": "Brain — Document Upload",
+      "quote": "Document upload is here! I can drop in a client brief PDF and every agent references it. This is the feature that makes this genuinely useful for client work.",
+      "sentiment": "delighted"
+    },
+    {
+      "section": "Brief Request",
+      "quote": "Real client question. The difference between a Creative Director and Brand Strategist matters. If both give me the same answer, the agents aren't actually different.",
+      "sentiment": "neutral"
+    },
+    {
+      "section": "Brief Response",
+      "quote": "The response actually differentiates Creative Direction from Brand Strategy. It's not just repeating my question back at me. This is the kind of thinking I need from an AI collaborator.",
+      "sentiment": "delighted"
+    },
+    {
+      "section": "Activity Feed",
+      "quote": "Activity tab gives me a log of what happened. As someone who tracks billable hours, I want this to be exportable one day. Right now it's more of an internal status feed.",
+      "sentiment": "neutral"
+    }
+  ],
+  "goalAchieved": true,
+  "goalNote": "Brief conversation started. Agent differentiation partially visible in response.",
+  "verdict": "The design quality of the product itself is a trust signal — someone on the team cares about aesthetics. The Brain tab with shared context is a genuine differentiator for client work. Key ask: make document upload more prominent, and prove that the Designer agents give substantively different answers from the PM and Strategist.",
+  "npsScore": 8
+}

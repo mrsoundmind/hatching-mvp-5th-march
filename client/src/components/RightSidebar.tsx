@@ -7,6 +7,8 @@ import { ActivityTab } from "./sidebar/ActivityTab";
 import { TasksTab } from "./sidebar/TasksTab";
 import { BrainDocsTab } from "./sidebar/BrainDocsTab";
 import { isApprovalExpired } from "./sidebar/approvalUtils";
+import { ErrorBoundary } from "react-error-boundary";
+import { PanelErrorFallback } from "@/components/ErrorFallbacks";
 import type { Project, Team, Agent, Task } from "@shared/schema";
 
 interface RightSidebarProps {
@@ -143,33 +145,48 @@ export function RightSidebar({ activeProject, activeTeam, activeAgent }: RightSi
 
       {/* Activity tab panel (CSS-hidden, never unmounted) */}
       <div
+        role="tabpanel"
+        id="sidebar-tabpanel-activity"
+        aria-labelledby="sidebar-tab-activity"
         style={{ display: activeTab === 'activity' ? 'flex' : 'none' }}
         aria-hidden={activeTab !== 'activity'}
         className="flex-1 flex flex-col overflow-y-auto hide-scrollbar"
       >
-        <ActivityTab
-          projectId={activeProject?.id}
-          agents={projectAgents?.map(a => ({ id: a.id, name: a.name, role: a.role })) || []}
-          executionRules={activeProject?.executionRules as Record<string, unknown> | null | undefined}
-        />
+        <ErrorBoundary FallbackComponent={PanelErrorFallback}>
+          <ActivityTab
+            projectId={activeProject?.id}
+            agents={projectAgents?.map(a => ({ id: a.id, name: a.name, role: a.role })) || []}
+            executionRules={activeProject?.executionRules as Record<string, unknown> | null | undefined}
+          />
+        </ErrorBoundary>
       </div>
 
       {/* Tasks tab panel (CSS-hidden, never unmounted) */}
       <div
+        role="tabpanel"
+        id="sidebar-tabpanel-tasks"
+        aria-labelledby="sidebar-tab-tasks"
         style={{ display: activeTab === 'tasks' ? 'flex' : 'none' }}
         aria-hidden={activeTab !== 'tasks'}
         className="flex-1 flex flex-col overflow-y-auto hide-scrollbar"
       >
-        <TasksTab projectId={activeProject?.id} />
+        <ErrorBoundary FallbackComponent={PanelErrorFallback}>
+          <TasksTab projectId={activeProject?.id} />
+        </ErrorBoundary>
       </div>
 
       {/* Brain tab panel (CSS-hidden, never unmounted) */}
       <div
+        role="tabpanel"
+        id="sidebar-tabpanel-brain"
+        aria-labelledby="sidebar-tab-brain"
         style={{ display: activeTab === 'brain' ? 'flex' : 'none' }}
         aria-hidden={activeTab !== 'brain'}
         className="flex-1 flex flex-col overflow-y-auto hide-scrollbar"
       >
-        <BrainDocsTab projectId={activeProject?.id} project={activeProject} />
+        <ErrorBoundary FallbackComponent={PanelErrorFallback}>
+          <BrainDocsTab projectId={activeProject?.id} project={activeProject} />
+        </ErrorBoundary>
       </div>
     </aside>
   );

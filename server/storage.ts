@@ -190,6 +190,7 @@ export interface IStorage {
     graceExpiresAt?: Date | null;
   }): Promise<void>;
   getUserTier(userId: string): Promise<{ tier: string; subscriptionStatus: string; graceExpiresAt: Date | null } | undefined>;
+  getUserByStripeCustomerId(customerId: string): Promise<User | undefined>;
   checkWebhookProcessed(stripeEventId: string): Promise<boolean>;
   markWebhookProcessed(stripeEventId: string, eventType: string): Promise<void>;
 
@@ -1395,6 +1396,9 @@ export class MemStorage implements IStorage {
     if (!user) return undefined;
     return { tier: 'pro', subscriptionStatus: 'none', graceExpiresAt: null };
   }
+  async getUserByStripeCustomerId(customerId: string): Promise<User | undefined> {
+    return Array.from(this.users.values()).find(u => (u as any).stripeCustomerId === customerId);
+  }
   async checkWebhookProcessed(): Promise<boolean> { return false; }
   async markWebhookProcessed(): Promise<void> {}
 
@@ -1954,66 +1958,65 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Phase 6: Count autonomous task execution events today for cost cap enforcement
+  // P1-5: Migrated from raw SQL to Drizzle ORM
   async countAutonomyEventsForProjectToday(projectId: string, dateStr: string): Promise<number> {
-    const { pool: dbPool } = await import('./db.js');
-    const result = await dbPool.query(
-      `SELECT COUNT(*)::int as count FROM autonomy_events
-       WHERE project_id = $1
-       AND event_type = 'autonomous_task_execution'
-       AND "timestamp"::date = $2::date`,
-      [projectId, dateStr],
-    );
-    return result.rows[0]?.count ?? 0;
+    const startOfDay = new Date(dateStr + 'T00:00:00.000Z');
+    const endOfDay = new Date(dateStr + 'T23:59:59.999Z');
+    const result = await db.select({ count: sql<number>`count(*)::int` })
+      .from(schema.autonomyEvents)
+      .where(and(
+        eq(schema.autonomyEvents.projectId, projectId),
+        eq(schema.autonomyEvents.eventType, 'autonomous_task_execution'),
+        sql`${schema.autonomyEvents.timestamp} >= ${startOfDay}`,
+        sql`${schema.autonomyEvents.timestamp} <= ${endOfDay}`,
+      ));
+    return result[0]?.count ?? 0;
   }
 
   // SAFE-04: Count autonomy events by agent for trust scoring
+  // P1-5: Migrated from raw SQL to Drizzle ORM
   async countAutonomyEventsByAgent(
     agentId: string,
     projectId: string,
     eventType: string,
   ): Promise<number> {
-    const { pool: dbPool } = await import('./db.js');
-    const result = await dbPool.query(
-      `SELECT COUNT(*)::int as count FROM autonomy_events
-       WHERE hatch_id = $1
-       AND project_id = $2
-       AND event_type = $3`,
-      [agentId, projectId, eventType],
-    );
-    return result.rows[0]?.count ?? 0;
+    const result = await db.select({ count: sql<number>`count(*)::int` })
+      .from(schema.autonomyEvents)
+      .where(and(
+        eq(schema.autonomyEvents.hatchId, agentId),
+        eq(schema.autonomyEvents.projectId, projectId),
+        eq(schema.autonomyEvents.eventType, eventType),
+      ));
+    return result[0]?.count ?? 0;
   }
 
-  // UX-03: Absence tracking for return briefing
+  // UX-03: Absence tracking for return briefing (P1-5: migrated from raw SQL to Drizzle ORM)
   async getProjectTimestamps(projectId: string): Promise<{ lastSeenAt: Date | null; lastBriefedAt: Date | null }> {
-    const { pool: dbPool } = await import('./db.js');
-    const result = await dbPool.query(
-      `SELECT last_seen_at, last_briefed_at FROM projects WHERE id = $1`,
-      [projectId],
-    );
-    const row = result.rows[0];
-    if (!row) return { lastSeenAt: null, lastBriefedAt: null };
+    const [proj] = await db.select({
+      lastSeenAt: schema.projects.lastSeenAt,
+      lastBriefedAt: schema.projects.lastBriefedAt,
+    }).from(schema.projects).where(eq(schema.projects.id, projectId));
+    if (!proj) return { lastSeenAt: null, lastBriefedAt: null };
     return {
-      lastSeenAt: row.last_seen_at ? new Date(row.last_seen_at) : null,
-      lastBriefedAt: row.last_briefed_at ? new Date(row.last_briefed_at) : null,
+      lastSeenAt: proj.lastSeenAt ? new Date(proj.lastSeenAt) : null,
+      lastBriefedAt: proj.lastBriefedAt ? new Date(proj.lastBriefedAt) : null,
     };
   }
 
   async setProjectLastSeenAt(projectId: string, timestamp: Date): Promise<void> {
-    const { pool: dbPool } = await import('./db.js');
-    await dbPool.query(
-      `UPDATE projects SET last_seen_at = $1 WHERE id = $2`,
-      [timestamp, projectId],
-    );
+    await db.update(schema.projects)
+      .set({ lastSeenAt: timestamp } as any)
+      .where(eq(schema.projects.id, projectId));
   }
 
   async setProjectLastBriefedAt(projectId: string, timestamp: Date): Promise<void> {
-    const { pool: dbPool } = await import('./db.js');
-    await dbPool.query(
-      `UPDATE projects SET last_briefed_at = $1 WHERE id = $2`,
-      [timestamp, projectId],
-    );
+    await db.update(schema.projects)
+      .set({ lastBriefedAt: timestamp } as any)
+      .where(eq(schema.projects.id, projectId));
   }
 
+  // TODO(P1-5): Migrate to Drizzle ORM — raw SQL used for complex filtering + mapping.
+  // This is parameterized (no injection risk) but bypasses type safety.
   async getAutonomyEventsSince(projectId: string, since: Date): Promise<Array<{ eventType: string; agentId: string | null; payload: unknown; createdAt: Date }>> {
     const { pool: dbPool } = await import('./db.js');
     const result = await dbPool.query(
@@ -2114,6 +2117,11 @@ export class DatabaseStorage implements IStorage {
       subscriptionStatus: rows[0].subscriptionStatus,
       graceExpiresAt: rows[0].graceExpiresAt,
     };
+  }
+
+  async getUserByStripeCustomerId(customerId: string): Promise<User | undefined> {
+    const [row] = await db.select().from(schema.users).where(eq(schema.users.stripeCustomerId, customerId));
+    return row;
   }
 
   async checkWebhookProcessed(stripeEventId: string): Promise<boolean> {

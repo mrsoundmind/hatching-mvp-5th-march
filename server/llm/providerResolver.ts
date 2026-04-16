@@ -162,9 +162,12 @@ function isRecoverableOpenAITestError(error: any): boolean {
 
 function buildProviderOrder(config: RuntimeConfig, priorError?: any): ProviderId[] {
   if (config.mode === 'prod') {
-    // In prod: Gemini primary, OpenAI fallback (if both keys set), otherwise just the configured one
+    // In prod: Gemini primary → OpenAI (if set) → Groq (if set)
     if (config.provider === 'gemini') {
-      return process.env.OPENAI_API_KEY ? ['gemini', 'openai'] : ['gemini'];
+      const chain: ProviderId[] = ['gemini'];
+      if (process.env.OPENAI_API_KEY) chain.push('openai');
+      if (process.env.GROQ_API_KEY) chain.push('groq');
+      return chain;
     }
     return ['openai'];
   }

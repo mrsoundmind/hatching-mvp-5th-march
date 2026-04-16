@@ -3,6 +3,7 @@ import { PanelErrorFallback } from '@/components/ErrorFallbacks';
 import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Menu, PanelRight } from "lucide-react";
+import { ProjectSelectionProvider, useProjectSelection } from "@/hooks/useProjectSelection";
 
 import { LeftSidebar } from "@/components/LeftSidebar";
 import { CenterPanel } from "@/components/CenterPanel";
@@ -21,18 +22,21 @@ import { devLog } from "@/lib/devLog";
 import { useToast } from "@/hooks/use-toast";
 
 export default function Home() {
+  return (
+    <ProjectSelectionProvider>
+      <HomeInner />
+    </ProjectSelectionProvider>
+  );
+}
+
+function HomeInner() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  // Restore last active project from localStorage on mount
-  const [activeProjectId, setActiveProjectId] = useState<string | null>(() => {
-    try {
-      const stored = localStorage.getItem('hatchin_active_project');
-      if (stored && stored !== 'null' && stored !== 'undefined') return stored;
-    } catch { /* ignore */ }
-    return null;
-  });
-  const [activeTeamId, setActiveTeamId] = useState<string | null>(null);
-  const [activeAgentId, setActiveAgentId] = useState<string | null>(null);
+  const {
+    activeProjectId, setActiveProjectId,
+    activeTeamId, setActiveTeamId,
+    activeAgentId, setActiveAgentId,
+  } = useProjectSelection();
   // All projects should always be expanded, and teams should be expanded by default
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
   const [expandedTeams, setExpandedTeams] = useState<Set<string>>(new Set());
@@ -117,16 +121,7 @@ export default function Home() {
 
 
 
-  // Persist activeProjectId to localStorage so it survives page reload
-  useEffect(() => {
-    try {
-      if (activeProjectId) {
-        localStorage.setItem('hatchin_active_project', activeProjectId);
-      } else {
-        localStorage.removeItem('hatchin_active_project');
-      }
-    } catch { /* ignore */ }
-  }, [activeProjectId]);
+  // localStorage persistence for activeProjectId is handled by ProjectSelectionProvider
 
   // Auto-select first project if none is active (and stored project is gone)
   useEffect(() => {
@@ -884,7 +879,7 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="app-mesh-bg min-h-screen overflow-hidden">
+    <div className="app-mesh-bg fixed inset-0 overflow-hidden flex flex-col">
       {/* Onboarding System */}
       <OnboardingManager
         onComplete={(path, templateData) => {
@@ -907,7 +902,7 @@ export default function Home() {
       />
 
       {/* Mobile header bar — visible on < lg only */}
-      <div className="lg:hidden flex items-center justify-between px-3 py-2 border-b border-border/40 bg-background/80 backdrop-blur-sm">
+      <div className="lg:hidden shrink-0 flex items-center justify-between px-3 h-12 border-b border-border/40 bg-background/80 backdrop-blur-sm">
         <button
           onClick={() => setMobileLeftOpen(true)}
           className="p-2 rounded-lg hover:bg-muted transition-colors"
@@ -980,7 +975,7 @@ export default function Home() {
         </SheetContent>
       </Sheet>
 
-      <div className="h-[calc(100vh-theme(spacing.0))] lg:h-screen min-h-0 flex gap-3">
+      <div className="flex-1 min-h-0 flex gap-3">
         {/* Desktop left sidebar — hidden on mobile */}
         <div className="hidden lg:block h-full">
           <ErrorBoundary FallbackComponent={PanelErrorFallback}>

@@ -75,8 +75,8 @@ export async function registerRoutes(app: Express, sessionParser?: SessionParser
 
   const getSessionUserId = (req: Request): string => (req.session as any).userId as string;
 
-  // Fix 3c: Block /api/dev/* in production
-  if (isProd && process.env.DEV !== 'true') {
+  // Fix 3c: Block /api/dev/* in production — no override allowed
+  if (process.env.NODE_ENV === 'production') {
     app.all("/api/dev/*", (_req, res) => {
       res.status(403).json({ error: 'Dev endpoints are disabled in production.' });
     });
@@ -258,6 +258,7 @@ export async function registerRoutes(app: Express, sessionParser?: SessionParser
       subscriptionStatus: user.subscriptionStatus || 'none',
       dailyMessagesUsed,
       dailyMessageLimit,
+      csrfToken: req.session.csrfToken || null,
     });
   });
 

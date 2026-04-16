@@ -586,12 +586,12 @@ function TemplateCard({ pack, index, isSelected, isLoading, onSelect }: Template
       {/* Pack Header */}
       <div className="relative z-10 flex items-start justify-between mb-3">
         <div className="flex items-center gap-3">
-          <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl shadow-[0_0_15px_rgba(108,130,255,0.15)] group-hover:shadow-[0_0_25px_rgba(108,130,255,0.25)] transition-shadow ${pack.color === 'blue' ? 'bg-gradient-to-br from-hatchin-blue/20 to-[#9F7BFF]/20 border border-hatchin-blue/30' :
-              pack.color === 'green' ? 'bg-gradient-to-br from-[#47DB9A]/20 to-emerald-500/20 border border-[#47DB9A]/30' :
-                pack.color === 'purple' ? 'bg-gradient-to-br from-[#9F7BFF]/20 to-fuchsia-500/20 border border-[#9F7BFF]/30' :
+          <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl shadow-[0_0_15px_rgba(108,130,255,0.15)] group-hover:shadow-[0_0_25px_rgba(108,130,255,0.25)] transition-shadow ${pack.color === 'blue' ? 'bg-gradient-to-br from-hatchin-blue/20 to-hatchin-purple/20 border border-hatchin-blue/30' :
+              pack.color === 'green' ? 'bg-gradient-to-br from-hatchin-green/20 to-emerald-500/20 border border-hatchin-green/30' :
+                pack.color === 'purple' ? 'bg-gradient-to-br from-hatchin-purple/20 to-fuchsia-500/20 border border-hatchin-purple/30' :
                   pack.color === 'amber' ? 'bg-gradient-to-br from-[#FFB547]/20 to-amber-500/20 border border-[#FFB547]/30' :
                     pack.color === 'red' ? 'bg-gradient-to-br from-[#FF4E6A]/20 to-rose-500/20 border border-[#FF4E6A]/30' :
-                      'bg-gradient-to-br from-hatchin-blue/20 to-[#9F7BFF]/20 border border-hatchin-blue/30'
+                      'bg-gradient-to-br from-hatchin-blue/20 to-hatchin-purple/20 border border-hatchin-blue/30'
             }`}>
             {pack.emoji}
           </div>
@@ -626,8 +626,8 @@ function TemplateCard({ pack, index, isSelected, isLoading, onSelect }: Template
             return (
               <div key={memberName} className="flex items-center gap-1 bg-hatchin-card rounded px-2 py-1">
                 <User className={`w-3 h-3 ${pack.color === 'blue' ? 'text-hatchin-blue' :
-                  pack.color === 'green' ? 'text-[#47DB9A]' :
-                    pack.color === 'purple' ? 'text-[#9F7BFF]' :
+                  pack.color === 'green' ? 'text-hatchin-green' :
+                    pack.color === 'purple' ? 'text-hatchin-purple' :
                       pack.color === 'amber' ? 'text-[#FFB547]' :
                         'text-hatchin-blue'
                   }`} />

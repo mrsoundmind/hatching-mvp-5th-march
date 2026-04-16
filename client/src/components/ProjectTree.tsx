@@ -92,9 +92,9 @@ export function ProjectTree({
       case 'blue':
         return 'bg-hatchin-blue';
       case 'green':
-        return 'bg-[#47DB9A]';
+        return 'bg-hatchin-green';
       case 'purple':
-        return 'bg-[#9F7BFF]';
+        return 'bg-hatchin-purple';
       case 'red':
         return 'bg-[#FF4E6A]';
       default:
@@ -116,9 +116,9 @@ export function ProjectTree({
       case 'blue':
         return 'text-hatchin-blue';
       case 'green':
-        return 'text-[#47DB9A]';
+        return 'text-hatchin-green';
       case 'purple':
-        return 'text-[#9F7BFF]';
+        return 'text-hatchin-purple';
       case 'amber':
         return 'text-[#FFB547]';
       case 'red':
@@ -295,7 +295,7 @@ export function ProjectTree({
   }, []);
 
   return (
-    <div className="space-y-1">
+    <div className="space-y-1" role="tree" aria-label="Project tree">
       {/* Premium empty state when no projects exist */}
       {projects.length === 0 && (
         <div className="flex flex-col items-center justify-center py-8 px-3 text-center">
@@ -315,22 +315,22 @@ export function ProjectTree({
         const isProjectExpanded = expandedProjects.has(project.id);
 
         return (
-          <div key={project.id} className="flex flex-col">
+          <div key={project.id} className="flex flex-col" role="treeitem" aria-expanded={isProjectExpanded}>
             {index > 0 && (
               <div className="premium-divider my-2 mx-1" />
             )}
             <div className="space-y-0.5">
               {/* Project Level */}
-              <div className="flex items-center justify-between px-3 py-2 rounded-xl transition-all duration-200 group">
-                <div
-                  className={`flex items-center gap-2 min-w-0 flex-1 cursor-pointer rounded-xl py-2 px-2.5 transition-all duration-200 hover:bg-[var(--glass-hover-bg)] hover:shadow-sm relative ${isProjectActive && !activeTeamId && !activeAgentId
-                    ? 'bg-[var(--glass-frosted-strong)] sidebar-active-accent elevation-1'
-                    : ''
-                    }`}
-                  onClick={() => onSelectProject(project.id)}
-                >
+              <div
+                className={`flex items-center justify-between px-3 py-1.5 rounded-xl cursor-pointer transition-all duration-200 group hover:bg-[var(--glass-hover-bg)] hover:shadow-sm relative ${isProjectActive && !activeTeamId && !activeAgentId
+                  ? 'bg-[var(--glass-frosted-strong)] sidebar-active-accent elevation-1'
+                  : ''
+                }`}
+                onClick={() => onSelectProject(project.id)}
+              >
+                <div className="flex items-center gap-2.5 min-w-0 flex-1">
                   <div
-                    className="flex-shrink-0"
+                    className="flex-shrink-0 w-4 flex justify-center"
                     onClick={(e) => {
                       e.stopPropagation();
                       if (projectTeams.length > 0) {
@@ -346,7 +346,7 @@ export function ProjectTree({
                       )
                     )}
                   </div>
-                  <File className={`w-4 h-4 mr-2 ${getProjectIconColor(project.color)}`} />
+                  <Folder className={`w-4 h-4 flex-shrink-0 ${getProjectIconColor(project.color)}`} />
                   {editingProject === project.id ? (
                     <input
                       ref={inputRef}
@@ -460,7 +460,7 @@ export function ProjectTree({
                   transition={{ duration: 0.2, ease: 'easeInOut' }}
                   className="overflow-hidden"
                 >
-                <div className="ml-7 space-y-1">
+                <div className="ml-7 space-y-1" role="group">
                   {/* Teams */}
                   {projectTeams.map(team => {
                     const teamAgents = agents.filter(a => a.teamId === team.id && !a.isSpecialAgent);
@@ -468,18 +468,18 @@ export function ProjectTree({
                     const isTeamExpanded = expandedTeams.has(team.id);
 
                     return (
-                      <div key={team.id} className="space-y-1">
+                      <div key={team.id} className="space-y-1" role="treeitem" aria-expanded={isTeamExpanded}>
                         {/* Team Level */}
                         <div
-                          className={`flex items-center justify-between px-3 py-2 rounded-xl cursor-pointer transition-all duration-200 group hover:bg-[var(--glass-hover-bg)] hover:shadow-sm relative ${isTeamActive && !activeAgentId
-                            ? 'bg-[var(--glass-frosted-strong)] sidebar-active-accent elevation-1'
+                          className={`flex items-center justify-between px-3 py-1.5 rounded-xl cursor-pointer transition-all duration-200 group hover:bg-[var(--glass-hover-bg)] hover:shadow-sm relative font-normal text-[var(--hatchin-text-muted)] ${isTeamActive && !activeAgentId
+                            ? 'bg-[var(--glass-frosted-strong)] sidebar-active-accent elevation-1 !text-[var(--hatchin-text)]'
                             : ''
                             }`}
                           onClick={() => onSelectTeam(team.id)}
                         >
-                          <div className="flex items-center gap-2 min-w-0 flex-1">
+                          <div className="flex items-center gap-2.5 min-w-0 flex-1">
                             <div
-                              className="flex-shrink-0"
+                              className="flex-shrink-0 w-4 flex justify-center"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 if (teamAgents.length > 0) {
@@ -495,7 +495,7 @@ export function ProjectTree({
                                 )
                               )}
                             </div>
-                            <Users className={`w-4 h-4 mr-2 ${getProjectIconColor(projects.find(p => p.id === team.projectId)?.color || 'blue')}`} />
+                            <Users className={`w-4 h-4 flex-shrink-0 ${getProjectIconColor(projects.find(p => p.id === team.projectId)?.color || 'blue')}`} />
                             {editingTeam === team.id ? (
                               <input
                                 ref={inputRef}
@@ -592,13 +592,14 @@ export function ProjectTree({
                               transition={{ duration: 0.18, ease: 'easeInOut' }}
                               className="overflow-hidden"
                             >
-                          <div className="ml-7 space-y-0.5">
+                          <div className="ml-7 space-y-0.5" role="group">
                             {teamAgents.map(agent => {
                               const isAgentActive = agent.id === activeAgentId;
 
                               return (
                                 <div
                                   key={agent.id}
+                                  role="treeitem"
                                   className={`flex items-center justify-between px-3 py-2 rounded-xl cursor-pointer transition-all duration-200 relative group hover:bg-[var(--glass-hover-bg)] hover:shadow-sm ${isAgentActive
                                     ? 'bg-[var(--glass-frosted-strong)] sidebar-active-accent elevation-1'
                                     : ''
@@ -710,6 +711,7 @@ export function ProjectTree({
                       return (
                         <div
                           key={agent.id}
+                          role="treeitem"
                           className={`flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer transition-all duration-200 relative group hover:bg-hatchin-border hover:shadow-sm ${isAgentActive
                             ? 'bg-hatchin-blue/10'
                             : ''

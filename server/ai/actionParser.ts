@@ -103,15 +103,19 @@ export function detectUserPermission(userMessage: string): 'granted' | 'denied' 
     const msg = userMessage.toLowerCase().trim();
 
     // Check denial first (shorter = stronger signal)
+    // P1-9: Use word boundary regex to prevent partial matches
+    // (e.g., "don't add that" should not match "add")
     for (const phrase of PERMISSION_DENIED_PHRASES) {
-        if (msg === phrase || msg.startsWith(phrase + ' ') || msg.endsWith(' ' + phrase)) {
+        const pattern = new RegExp('\\b' + phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i');
+        if (pattern.test(msg)) {
             return 'denied';
         }
     }
 
-    // Check grant
+    // Check grant — word boundary matching prevents "I don't think we should add" from matching "add"
     for (const phrase of PERMISSION_GRANTED_PHRASES) {
-        if (msg === phrase || msg.startsWith(phrase + ' ') || msg.endsWith(' ' + phrase) || msg.includes(phrase)) {
+        const pattern = new RegExp('\\b' + phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i');
+        if (pattern.test(msg)) {
             return 'granted';
         }
     }

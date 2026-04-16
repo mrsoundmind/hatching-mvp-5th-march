@@ -21,6 +21,9 @@ export async function getJobQueue(): Promise<PgBoss | null> {
   }
 
   _boss = new PgBoss(process.env.DATABASE_URL!);
+  _boss.on('error', (err) => {
+    console.error('[Hatchin][JobQueue] pg-boss error (non-fatal):', err);
+  });
   await _boss.start();
   return _boss;
 }

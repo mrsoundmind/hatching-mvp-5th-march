@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import { randomUUID } from 'crypto';
 import express, { type Request, Response, NextFunction } from "express";
 import helmet from "helmet";
 import cors from "cors";
@@ -54,8 +55,9 @@ app.use(helmet({
       scriptSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'"],
       imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'", "wss:", "ws:"],
-      fontSrc: ["'self'"],
+      mediaSrc: ["'self'", "https:", "blob:"],
+      connectSrc: ["'self'", "wss:", "ws:", "https:"],
+      fontSrc: ["'self'", "https:", "data:"],
     }
   } : false, // disabled in dev to allow Vite inline scripts
 }));
@@ -66,10 +68,12 @@ app.use(cors({
   credentials: true,
 }));
 
-// Fix 3c: Rate limiting — general API protection (200 req / 15 min per IP)
+// Fix 3c: Rate limiting — general API protection
+// Development: 2000 req / 15 min (E2E tests generate many requests)
+// Production: 200 req / 15 min per IP
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 200,
+  max: process.env.NODE_ENV === 'production' ? 200 : 2000,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many requests, please slow down.' },
@@ -166,6 +170,46 @@ if (process.env.DATABASE_URL) {
 const sessionMiddleware = session(sessionOptions);
 app.use(sessionMiddleware);
 
+// P1-10: CSRF token generation — ensure every session has a CSRF token.
+// The token is generated once per session and exposed via GET /api/auth/me.
+app.use((req: Request, _res: Response, next: NextFunction) => {
+  if (req.session && !req.session.csrfToken) {
+    req.session.csrfToken = randomUUID();
+  }
+  next();
+});
+
+// P1-10: CSRF validation middleware for state-changing requests.
+// Checks x-csrf-token header on POST/PUT/PATCH/DELETE.
+// Skipped in non-production for dev convenience. Skipped for:
+//   - /api/billing/webhook (Stripe uses its own signature verification)
+//   - /api/auth/* (pre-login routes, no session yet)
+function validateCsrf(req: Request, res: Response, next: NextFunction) {
+  // Skip in non-production for developer convenience
+  if (process.env.NODE_ENV !== 'production') {
+    return next();
+  }
+
+  // Only validate on mutation methods
+  const method = req.method.toUpperCase();
+  if (!['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
+    return next();
+  }
+
+  // Exempt routes that handle their own authentication
+  if (req.path.startsWith('/api/billing/webhook') || req.path.startsWith('/api/auth/')) {
+    return next();
+  }
+
+  const clientToken = req.headers['x-csrf-token'] as string | undefined;
+  if (!clientToken || clientToken !== req.session?.csrfToken) {
+    return res.status(403).json({ error: 'CSRF token invalid or missing' });
+  }
+
+  next();
+}
+app.use('/api', validateCsrf);
+
 // TypeScript: extend express-session to include auth/session metadata.
 declare module 'express-session' {
   interface SessionData {
@@ -176,6 +220,7 @@ declare module 'express-session' {
     oauthNonce?: string;
     pkceVerifier?: string;
     returnTo?: string;
+    csrfToken?: string;
   }
 }
 

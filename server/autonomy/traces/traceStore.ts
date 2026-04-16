@@ -1,3 +1,7 @@
+// TODO(P1-5): Migrate raw pool.query() calls to Drizzle ORM for type safety.
+// All queries here are parameterized (no SQL injection risk) but bypass Drizzle's
+// type system and cannot be tested via MemStorage. Low priority since traces are
+// an internal debugging tool, not user-facing.
 import { promises as fs } from 'fs';
 import path from 'path';
 import { randomUUID } from 'crypto';

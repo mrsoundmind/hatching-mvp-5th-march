@@ -18,6 +18,7 @@ build/
 .cache/
 .playwright/
 .playwright-cli/
+tests/e2e/.auth/
 output/
 baseline/
 eval/results/

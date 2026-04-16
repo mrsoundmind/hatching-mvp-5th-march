@@ -1,0 +1,52 @@
+{
+  "name": "Marcus Johnson",
+  "role": "Senior Product Manager",
+  "goal": "Get a status update on active project tasks — can this replace a standup?",
+  "background": "38 years old. Enterprise PM background. Uses Jira, Confluence, Slack. Needs to justify any new tool to his team and leadership. Results-oriented, low patience for UX friction.",
+  "thoughts": [
+    {
+      "section": "Landing — Value Prop",
+      "quote": "\"AI teammates with real personalities\" — I get the concept. But as a PM, I immediately think: can they assign tasks? Track progress? Update status? The landing doesn't answer those questions.",
+      "sentiment": "neutral"
+    },
+    {
+      "section": "Landing — Navigation",
+      "quote": "Minimal nav — no pricing page, no features, no docs. That's either very confident or means there's not much to explain yet. I'll reserve judgment.",
+      "sentiment": "neutral"
+    },
+    {
+      "section": "App — First Load",
+      "quote": "Three-panel layout. Left: navigation. Center: chat. Right: something. This is a familiar pattern. Let me go straight to tasks.",
+      "sentiment": "neutral"
+    },
+    {
+      "section": "Tasks Tab — Content",
+      "quote": "Tasks are visible in the panel. I can see status indicators. What I need next: filter by assignee, sort by due date, see what's overdue. The raw view is here — the power-user features are what I'm looking for.",
+      "sentiment": "positive"
+    },
+    {
+      "section": "Activity Feed — Content",
+      "quote": "Activity feed has real content. If I could glance at this each morning instead of running a standup, that saves 15 minutes per day per team. That's the ROI I can sell to leadership.",
+      "sentiment": "positive"
+    },
+    {
+      "section": "Status Request",
+      "quote": "Standup question. This is my core use case. Maya needs to synthesize project state accurately, not make things up.",
+      "sentiment": "neutral"
+    },
+    {
+      "section": "Status Response",
+      "quote": "Got a status-style response with meaningful content. Critical validation step: cross-reference with actual project state to confirm accuracy. If it hallucinates completed tasks, that breaks trust immediately.",
+      "sentiment": "positive"
+    },
+    {
+      "section": "Brain Tab — PM Lens",
+      "quote": "Project context is stored here. If agents reference this in their status updates, the responses are grounded in actual project data. That's the difference between useful and hallucinatory.",
+      "sentiment": "positive"
+    }
+  ],
+  "goalAchieved": true,
+  "goalNote": "Status update conversation worked. Accuracy of AI response relative to actual project state needs human verification.",
+  "verdict": "The Activity + Tasks + Brain sidebar structure maps directly to how I track projects. The concept of AI agents that respond in the context of shared project knowledge is exactly what async PMs need. What's missing: explicit task CRUD (I want to create/update/close tasks without relying on AI interpretation), and evidence that status reports are grounded in real data not LLM confabulation.",
+  "npsScore": 6
+}

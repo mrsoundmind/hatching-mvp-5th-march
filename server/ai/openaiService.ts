@@ -84,6 +84,33 @@ function resolveRuntimeModel(preferred?: string): string | undefined {
   return preferred || process.env.OPENAI_MODEL || runtime.model || 'gpt-4o-mini';
 }
 
+/**
+ * Detects when a user has explicitly requested a specific format or style.
+ * Returns the matched phrase so it can be surfaced as a hard system constraint.
+ */
+function detectUserFormatRequest(message: string): string | null {
+  const patterns: RegExp[] = [
+    /not\s+a\s+listicle/i,
+    /no\s+(?:bullet|bullets|list|lists|numbered\s+list)/i,
+    /don'?t\s+(?:use\s+)?(?:bullet|list|bullets|lists)/i,
+    /(?:write|respond|answer|reply)\s+(?:in\s+)?(?:prose|paragraph|paragraphs|plain\s+text|full\s+sentences)/i,
+    /skip\s+the\s+(?:list|bullets|formatting|format)/i,
+    /just\s+(?:tell|give)\s+me\s+(?:the\s+)?(?:short|quick|brief|honest|real|straight)/i,
+    /your\s+(?:actual|real|honest|genuine)\s+opinion/i,
+    /in\s+one\s+sentence/i,
+    /be\s+(?:blunt|direct|honest|straight)/i,
+    /keep\s+it\s+(?:short|brief|quick|simple)/i,
+    /no\s+formatting/i,
+    /give\s+me\s+a\s+(?:straight|direct|honest)\s+answer/i,
+  ];
+
+  for (const pattern of patterns) {
+    const match = message.match(pattern);
+    if (match) return match[0];
+  }
+  return null;
+}
+
 // B1.1: Add streaming response generation with LangSmith tracing
 export async function* generateStreamingResponse(
   userMessage: string,
@@ -281,6 +308,12 @@ After 5+ exchanges, if you've learned something significant about the project, s
 --- END HATCH BRAIN UPDATE INTELLIGENCE ---
 ` : '';
 
+    // Detect explicit formatting instructions from the user message
+    const userFormatConstraint = detectUserFormatRequest(userMessage);
+    const userFormatSection = userFormatConstraint
+      ? `\n--- USER EXPLICIT FORMAT REQUEST ---\nThe user explicitly said: "${userFormatConstraint}". You MUST honor this exactly. It overrides your default response style.\n--- END USER FORMAT REQUEST ---`
+      : '';
+
     // 6.2: Inject reasoning pattern hint if cached for this role + project + category
     const reasoningHint = context.projectId
       ? getReasoningHint(context.projectId, agentRole, userMessage)
@@ -328,6 +361,17 @@ After 5+ exchanges, if you've learned something significant about the project, s
       } catch { /* non-critical — skip task injection on error */ }
     }
 
+    // Hard format rules — placed last so they are fresh when the model generates
+    const agentRoleLabel = roleProfile?.characterName || agentRole;
+    const hardFormatRules = `\n--- ABSOLUTE FORMAT RULES (read these last, follow them first) ---
+1. ZERO lists. No bullet points, no dashes, no asterisks, no numbered items. Prose only. Every idea in a sentence.
+2. ZERO filler openers: "Certainly", "Absolutely", "Of course", "Great question", "Happy to help" are banned.
+3. ZERO markdown headers. No ##. No **Title:**. This is chat.
+4. ONE question max. Delete all but the most important.
+5. Name things a real ${agentRoleLabel} would know — specific tools, frameworks, failure patterns. No generic advice anyone could give.
+6. If asked for an opinion, give one. "I think X" not "there are several factors."
+--- END ABSOLUTE FORMAT RULES ---`;
+
     // Create system prompt based on role and context
     const systemPrompt = `${enhancedPrompt}
 ${characterSection}
@@ -352,6 +396,8 @@ ${roleBrainContext}
 ${opinionSection}
 ${reasoningHintSection}
 ${assignedTasksSection}
+${userFormatSection}
+${hardFormatRules}
 ${mayaTeamSuggestionInstructions}
 ${hatchTaskInstructions}
 
